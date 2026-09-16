@@ -4,7 +4,7 @@ import { createSystemMessage } from './functions.js';
 
 const CONFIG_URL = './config.json';
 const THEME_ELEMENT = 'theme-stylesheet';
-const THEME_DEFAULT = 'dark';
+const THEME_DEFAULT = 'navy';
 /* the themes that ship with the board; anything else in the config is ignored rather than turned
    into a path, so a typo cannot pull in a stylesheet from somewhere unexpected */
 const THEMES = ['dark', 'light', 'navy'];
