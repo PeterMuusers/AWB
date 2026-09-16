@@ -285,7 +285,14 @@ header,
 }
 .upper-winds-content .windcell-forecast .wind-arrow {
 	font-size: 0.8em;
-	margin-right: 2px;
+	margin-right: 1px;
+}
+/* the estimated hours are the narrowest columns, so speed and gust sit closer together there */
+.upper-winds-content .windcell-forecast .windcell-row {
+	gap: 2px;
+}
+.upper-winds-content .windcell-forecast .windgust {
+	margin-left: 0;
 }
 .windtemperature {
 	display: block;

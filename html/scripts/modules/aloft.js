@@ -279,6 +279,14 @@ class Module {
 		return (difference > 180) ? 360 - difference : difference;
 	}
 
+	/* A gust is only worth a second number when it stands out from the wind itself */
+	gust(gust, wind) {
+		if (gust === null || gust === undefined || wind === null || gust <= wind + 1) {
+			return '';
+		}
+		return '<span class="windgust">G' + Math.round(gust) + '</span>';
+	}
+
 	cell(wind, extra, forecast, reference) {
 		if (!wind) {
 			return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"></td>';
@@ -321,17 +329,18 @@ class Module {
 					columns[0].levels[feet] ? columns[0].levels[feet].dir : null)).join('') + '</tr>';
 		});
 
-		/* The ground row: measured now, modelled for the hours after it. No gusts here: they are in
-		   the metrics panel and in the chart, and a fourth number does not fit this column. */
+		/* The ground row: measured now, modelled for the hours after it, with the gust behind the
+		   speed wherever there is one worth naming. */
 		var measured = (document.modules || {}).luchtvaartmeteo;
 		var observation = measured ? measured.observation : null;
 		var groundNow = (observation && observation.wind_dir !== null) ? Math.round(observation.wind_dir) : columns[0].ground.dir;
 		rows += '<tr class="ground-row"><td class="windtext">' + LANGUAGE_GROUND + '</td>';
 		rows += columns.map((hour, index) => {
 			if (index === 0 && observation && observation.wind_kt !== null && observation.wind_dir !== null) {
-				return this.cell({ kt: Math.round(observation.wind_kt), dir: Math.round(observation.wind_dir) }, '', false, groundNow);
+				return this.cell({ kt: Math.round(observation.wind_kt), dir: Math.round(observation.wind_dir) },
+					this.gust(observation.gust_kt, observation.wind_kt), false, groundNow);
 			}
-			return this.cell(hour.ground, '', index > 0, groundNow);
+			return this.cell(hour.ground, this.gust(hour.ground.gust, hour.ground.kt), index > 0, groundNow);
 		}).join('');
 		rows += '</tr>';
 
