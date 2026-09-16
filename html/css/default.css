@@ -237,6 +237,7 @@ header,
 }
 .windcell {
 	white-space: nowrap;
+	overflow: hidden;
 }
 .windcell-row {
 	display: flex;
@@ -251,6 +252,12 @@ header,
 .windcell-row .winddirection {
 	/* pushed to the right edge, so the degrees form a column of their own */
 	margin-left: auto;
+	min-width: 0;
+	overflow: hidden;
+}
+.windcell-row .windgust {
+	flex: none;
+	margin-left: 1px;
 }
 .wind-arrow {
 	display: inline-block;

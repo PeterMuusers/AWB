@@ -50,7 +50,7 @@ class Module {
 
 		/* Set language specific stuff */
 		document.getElementById(ID_WINDS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
-		document.getElementById(ID_WINDS_SOURCE_DATA).innerHTML = SOURCE + ' ' + this.model;
+		document.getElementById(ID_WINDS_SOURCE_DATA).innerHTML = SOURCE;
 		document.getElementById(ID_WINDS_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_LAST_UPDATED;
 
 		/* Schedule update of document content */
@@ -321,21 +321,20 @@ class Module {
 					columns[0].levels[feet] ? columns[0].levels[feet].dir : null)).join('') + '</tr>';
 		});
 
-		/* The ground row: measured now, modelled for the hours after it */
+		/* The ground row: measured now, modelled for the hours after it. No gusts here: they are in
+		   the metrics panel and in the chart, and a fourth number does not fit this column. */
 		var measured = (document.modules || {}).luchtvaartmeteo;
 		var observation = measured ? measured.observation : null;
 		var groundNow = (observation && observation.wind_dir !== null) ? Math.round(observation.wind_dir) : columns[0].ground.dir;
 		rows += '<tr class="ground-row"><td class="windtext">' + LANGUAGE_GROUND + '</td>';
 		rows += columns.map((hour, index) => {
 			if (index === 0 && observation && observation.wind_kt !== null && observation.wind_dir !== null) {
-				var gust = (observation.gust_kt !== null && observation.gust_kt > observation.wind_kt + 1)
-					? '<span class="windgust">G' + Math.round(observation.gust_kt) + '</span>' : '';
-				return this.cell({ kt: Math.round(observation.wind_kt), dir: Math.round(observation.wind_dir) }, gust);
+				return this.cell({ kt: Math.round(observation.wind_kt), dir: Math.round(observation.wind_dir) }, '', false, groundNow);
 			}
-			var modelled = (hour.ground.gust > hour.ground.kt + 1) ? '<span class="windgust">G' + hour.ground.gust + '</span>' : '';
-			return this.cell(hour.ground, modelled, index > 0, groundNow);
+			return this.cell(hour.ground, '', index > 0, groundNow);
 		}).join('');
 		rows += '</tr>';
+
 		document.getElementById(ID_TABLE_BODY).innerHTML = rows;
 
 		/* The freezing level also goes in the metrics panel. Sitting at or below twelve thousand feet
