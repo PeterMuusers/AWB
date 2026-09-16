@@ -91,6 +91,54 @@ class OnlineStatus {
 	}
 }
 
+/* The board runs all day on a screen with no keyboard and no mouse, so it has to get itself out of
+   trouble. Every module records the moment it last brought data in. When not one of them has
+   managed that for half an hour, twice the slowest interval on the board, while the machine says it
+   is online, it is the page that is stuck rather than the sources that are down, and loading it
+   again is the only cure left. A source that is genuinely unreachable keeps its own warning on its
+   own card and does not trigger this, because the other modules keep succeeding. */
+class Watchdog {
+	constructor() {
+		this.started = Date.now();
+		this.refreshInterval = 60 * 1000; // Check once a minute
+		this.staleAfter = 30 * 60 * 1000;
+
+		/* Schedule the check */
+		this.task = setInterval(
+			this.check.bind(this),
+			this.refreshInterval
+		);
+	}
+
+	/* The moment any module last brought data in, or null when none of them ever did */
+	newest() {
+		var newest = null;
+		for (var name in document.modules) {
+			var updated = document.modules[name].last_updated;
+			if (updated instanceof Date && (newest === null || updated > newest)) {
+				newest = updated;
+			}
+		}
+		return newest;
+	}
+
+	check() {
+		if (window.navigator.onLine === false) {
+			/* nothing to fetch, so reloading would only empty the screen */
+			return;
+		}
+		var newest = this.newest();
+		/* before the first answer arrives there is nothing to measure against but the page itself */
+		var since = (newest === null) ? this.started : newest.getTime();
+		var stale = Date.now() - since;
+		if (stale < this.staleAfter) {
+			return;
+		}
+		console.warn('No data for ' + Math.round(stale / 60000) + ' minutes while online; reloading the board.');
+		window.location.reload();
+	}
+}
+
 /* Get a URL parameter */
 function getURLParameter(variable) {
       var query = window.location.search.substring(1);
@@ -141,6 +189,10 @@ loadConfig(location).then(response => {
 
 	/* Set up online/offline status monitor */
 	var online_status = new OnlineStatus();
+
+	/* Nobody is going to press a key on this screen, so the board watches itself. It hangs off the
+	   document like the modules do, so a check can be triggered by hand over a remote console. */
+	document.watchdog = new Watchdog();
 
 	/* Set up ADS-B module(s) */
 	var airplanes = new OpenSkyNetwork(document.config.airplanes);
