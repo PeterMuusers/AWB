@@ -20,7 +20,7 @@ require __DIR__ . '/env.php';
 $API_URL = 'https://api.anthropic.com/v1/messages';
 $API_VERSION = '2023-06-01';
 $FALLBACK_BETA = 'server-side-fallback-2026-07-01';
-$DEFAULT_MODEL = 'claude-opus-5';
+$DEFAULT_MODEL = 'claude-haiku-4-5';
 $MAX_TOKENS = 1500;
 $CACHE_TTL = 24 * 60 * 60;		// the cache key is the bulletin itself, so this only sweeps up old ones
 $CACHE_DIR = sys_get_temp_dir();

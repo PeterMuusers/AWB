@@ -54,7 +54,7 @@
 	],
 	"llfc": {
 		"mode": "raw",
-		"model": "claude-opus-5"
+		"model": "claude-haiku-4-5"
 	},
 	"luchtvaartmeteo": {
 		"station": "hoogeveen",
