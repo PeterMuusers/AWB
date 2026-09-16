@@ -191,8 +191,9 @@ class Module {
 		var gusts = this.measured('gust_kt');
 		var peak = Math.max(10, ...winds.map(point => point.value), ...gusts.map(point => point.value), ...ahead.map(hour => hour.ground.gust || 0));
 		var windY = knots => windBottom - (knots / peak) * (windBottom - windTop);
+		var visibleOnly = points => points.filter(point => point.time.getTime() >= start && point.time.getTime() <= end);
 		var drawLine = (points, colour, dashed) => {
-			var visible = points.filter(point => point.time.getTime() >= start && point.time.getTime() <= end);
+			var visible = visibleOnly(points);
 			if (visible.length < 2) {
 				return;
 			}
@@ -211,10 +212,59 @@ class Module {
 			context.stroke();
 			context.setLineDash([]);
 		};
+
+		/* A dot on a value, with the number next to it: above the line for gusts, below it for wind */
+		var drawMarker = (point, colour, label, above) => {
+			if (!point) {
+				return;
+			}
+			var left = x(point.time.getTime());
+			var top = windY(point.value);
+			context.fillStyle = colour;
+			context.beginPath();
+			context.arc(left, top, 2.5, 0, 2 * Math.PI);
+			context.fill();
+			if (label) {
+				context.textAlign = 'center';
+				context.fillText(label, left, top + (above ? -8 : 9));
+			}
+		};
+
+		var lastOf = points => {
+			var visible = visibleOnly(points);
+			return visible.length > 0 ? visible[visible.length - 1] : null;
+		};
+		/* The expected line starts where the measured one stops, so the two do not run over each
+		   other: the model also has an hour that began before now. */
+		var nowWind = lastOf(winds);
+		var nowGust = lastOf(gusts);
+		var future = ahead.filter(hour => hour.time.getTime() >= (nowWind ? nowWind.time.getTime() : now));
+		var aheadWind = future.map(hour => ({ time: hour.time, value: hour.ground.kt }));
+		var aheadGust = future.map(hour => ({ time: hour.time, value: hour.ground.gust }));
+		if (nowWind) {
+			aheadWind.unshift(nowWind);
+		}
+		if (nowGust) {
+			aheadGust.unshift(nowGust);
+		}
+
 		drawLine(winds, windColour, false);
 		drawLine(gusts, gustColour, false);
-		drawLine(ahead.map(hour => ({ time: hour.time, value: hour.ground.kt })), windColour, true);
-		drawLine(ahead.map(hour => ({ time: hour.time, value: hour.ground.gust })), gustColour, true);
+		drawLine(aheadWind, windColour, true);
+		drawLine(aheadGust, gustColour, true);
+
+		/* Dots on every expected hour, so it is clear those are hourly steps */
+		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => drawMarker(point, windColour, null, false));
+		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => drawMarker(point, gustColour, null, true));
+
+		/* Numbers only where they matter: what it is now and where it ends up */
+		drawMarker(nowWind, windColour, nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null, false);
+		drawMarker(nowGust, gustColour, nowGust ? 'G' + Math.round(nowGust.value) : null, true);
+		var lastWind = lastOf(aheadWind);
+		var lastGust = lastOf(aheadGust);
+		drawMarker(lastWind, windColour, lastWind ? Math.round(lastWind.value) + ' ' + UNIT_KNOTS : null, false);
+		drawMarker(lastGust, gustColour, lastGust ? 'G' + Math.round(lastGust.value) : null, true);
+
 		context.fillStyle = muted;
 		context.textAlign = 'right';
 		context.fillText(Math.round(peak) + ' ' + UNIT_KNOTS, AXIS_WIDTH - 5, windTop + 4);
