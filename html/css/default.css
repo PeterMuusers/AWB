@@ -482,6 +482,19 @@ header,
 	font-weight: 400;
 	color: var(--textcolor-2, var(--textcolor));
 }
+.metrics-value .wind-arrow {
+	margin-left: 6px;
+}
+/* a freezing level low enough to meet on the way up */
+.metrics-cell-cold .metrics-label,
+.metrics-cell-cold .metrics-value,
+.metrics-cell-cold .metrics-unit {
+	color: var(--cold-color, var(--wind-color, var(--textcolor)));
+}
+.metrics-cold-icon {
+	margin-right: 5px;
+	vertical-align: -0.1em;
+}
 .metrics-gust {
 	color: var(--gust-color, var(--jumplimit-color));
 }

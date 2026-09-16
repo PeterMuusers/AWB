@@ -24,6 +24,7 @@
 	--wind-color: #3987e5;
 	--gust-color: #f0784a;
 	--rain-color: #199e70;
+	--cold-color: #7fc9ff;
 	--cloud-color: #8fb0cc;
 
 	/* Weather alerts: the backgrounds stay bright, so their text stays dark */

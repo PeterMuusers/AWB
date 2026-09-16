@@ -34,6 +34,7 @@ const CLOUD_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 30
 const CLOUD_MIN_PERCENT = 12.5;			// one eighth
 const FEET_PER_METER = 3.28084;
 const MAX_LAYERS = 3;
+const FREEZING_COLD_BELOW = 12000;		// feet; at or under this the freezing level is marked as cold
 const SIGNIFICANT_SHIFT = 30;			// degrees; a turn of this much gets a colour of its own
 
 class Module {
@@ -337,9 +338,17 @@ class Module {
 		rows += '</tr>';
 		document.getElementById(ID_TABLE_BODY).innerHTML = rows;
 
-		/* The freezing level also goes in the metrics panel */
-		if (freezing !== null && document.getElementById(ID_FREEZING_ALTITUDE)) {
-			document.getElementById(ID_FREEZING_ALTITUDE).innerHTML = freezing.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>';
+		/* The freezing level also goes in the metrics panel. Sitting at or below twelve thousand feet
+		   it is low enough to matter on the way up, so it is marked as cold there. */
+		var element = document.getElementById(ID_FREEZING_ALTITUDE);
+		if (freezing !== null && element) {
+			var cold = freezing <= FREEZING_COLD_BELOW;
+			element.innerHTML = (cold ? '<span class="iconify metrics-cold-icon" data-icon="mdi-snowflake"></span>' : '')
+				+ freezing.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>';
+			var cell = element.closest('.metrics-cell');
+			if (cell) {
+				cell.classList.toggle('metrics-cell-cold', cold);
+			}
 		}
 
 		/* the unit stays on the title line, the explanation goes on its own line below it */
