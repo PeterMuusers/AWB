@@ -1,5 +1,6 @@
 {
 	"location": {
+		"name": "Hoogeveen",
 		"lattitude": 52.73238107767711,
 		"longitude": 6.521150287956746
 	},
@@ -43,8 +44,32 @@
 		"Thermiek",
 		"Vooruitzichten"
 	],
+	"luchtvaartmeteo": {
+		"station": "hoogeveen"
+	},
 	"openweathermap": {
 		"appid": "00000000000000000000000000000000"
+	},
+	"radar": {
+		"bounds": [[50.72, 3.25], [53.58, 7.25]],
+		"hoursBack": 2,
+		"hoursAhead": 2,
+		"satellite": {
+			"enabled": true,
+			"layer": "clouds",
+			"blend": true,
+			"opacity": 1,
+			"advect": true,
+			"altitude": 5000
+		},
+		"frameInterval": 250,
+		"pauseAtNow": 1000,
+		"pauseAtEnd": 2000,
+		"forecast": {
+			"source": "jumprun",
+			"station": "hoogeveen",
+			"fallback": "wms"
+		}
 	},
 	"sat24": {
 		"image_size": "3",
