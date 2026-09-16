@@ -77,7 +77,6 @@ footer {
 }
 header,
 .weather,
-.compass,
 .upper-winds,
 .metar,
 .llfc,
@@ -120,31 +119,6 @@ header,
 }
 .header-name {
 	font-weight: bold;
-}
-.compass {
-	position: relative;
-	width: 132px;
-	height: 132px;
-	opacity: 0.85;
-}
-.compass-rose,
-.compass-arrow {
-	/* The graphics are drawn in white for a dark board. A light theme sets --compass-filter to
-	   invert them, so they stay visible on a light card. */
-	filter: var(--compass-filter, none);
-}
-.compass-rose {
-	position: absolute;
-	left: 0;
-	height: 132px;
-	width: 132px;
-}
-.compass-arrow {
-	height: 132px;
-	width: 132px;
-	position: absolute;
-	left: 0;
-	transition: transform 1s;
 }
 .metrics-content,
 .upper-winds-content,

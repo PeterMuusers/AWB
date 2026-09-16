@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET, UNIT_HECTOPASCAL, UNIT_KILOMETERS, UNIT_KNOTS, UNIT_METERS_PER_SECOND } from '../const.js';
-import { createSystemMessage, setCompass, sunElevation, sunTimes } from '../functions.js';
+import { createSystemMessage, sunElevation, sunTimes } from '../functions.js';
 import {
 	LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_WIND, LANGUAGE_WIND_DIRECTION, LANGUAGE_VISIBILITY,
 	LANGUAGE_PRECIPITATION, LANGUAGE_TEMPERATURE, LANGUAGE_DEWPOINT, LANGUAGE_FREEZING_ALTITUDE, LANGUAGE_PRESSURE,
@@ -35,7 +35,6 @@ const ID_SUMMARY = 'metrics-data';
 const ID_NOTE = 'metrics-note';
 const ID_CLOUDBASE = 'cloudbase-data';
 const ID_CLOUDBASE_LAYERS = 'cloudbase-layers';
-const ID_COMPASS_ARROW = 'compass-arrow-id';
 
 /* Each cell of the grid: label, value, unit and an optional second line */
 const CELLS = [
@@ -264,7 +263,6 @@ class Module {
 		this.set('wind-direction-arrow', direction === null ? ''
 			: '<span class="wind-arrow" style="transform: rotate(' + ((Math.round(direction) + 180) % 360) + 'deg)">'
 				+ '<span class="iconify" data-icon="mdi-arrow-up"></span></span>');
-		setCompass(ID_COMPASS_ARROW, direction === null ? 0 : direction);
 
 		/* Jump limit warning, when configured */
 		var limitElement = document.getElementById('wind-jumplimit');

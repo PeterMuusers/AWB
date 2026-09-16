@@ -6,6 +6,8 @@ const LANGUAGE_LAST_UPDATED = 'Laatste update:';
 const LANGUAGE_SOURCE = 'Bron:';
 const LANGUAGE_NOW = 'Nu';
 const LANGUAGE_CLOUD_BASE = 'Wolkenbasis';
+const LANGUAGE_MEASURED_LABEL = 'gemeten';
+const LANGUAGE_EXPECTED_LABEL = 'verwacht';
 const LANGUAGE_GROUND = 'Grond';
 const LANGUAGE_FREEZING_LEVEL_AT = '0 \u00b0C op';
 const LANGUAGE_MEASURED = 'grond gemeten, hoogtes uit het model';
@@ -45,6 +47,8 @@ export {
         LANGUAGE_RADAR_FORECAST,
         LANGUAGE_NOW,
         LANGUAGE_CLOUD_BASE,
+        LANGUAGE_MEASURED_LABEL,
+        LANGUAGE_EXPECTED_LABEL,
         LANGUAGE_GROUND,
         LANGUAGE_FREEZING_LEVEL_AT,
         LANGUAGE_MEASURED,

@@ -24,7 +24,6 @@ const ID_IMG_LAYER_RAIN = 'img-layer-rain-id';
 const ID_IFRAME_RAIN = 'img-layer-rain-id';
 const ID_UPPERWINDS_TABLE = 'uppper-winds-content-data';
 const ID_WEATHER_ALERT = 'weather-alert';
-const ID_COMPASS = 'compass';
 const ID_METAR = 'metar';
 
 var ip;
@@ -120,12 +119,6 @@ document.config = {};
 loadConfig(location).then(response => {
     /* Check if a custom location is given */
     
-    /* Enable/disable compass rose */
-	if (document.config.compass === true) {
-		document.getElementById(ID_COMPASS).style.display = 'block';
-	} else {
-		document.getElementById(ID_COMPASS).style.display = 'none';
-	}
 
 	/* Enable/disable METAR & TAF */
 	if (document.config.metar) {

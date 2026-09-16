@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_NOW, LANGUAGE_CLOUD_BASE, LANGUAGE_WIND } from '../language.js';
+import { LANGUAGE_NOW, LANGUAGE_CLOUD_BASE, LANGUAGE_WIND, LANGUAGE_MEASURED_LABEL, LANGUAGE_EXPECTED_LABEL } from '../language.js';
 
 /*
  * Cloud layers and wind over time: the past hours as measured at the station (ceilometer and
@@ -19,6 +19,7 @@ const ID_HEADER = 'cloudprofile-header';
 /* Gridlines of the altitude axis, evenly spaced on screen so the low altitudes get the room */
 const ALTITUDE_TICKS = [0, 1000, 2000, 3500, 5000, 9000, 12000, 20000];
 const LABEL_HEIGHT = 14;				// pixels at the bottom for the times
+const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measured | expected'
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 const AXIS_WIDTH = 34;					// pixels on the left for the altitude labels
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
@@ -132,7 +133,7 @@ class Module {
 		var end = now + this.hoursAhead * 3600 * 1000;
 		var x = time => AXIS_WIDTH + (time - start) / (end - start) * (width - AXIS_WIDTH);
 		var cloudBottom = height - LABEL_HEIGHT - WIND_HEIGHT;
-		var y = feet => cloudBottom - this.altitudeFraction(feet) * (cloudBottom - 4);
+		var y = feet => cloudBottom - this.altitudeFraction(feet) * (cloudBottom - TOP_LABEL_HEIGHT - 2);
 
 		var style = getComputedStyle(document.documentElement);
 		var muted = style.getPropertyValue('--metadata-textcolor').trim() || '#8a96a3';
@@ -159,7 +160,7 @@ class Module {
 
 		/* The part ahead gets a slightly lighter background */
 		context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', 0.06)';
-		context.fillRect(x(now), 0, width - x(now), cloudBottom);
+		context.fillRect(x(now), TOP_LABEL_HEIGHT, width - x(now), cloudBottom - TOP_LABEL_HEIGHT);
 
 		/* Expected layers: a block from base to top, the more eighths the more solid */
 		var ahead = hours.filter(hour => hour.time.getTime() >= now - 1800000 && hour.time.getTime() <= end);
@@ -297,19 +298,29 @@ class Module {
 		hour.setMinutes(0, 0, 0);
 		hour.setHours(hour.getHours() + 1);
 		while (hour.getTime() <= end) {
-			context.fillStyle = muted;
-			context.fillText(hour.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' }), x(hour.getTime()), height - LABEL_HEIGHT / 2);
+			/* skip an hour that would collide with the label for now */
+			if (Math.abs(x(hour.getTime()) - x(now)) > 20) {
+				context.fillStyle = muted;
+				context.fillText(hour.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' }), x(hour.getTime()), height - LABEL_HEIGHT / 2);
+			}
 			hour.setHours(hour.getHours() + 1);
 		}
 		context.strokeStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
 		context.lineWidth = 1.5;
 		context.beginPath();
-		context.moveTo(x(now), 0);
+		context.moveTo(x(now), TOP_LABEL_HEIGHT);
 		context.lineTo(x(now), windBottom);
 		context.stroke();
 		context.fillStyle = context.strokeStyle;
 		context.textAlign = 'center';
 		context.fillText(LANGUAGE_NOW, x(now), height - LABEL_HEIGHT / 2);
+
+		/* what the line divides, said once in the strip above the chart itself */
+		context.fillStyle = muted;
+		context.textAlign = 'right';
+		context.fillText(LANGUAGE_MEASURED_LABEL.toUpperCase(), x(now) - 6, TOP_LABEL_HEIGHT / 2 - 1);
+		context.textAlign = 'left';
+		context.fillText(LANGUAGE_EXPECTED_LABEL.toUpperCase(), x(now) + 6, TOP_LABEL_HEIGHT / 2 - 1);
 
 		this.drawn = true;
 	}

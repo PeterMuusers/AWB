@@ -34,8 +34,6 @@
 	--alert2-background-color: #f16e2a;
 	--alert3-background-color: #d3361a;
 
-	/* The compass graphics are already white, so they are not inverted here */
-
 	/* Type: Barlow for text, Barlow Condensed for labels and numbers */
 	--font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
 	--font-condensed: 'Barlow Condensed', system-ui, -apple-system, sans-serif;

@@ -11,8 +11,6 @@
 	--surface-2: #f3f6f9;
 	--systemmessage-background-color: #111a24;
 	--systemmessage-textcolor: #ffffff;
-	/* the compass graphics are white, invert them on a light card */
-	--compass-filter: invert(1) hue-rotate(180deg);
 
 	/* Text */
 	--textcolor: #111a24;
