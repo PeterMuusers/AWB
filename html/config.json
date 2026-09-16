@@ -45,7 +45,12 @@
 		"Vooruitzichten"
 	],
 	"luchtvaartmeteo": {
-		"station": "hoogeveen"
+		"station": "hoogeveen",
+		"stationName": "Hoogeveen",
+		"note": "Ceilometer en wind gemeten op Hoogeveen, 4 km van de dropzone",
+		"windUnit": "ms",
+		"jumpLimit": 11,
+		"jumpLimitText": "Alleen ervaren springers"
 	},
 	"openweathermap": {
 		"appid": "00000000000000000000000000000000"
@@ -85,9 +90,6 @@
 		"tempunit": "celcius",
 		"windunit": "kmh",
 		"period": "periodCurrentHighRes"
-	},
-	"weerlive": {
-		"key": "0000000000"
 	},
 	"windsaloft": {
 		"hourOffset": "0",

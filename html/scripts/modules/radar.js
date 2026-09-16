@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL } from '../const.js';
-import { createSystemMessage } from '../functions.js';
+import { createSystemMessage, sunElevation } from '../functions.js';
 import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_RADAR, LANGUAGE_RADAR_FORECAST } from '../language.js';
 
 /*
@@ -155,21 +155,6 @@ function timeDimensionEnd(xml, layer) {
 
 function isoMinutes(date) {
 	return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
-
-/* Elevation of the sun in degrees (standard low-precision solar position, good to ~0.1 degree) */
-function sunElevation(date, latitude, longitude) {
-	var rad = Math.PI / 180;
-	var days = (date.getTime() / 86400000) - 10957.5;	// days since 1 January 2000, 12:00 UTC
-	var meanLongitude = 280.460 + 0.9856474 * days;
-	var meanAnomaly = (357.528 + 0.9856003 * days) * rad;
-	var eclipticLongitude = (meanLongitude + 1.915 * Math.sin(meanAnomaly) + 0.020 * Math.sin(2 * meanAnomaly)) * rad;
-	var obliquity = (23.439 - 0.0000004 * days) * rad;
-	var declination = Math.asin(Math.sin(obliquity) * Math.sin(eclipticLongitude));
-	var rightAscension = Math.atan2(Math.cos(obliquity) * Math.sin(eclipticLongitude), Math.cos(eclipticLongitude)) / rad;
-	var siderealTime = 18.697374558 + 24.06570982441908 * days;
-	var hourAngle = (((siderealTime % 24) * 15 + longitude - rightAscension + 180) % 360 - 180) * rad;
-	return Math.asin(Math.sin(latitude * rad) * Math.sin(declination) + Math.cos(latitude * rad) * Math.cos(declination) * Math.cos(hourAngle)) / rad;
 }
 
 /* jumprun run id 'YYYYMMDDHHMM' to Date */
