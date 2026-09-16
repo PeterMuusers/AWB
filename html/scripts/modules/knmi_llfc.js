@@ -463,13 +463,23 @@ class Module {
 		return (parseFloat(style.marginBottom) || 0) + (parseFloat(style.paddingBottom) || 0);
 	}
 
+	/* The subjects of the bulletin to show, in the order of the config. The key used to be called
+	   knmi_gafor while this module has always read knmi_llfc, which left the card empty and threw
+	   on every update. The old name is still accepted, because a config file that is already on a
+	   board is not replaced by pulling a new version of the code. */
+	subjects() {
+		var configured = document.config.knmi_llfc || document.config.knmi_gafor;
+		return Array.isArray(configured) ? configured : [];
+	}
+
 	/* The bulletin as the KNMI writes it, item by item */
 	showBulletin() {
 		var content = '';
-		for (var i = 0; i < document.config.knmi_llfc.length; i++) {
-			var item = this.llfc_items[document.config.knmi_llfc[i].toUpperCase()];
+		var subjects = this.subjects();
+		for (var i = 0; i < subjects.length; i++) {
+			var item = this.llfc_items[subjects[i].toUpperCase()];
 			if (item !== null && item !== undefined) {
-				content += '<div class=llfc-item><span class="llfc-item-header">' + document.config.knmi_llfc[i] + '</span><span class="llfc-item-text">' + item + '</span></div>';
+				content += '<div class=llfc-item><span class="llfc-item-header">' + subjects[i] + '</span><span class="llfc-item-text">' + item + '</span></div>';
 			}
 		}
 		document.getElementById(ID_LLFC_CONTENT).innerHTML = content;

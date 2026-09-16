@@ -44,7 +44,7 @@
 	"alerts": {
 		"enabled": false
 	},
-	"knmi_gafor": [
+	"knmi_llfc": [
 		"Geldig",
 		"Situatie",
 		"Significant weer",
