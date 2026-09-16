@@ -1,7 +1,6 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { setTrend } from '../functions.js';
 import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED } from '../language.js';
 
 /*
@@ -28,7 +27,6 @@ const ID_VALID_FROM = 'winds-valid-from';
 const ID_TABLE_HEAD = 'upper-winds-content-head';
 const ID_TABLE_BODY = 'uppper-winds-content-data';
 const ID_FREEZING_ALTITUDE = 'freezing-altitude-data';
-const ID_FREEZING_TREND = 'freezing-altitude-trend';
 
 /* Pressure levels with wind, and the levels used for the cloud layers */
 const WIND_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500];
@@ -47,7 +45,6 @@ class Module {
 		this.refreshInterval = 15 * 60 * 1000; // Refresh interval is 15 minutes
 
 		this.last_updated = null;
-		this.freezing = null;	// kept so the arrow can show whether it is rising or falling
 		this.hours = [];		// [{time, levels: {ft: {kt, dir}}, freezing, layers}]
 
 		/* Set language specific stuff */
@@ -340,11 +337,9 @@ class Module {
 		rows += '</tr>';
 		document.getElementById(ID_TABLE_BODY).innerHTML = rows;
 
-		/* The freezing level also goes in the metrics panel, with an arrow for its direction */
+		/* The freezing level also goes in the metrics panel */
 		if (freezing !== null && document.getElementById(ID_FREEZING_ALTITUDE)) {
 			document.getElementById(ID_FREEZING_ALTITUDE).innerHTML = freezing.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>';
-			setTrend(ID_FREEZING_TREND, freezing, this.freezing);
-			this.freezing = freezing;
 		}
 
 		/* the unit stays on the title line, the explanation goes on its own line below it */

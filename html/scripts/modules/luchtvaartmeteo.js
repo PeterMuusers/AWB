@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET, UNIT_HECTOPASCAL, UNIT_KILOMETERS, UNIT_KNOTS, UNIT_METERS_PER_SECOND } from '../const.js';
-import { createSystemMessage, setCompass, setTrend, sunElevation, sunTimes } from '../functions.js';
+import { createSystemMessage, setCompass, sunElevation, sunTimes } from '../functions.js';
 import {
 	LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_WIND, LANGUAGE_WIND_DIRECTION, LANGUAGE_VISIBILITY,
 	LANGUAGE_PRECIPITATION, LANGUAGE_TEMPERATURE, LANGUAGE_DEWPOINT, LANGUAGE_FREEZING_ALTITUDE, LANGUAGE_PRESSURE,
@@ -161,13 +161,12 @@ class Module {
 				document.getElementById(ID_METRICS_LAST_UPDATED_WARNING).style.display = 'block';
 				return;
 			}
-			var previous = this.observation;
 			this.last_updated = new Date();
 			this.observed_at = data.time ? new Date(data.time) : null;
 			this.observation = data.observation;
 			this.series = data.series || null;
 			this.units = data.units;
-			this.showData(previous);
+			this.showData();
 		}).catch(error => {
 			document.getElementById(ID_METRICS_LAST_UPDATED_SPINNER).style.display = 'none';
 			document.getElementById(ID_METRICS_LAST_UPDATED_WARNING).style.display = 'block';
@@ -226,13 +225,7 @@ class Module {
 		document.getElementById(id).innerHTML = (html === null || html === undefined) ? '' : html;
 	}
 
-	showData(previous) {
-		var observation = this.observation;
-		var previousValue = field => {
-			var value = previous ? previous[field] : null;
-			return (value === null || value === undefined) ? null : Number(value);
-		};
-
+	showData() {
 		/* Station and how far it is from the dropzone */
 		this.set(ID_LOCATION, document.config.luchtvaartmeteo.stationName || this.station);
 		this.set(ID_NOTE, document.config.luchtvaartmeteo.note || LANGUAGE_MEASURED_AT + ' ' + (document.config.luchtvaartmeteo.stationName || this.station));
@@ -267,7 +260,6 @@ class Module {
 		var direction = this.value('wind_dir');
 		this.set('wind-direction-degrees', direction === null ? '' : Math.round(direction));
 		setCompass(ID_COMPASS_ARROW, direction === null ? 0 : direction);
-		setTrend('wind-trend', wind, previousValue('wind_kt'));
 
 		/* Jump limit warning, when configured */
 		var limitElement = document.getElementById('wind-jumplimit');
@@ -294,7 +286,6 @@ class Module {
 			this.set('visibility-value', Math.round(visibility / 100) * 100);
 			this.set('visibility-unit', 'm');
 		}
-		setTrend('visibility-trend', visibility, previousValue('vis_m'));
 
 		/* Precipitation */
 		var rain = this.value('rain_mmh');
@@ -303,13 +294,11 @@ class Module {
 		/* Temperature, dew point and pressure */
 		var temperature = this.value('temp_c');
 		this.set('temperature-data', temperature === null ? '' : temperature.toFixed(1));
-		setTrend('temperature-trend', temperature, previousValue('temp_c'));
 		var dewpoint = this.value('dewpoint_c');
 		this.set('dewpoint-data', dewpoint === null ? '' : dewpoint.toFixed(1));
 		var pressure = this.value('qnh_hpa');
 		this.set('pressure-value', pressure === null ? '' : pressure.toFixed(0));
 		this.set('pressure-unit', UNIT_HECTOPASCAL);
-		setTrend('pressure-trend', pressure, previousValue('qnh_hpa'));
 
 		/* Sunrise and sunset, computed for the dropzone itself */
 		var sun = sunTimes(new Date(), document.config.location.lattitude, document.config.location.longitude);
