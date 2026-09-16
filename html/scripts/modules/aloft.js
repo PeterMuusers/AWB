@@ -282,11 +282,13 @@ class Module {
 		if (!wind) {
 			return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"></td>';
 		}
-		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '">' + this.arrow(wind.dir, forecast && this.shift(wind.dir, reference) >= SIGNIFICANT_SHIFT)
+		/* every part gets its own slot, so arrows, speeds and degrees line up down the column */
+		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"><span class="windcell-row">'
+			+ this.arrow(wind.dir, forecast && this.shift(wind.dir, reference) >= SIGNIFICANT_SHIFT)
 			+ '<span class="windspeed">' + wind.kt + '</span>'
 			+ (extra || '')
 			/* for the hours ahead the arrow says enough; the degrees would only add noise */
-			+ (forecast ? '' : '<span class="winddirection">' + wind.dir + '&deg;</span>') + '</td>';
+			+ (forecast ? '' : '<span class="winddirection">' + wind.dir + '&deg;</span>') + '</span></td>';
 	}
 
 	showData() {
