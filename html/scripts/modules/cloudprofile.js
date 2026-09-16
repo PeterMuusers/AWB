@@ -206,6 +206,16 @@ class Module {
 			context.fillText('0 ' + String.fromCharCode(176) + 'C', AXIS_WIDTH + 4, y(freezing) - 6);
 		}
 
+		/* The line for now, drawn before the wind section so the lines and their numbers sit on top
+		   of it instead of disappearing behind it */
+		var windBottomEdge = height - LABEL_HEIGHT;
+		context.strokeStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
+		context.lineWidth = 1.5;
+		context.beginPath();
+		context.moveTo(x(now), TOP_LABEL_HEIGHT);
+		context.lineTo(x(now), windBottomEdge);
+		context.stroke();
+
 		/* Wind and gusts below it: measured solid, expected dashed */
 		var windTop = cloudBottom + 10;
 		var windBottom = height - LABEL_HEIGHT;
@@ -317,13 +327,7 @@ class Module {
 			}
 			hour.setHours(hour.getHours() + 1);
 		}
-		context.strokeStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
-		context.lineWidth = 1.5;
-		context.beginPath();
-		context.moveTo(x(now), TOP_LABEL_HEIGHT);
-		context.lineTo(x(now), windBottom);
-		context.stroke();
-		context.fillStyle = context.strokeStyle;
+		context.fillStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
 		context.textAlign = 'center';
 		context.fillText(LANGUAGE_NOW, x(now), height - LABEL_HEIGHT / 2);
 
