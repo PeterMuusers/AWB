@@ -13,7 +13,17 @@ body {
 	background-color: var(--background-color);
 	color: var(--textcolor);
 	font-family: var(--font-body, 'Roboto', 'Open Sans', sans-serif);
-	height: 100%;
+	/* The board hangs on one 16:9 screen that nobody scrolls, so the page is exactly as tall as
+	   the screen and never a pixel more. Everything inside divides that height between itself
+	   instead of pushing the bottom of the page out of sight. */
+	height: 100vh;
+	box-sizing: border-box;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	/* the gap around the board is padding rather than margin, so it counts inside those 100vh */
+	margin: 0;
+	padding: 8px;
 }
 header {
 	display: flex;
@@ -32,6 +42,8 @@ main {
 	display: flex;
 	flex-direction: column;
 	font-size: var(--main-fontsize);
+	flex: 1 1 auto;
+	min-height: 0;
 }
 footer {
 	font-size: var(--footer-fontsize);
@@ -61,12 +73,17 @@ footer {
 .contents {
 	display: flex;
 	width: 100%;
+	flex: 1 1 auto;
+	min-height: 0;
 }
 .text {
 	width: 50%;
 	display: flex;
 	flex-flow: row wrap;
 	height: 100%;
+	min-height: 0;
+	/* the rows keep their own height; the forecast card below them takes what is left over */
+	align-content: flex-start;
 }
 .text table {
 	width: 100%;
@@ -130,6 +147,9 @@ header,
 .llfc {
 	flex: 2 100%;
 	position: relative;
+	/* filled to the bottom of the screen by knmi_llfc.js, which also scales the text to fit it */
+	box-sizing: border-box;
+	overflow: hidden;
 }
 .llfc-content {
 	height: 100%;
@@ -138,17 +158,23 @@ header,
 	margin-left: 10px;
 	color: var(--metadata-textcolor);
 }
-/* one tile per subject of the bulletin, filling the width of the card evenly */
+/* One tile per subject of the bulletin. Columns rather than a grid, because the subjects are of
+   very different lengths: in a grid every tile on a row is as tall as the longest one on it, so a
+   wordy cloud forecast leaves three holes beside it and pushes the rest off the screen. Flowing
+   them into columns lets a short tile sit directly under a long one. The board scales the text down
+   from here when even that does not fit, through --llfc-scale. */
 .llfc-content {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-	gap: 8px;
-	align-content: start;
+	columns: 260px;
+	column-gap: 8px;
+	font-size: calc(var(--text-contents-fontsize) * var(--llfc-scale, 1));
 }
 .llfc-item {
 	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
 	border-radius: 8px;
 	padding: 8px 10px;
+	margin-bottom: 8px;
+	/* a subject is never torn across two columns */
+	break-inside: avoid;
 }
 .llfc-item-text {
 	/* a shade smaller and quieter than the subject above it, which carries the full colour */
@@ -159,7 +185,7 @@ header,
 	display: block;
 	margin-bottom: 2px;
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--text-header-fontsize);
+	font-size: calc(var(--text-header-fontsize) * var(--llfc-scale, 1));
 	font-weight: 600;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
@@ -347,7 +373,8 @@ header,
 }
 .images {
 	width: 50%;
-	min-height: 50vw; /* TODO calculate height by doing 100vw/100% - header - footer */
+	/* as tall as the row it sits in, which is as tall as the screen: it used to be half the width
+	   of the screen, which on a 16:9 panel is taller than the screen itself */
 	margin: 4px;
 	border-radius: 10px;
 	border-color: var(--block-border-color);

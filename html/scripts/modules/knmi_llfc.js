@@ -6,6 +6,11 @@ import { localiseTimes } from '../functions.js';
 import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL } from '../language.js';
 
 const SOURCE = 'KNMI';
+/* How far the forecast text may be scaled down to keep the board inside the screen, and in what
+   steps. Below this the text stops being readable from across the hangar, and a bulletin that long
+   is better left slightly clipped than shrunk into nothing. */
+const FIT_MIN_SCALE = 0.72;
+const FIT_STEP = 0.04;
 const REWRITE_URL = './llfc-rewrite.php';
 
 const ID_LLFC_SOURCE_LABEL = 'llfc-source-label';
@@ -356,6 +361,13 @@ class Module {
 			this.refreshInterval
 		);
 
+		/* A different screen means a different amount of room for the same text. The web fonts
+		   arrive after the first paint as well, and they change how much space the text takes. */
+		window.addEventListener('resize', this.fit.bind(this));
+		if (document.fonts && document.fonts.ready) {
+			document.fonts.ready.then(this.fit.bind(this));
+		}
+
 		/* Initial fill of document content */
 		this.updateData();
 	}
@@ -380,6 +392,56 @@ class Module {
 		return { from: moment(match[1], match[2], match[3]), until: moment(match[4], match[5], match[6]) };
 	}
 
+	/* The board hangs on a 16:9 screen that nobody scrolls, so the forecast has to end above the
+	   bottom edge. The tiles already flow into columns, which is enough for almost every bulletin;
+	   on a long one the text of this card is scaled down a step at a time until the page is no
+	   taller than the screen. Only this card scales: the measurements and the wind profile are
+	   numbers you read at a glance and they keep their size. */
+	fit() {
+		var content = document.getElementById(ID_LLFC_CONTENT);
+		var card = content ? content.closest('.llfc') : null;
+		if (!card) {
+			return;
+		}
+		/* measure against the natural height of the tiles, so let the card find its own size first */
+		card.style.height = '';
+		content.style.removeProperty('--llfc-scale');
+
+		var available = this.room(content, card);
+		var scale = 1;
+		while (content.getBoundingClientRect().height > available && scale > FIT_MIN_SCALE) {
+			scale -= FIT_STEP;
+			content.style.setProperty('--llfc-scale', scale.toFixed(2));
+		}
+		if (content.getBoundingClientRect().height > available) {
+			console.warn('Forecast does not fit at ' + Math.round(scale * 100) + '% and is cut off at the bottom.');
+		}
+
+		/* and then down to the bottom edge of the screen, so the card fills its half */
+		var style = window.getComputedStyle(card);
+		var height = window.innerHeight - card.getBoundingClientRect().top
+			- parseFloat(style.marginBottom) - this.pageMargin();
+		card.style.height = Math.max(height, 0) + 'px';
+	}
+
+	/* The height the tiles may take: from where they start down to the bottom edge of the screen,
+	   less the room the card needs underneath them for its border and its source line. */
+	room(content, card) {
+		var style = window.getComputedStyle(card);
+		var source = card.querySelector('.metadata-source');
+		/* the source line is pinned to the bottom of the card and may need more than the padding */
+		var footer = source ? (source.getBoundingClientRect().height + 5) : 0;
+		var below = Math.max(parseFloat(style.paddingBottom), footer)
+			+ parseFloat(style.borderBottomWidth) + parseFloat(style.marginBottom);
+		return window.innerHeight - content.getBoundingClientRect().top - below - this.pageMargin();
+	}
+
+	/* What the page keeps free below the cards */
+	pageMargin() {
+		var style = window.getComputedStyle(document.body);
+		return (parseFloat(style.marginBottom) || 0) + (parseFloat(style.paddingBottom) || 0);
+	}
+
 	/* The bulletin as the KNMI writes it, item by item */
 	showBulletin() {
 		var content = '';
@@ -391,6 +453,7 @@ class Module {
 		}
 		document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
 		document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE;
+		this.fit();
 	}
 
 	/* The same bulletin in plain language, rewritten server-side. The bulletin itself stays on
@@ -422,6 +485,7 @@ class Module {
 			if (content !== '') {
 				document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
 				document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE + ' ' + LANGUAGE_REWRITTEN;
+				this.fit();
 			}
 		}).catch(error => {
 			/* the bulletin itself is already on screen, so there is nothing to put right */
