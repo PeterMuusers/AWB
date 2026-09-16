@@ -23,7 +23,7 @@
 	--wind-color: #2a78d6;
 	--gust-color: #eb6834;
 	--rain-color: #1baf7a;
-	--cold-color: #eb6834;		/* orange: a freezing level under twelve thousand feet is a warning, not a fact */
+	--cold-color: #1c6fc4;		/* the colour the board marks a freezing level with when it is low enough to meet on the way up */
 	--cloud-color: #4c6d8c;
 
 	/* Weather alerts */
