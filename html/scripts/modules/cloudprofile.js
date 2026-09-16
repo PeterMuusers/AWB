@@ -23,6 +23,7 @@ const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measu
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 const AXIS_WIDTH = 34;					// pixels on the left for the altitude labels
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
+const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to be drawn
 const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
 
 class Module {
@@ -279,11 +280,14 @@ class Module {
 		drawMarker(firstGust, gustColour, firstGust ? 'G' + Math.round(firstGust.value) : null, true, 'left');
 		drawMarker(nowWind, windColour, nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null, false);
 		drawMarker(nowGust, gustColour, nowGust ? 'G' + Math.round(nowGust.value) : null, true);
+		/* The first expected hour can be only minutes after now, and then its number would sit on
+		   top of the measured one: draw the dot, leave the number off. */
+		var roomForLabel = point => Math.abs(x(point.time.getTime()) - x(now)) > LABEL_CLEARANCE;
 		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => {
-			drawMarker(point, windColour, Math.round(point.value) + ' ' + UNIT_KNOTS, false);
+			drawMarker(point, windColour, roomForLabel(point) ? Math.round(point.value) + ' ' + UNIT_KNOTS : null, false);
 		});
 		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => {
-			drawMarker(point, gustColour, 'G' + Math.round(point.value), true);
+			drawMarker(point, gustColour, roomForLabel(point) ? 'G' + Math.round(point.value) : null, true);
 		});
 
 		context.fillStyle = muted;
