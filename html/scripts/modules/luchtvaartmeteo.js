@@ -259,6 +259,11 @@ class Module {
 		this.set('wind-gust', (gust !== null && wind !== null && gust > wind + 1) ? '&nbsp;G' + toUnit(gust) : '');
 		var direction = this.value('wind_dir');
 		this.set('wind-direction-degrees', direction === null ? '' : Math.round(direction));
+		/* an arrow pointing the way the wind blows, the same one the wind profile uses. The rotation
+		   sits on an outer span: iconify replaces the inner element with an svg of its own. */
+		this.set('wind-direction-arrow', direction === null ? ''
+			: '<span class="wind-arrow" style="transform: rotate(' + ((Math.round(direction) + 180) % 360) + 'deg)">'
+				+ '<span class="iconify" data-icon="mdi-arrow-up"></span></span>');
 		setCompass(ID_COMPASS_ARROW, direction === null ? 0 : direction);
 
 		/* Jump limit warning, when configured */
