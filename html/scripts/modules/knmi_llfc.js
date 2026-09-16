@@ -2,7 +2,7 @@
 /* jshint esversion: 6 */ 
 
 import { DATE_OPTIONS_UTC, DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET } from '../const.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL } from '../language.js';
 
 const SOURCE = 'KNMI';
 const REWRITE_URL = './llfc-rewrite.php';
@@ -359,6 +359,26 @@ class Module {
 		this.updateData();
 	}
 
+	/* The period the bulletin applies to, from the GELDIG line: DDHHMM/DDHHMM in UTC. Converted
+	   here rather than by the model, because this is arithmetic and the board shows local time. */
+	validity() {
+		var item = this.llfc_items ? this.llfc_items['GELDIG'] : null;
+		var match = item ? /(\d{2})(\d{2})(\d{2})\/(\d{2})(\d{2})(\d{2})/.exec(item) : null;
+		if (match === null) {
+			return null;
+		}
+		var now = new Date();
+		var moment = (day, hour, minute) => {
+			var when = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), Number(day), Number(hour), Number(minute)));
+			/* a day number far in the past belongs to the next month */
+			if (when.getTime() - now.getTime() < -20 * 24 * 3600 * 1000) {
+				when.setUTCMonth(when.getUTCMonth() + 1);
+			}
+			return when;
+		};
+		return { from: moment(match[1], match[2], match[3]), until: moment(match[4], match[5], match[6]) };
+	}
+
 	/* The bulletin as the KNMI writes it, item by item */
 	showBulletin() {
 		var content = '';
@@ -473,7 +493,11 @@ class Module {
 					if (this.rewrite) {
 						this.showRewrite();
 					}
-					document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
+					/* issued at, and how long it applies */
+					var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' });
+					var validity = this.validity();
+					document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL)
+						+ (validity === null ? '' : '<span class="llfc-validity">' + LANGUAGE_VALID_UNTIL + ' ' + clock(validity.until) + '</span>');
 					document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 				} else {
 					document.getElementById(ID_LLFC_LAST_UPDATED_WARNING).style.display = 'block';

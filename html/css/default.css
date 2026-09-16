@@ -123,6 +123,10 @@ header,
 .metrics-content,
 .upper-winds-content,
 .metar-content,
+.llfc-validity {
+	margin-left: 10px;
+	color: var(--metadata-textcolor);
+}
 .llfc-content {
 	padding-top: 9px;
 	padding-bottom: 11px;
@@ -132,10 +136,18 @@ header,
 	flex: 2 100%;
 	position: relative;
 }
+.llfc-validity {
+	margin-left: 10px;
+	color: var(--metadata-textcolor);
+}
 .llfc-content {
 	height: 100%;
 }
 /* one tile per subject of the bulletin, filling the width of the card evenly */
+.llfc-validity {
+	margin-left: 10px;
+	color: var(--metadata-textcolor);
+}
 .llfc-content {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -148,8 +160,9 @@ header,
 	padding: 8px 10px;
 }
 .llfc-item-text {
-	/* a shade smaller than the rest of the card, so the subject stands out above it */
+	/* a shade smaller and quieter than the subject above it, which carries the full colour */
 	font-size: 0.85em;
+	color: var(--textcolor-2, var(--textcolor));
 }
 .llfc-item-header {
 	display: block;
