@@ -318,7 +318,9 @@ class Module {
 		var freezingDrawn = false;
 		this.altitudes.forEach(feet => {
 			if (freezing !== null && !freezingDrawn && feet < freezing) {
-				rows += '<tr class="freezing-row"><td colspan="' + (columns.length + 1) + '">'
+				/* marked the same way as in the metrics panel when it is low enough to climb through */
+				var cold = (freezing <= FREEZING_COLD_BELOW) ? ' freezing-row-cold' : '';
+				rows += '<tr class="freezing-row' + cold + '"><td colspan="' + (columns.length + 1) + '">'
 					+ LANGUAGE_FREEZING_LEVEL_AT + ' ' + freezing.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + '</td></tr>';
 				freezingDrawn = true;
 			}

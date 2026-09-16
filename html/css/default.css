@@ -319,6 +319,10 @@ header,
 	text-align: right;
 	padding-top: 5px;
 }
+/* the same mark as in the metrics panel: a freezing level you climb through rather than over */
+.upper-winds-content .freezing-row-cold td {
+	color: var(--cold-color, var(--wind-color, var(--textcolor)));
+}
 .metadata-source {
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
