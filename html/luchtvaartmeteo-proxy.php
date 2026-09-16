@@ -13,7 +13,7 @@
  *
  * Usage:
  *   luchtvaartmeteo-proxy.php?action=observations&station=hoogeveen
- *       -> newest value per parameter for the station (cached for 5 minutes)
+ *       -> newest value per parameter for the station (cached until the next observation is due)
  *   luchtvaartmeteo-proxy.php?action=locations
  *       -> all stations known to the API (cached for 1 day)
  *   luchtvaartmeteo-proxy.php?action=status
@@ -29,7 +29,10 @@ $CALLBACK_URL = $SITE_ORIGIN . '/auth/callback';
 $USER_AGENT = 'Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36';
 $CURL_TIMEOUT = 20;
 $TOKEN_MARGIN = 5 * 60;			// re-login this many seconds before the token expires
-$OBSERVATIONS_TTL = 5 * 60;		// cache observations per station for 5 minutes
+$OBSERVATION_PERIOD = 10 * 60;	// the station publishes a new observation every ten minutes
+$OBSERVATION_GRACE = 90;		// and it takes a moment to reach the API
+$OBSERVATIONS_MIN_TTL = 60;		// never ask the API more than once a minute
+$OBSERVATIONS_MAX_TTL = 15 * 60;	// ask again anyway when the station has fallen silent
 $LOCATIONS_TTL = 24 * 60 * 60;	// cache the station list for 1 day
 $CACHE_DIR = sys_get_temp_dir();
 
@@ -348,6 +351,35 @@ function api_get_multi_retry($credentials, $paths) {
 	return $results;
 }
 
+/* Whether the answer on disk is still the newest one that can exist. The station publishes on the
+   ten minute mark, so until the next observation is due there is nothing to fetch and the file is
+   served as it is. After that we go and look, but never more often than once a minute, so a station
+   that falls silent cannot turn the board into a stream of requests. Returns the body, or null when
+   it is time to ask the API again. */
+function read_observations_cache($file) {
+	global $OBSERVATION_PERIOD, $OBSERVATION_GRACE, $OBSERVATIONS_MIN_TTL, $OBSERVATIONS_MAX_TTL;
+	if (!is_readable($file)) {
+		return null;
+	}
+	$age = time() - filemtime($file);
+	if ($age < $OBSERVATIONS_MIN_TTL) {
+		return file_get_contents($file);
+	}
+	if ($age >= $OBSERVATIONS_MAX_TTL) {
+		return null;
+	}
+	$body = file_get_contents($file);
+	$data = json_decode($body, true);
+	if (!isset($data['time'])) {
+		return null;
+	}
+	$observed = strtotime($data['time']);
+	if ($observed === false) {
+		return null;
+	}
+	return (time() < ($observed + $OBSERVATION_PERIOD + $OBSERVATION_GRACE)) ? $body : null;
+}
+
 function read_cache($file, $ttl) {
 	if (is_readable($file) && (time() - filemtime($file)) < $ttl) {
 		return file_get_contents($file);
@@ -362,7 +394,7 @@ function write_cache($file, $data) {
 
 /* Newest value per parameter for one station */
 function action_observations($config, $credentials) {
-	global $PARAMETERS, $SCALE, $SERIES_FIELDS, $SERIES_HOURS, $CACHE_DIR, $OBSERVATIONS_TTL;
+	global $PARAMETERS, $SCALE, $SERIES_FIELDS, $SERIES_HOURS, $CACHE_DIR;
 
 	$station = isset($_GET['station']) ? $_GET['station'] : (isset($config['luchtvaartmeteo']['station']) ? $config['luchtvaartmeteo']['station'] : 'hoogeveen');
 	if (!preg_match('/^[A-Za-z0-9_-]+$/', $station)) {
@@ -371,7 +403,7 @@ function action_observations($config, $credentials) {
 	$station = strtolower($station);
 
 	$cache_file = $CACHE_DIR . '/awb-luchtvaartmeteo-observations-' . $station . '.json';
-	$cached = read_cache($cache_file, $OBSERVATIONS_TTL);
+	$cached = read_observations_cache($cache_file);
 	if ($cached !== null) {
 		header('X-Cache: HIT');
 		echo($cached);

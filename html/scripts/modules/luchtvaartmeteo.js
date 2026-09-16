@@ -88,7 +88,10 @@ class Module {
 	constructor(location) {
 		this.location = location;
 		this.station = document.config.luchtvaartmeteo.station || 'hoogeveen';
-		this.refreshInterval = 10 * 60 * 1000; // Refresh interval is 10 minutes
+		/* The station publishes every ten minutes and the proxy holds on to an answer until the next
+		   one is due, so asking often costs nothing beyond the dropzone and keeps what the board shows
+		   within a couple of minutes of what was measured. */
+		this.refreshInterval = 2 * 60 * 1000; // Refresh interval is 2 minutes
 
 		this.last_updated = null;
 		this.observed_at = null;
