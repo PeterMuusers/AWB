@@ -56,7 +56,7 @@ $PARAMETERS = array(
 /* The API refuses 'minute' for the duration parameter, so ask for seconds and scale */
 $SCALE = array('rain_min10' => 1 / 60);
 /* Fields for which the whole series is returned as well, for the chart under the radar map */
-$SERIES_FIELDS = array('rain_mmh');
+$SERIES_FIELDS = array('rain_mmh', 'wind_kt', 'gust_kt', 'base1_ft', 'base2_ft', 'base3_ft', 'okta1', 'okta2', 'okta3');
 $SERIES_HOURS = 4;
 
 set_time_limit(90);

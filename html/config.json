@@ -17,6 +17,10 @@
 		"second": "2-digit"
 	},
 	"compass": false,
+	"cloudProfile": {
+		"hoursBack": 2,
+		"hoursAhead": 2
+	},
 	"metar": [
 	],
 	"taf": [

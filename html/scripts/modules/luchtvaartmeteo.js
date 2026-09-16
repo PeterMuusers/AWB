@@ -1,11 +1,11 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET, UNIT_HECTOPASCAL, UNIT_KILOMETERS, UNIT_KNOTS, UNIT_METERS_PER_SECOND } from '../const.js';
-import { createSystemMessage, setCompass, setTrend, sunElevation, sunTimes, windDegreesToDirection } from '../functions.js';
+import { createSystemMessage, setCompass, setTrend, sunElevation, sunTimes } from '../functions.js';
 import {
 	LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_WIND, LANGUAGE_WIND_DIRECTION, LANGUAGE_VISIBILITY,
 	LANGUAGE_PRECIPITATION, LANGUAGE_TEMPERATURE, LANGUAGE_DEWPOINT, LANGUAGE_FREEZING_ALTITUDE, LANGUAGE_PRESSURE,
-	LANGUAGE_SUNRISE, LANGUAGE_SUNSET, LANGUAGE_LOWEST_LAYER, LANGUAGE_NO_CLOUDS, LANGUAGE_DRY, LANGUAGE_MEASURED_AT,
+	LANGUAGE_SUNRISE, LANGUAGE_SUNSET, LANGUAGE_AT, LANGUAGE_NO_CLOUDS, LANGUAGE_DRY, LANGUAGE_MEASURED_AT,
 	LANGUAGE_SKY,
 } from '../language.js';
 
@@ -94,6 +94,7 @@ class Module {
 		this.last_updated = null;
 		this.observed_at = null;
 		this.observation = null;
+		this.series = null;		// the past hours per field, for the chart under the panel
 		this.units = null;
 
 		this.unit = (document.config.luchtvaartmeteo.windUnit === 'kt') ? UNIT_KNOTS : UNIT_METERS_PER_SECOND;
@@ -164,6 +165,7 @@ class Module {
 			this.last_updated = new Date();
 			this.observed_at = data.time ? new Date(data.time) : null;
 			this.observation = data.observation;
+			this.series = data.series || null;
 			this.units = data.units;
 			this.showData(previous);
 		}).catch(error => {
@@ -246,8 +248,13 @@ class Module {
 			this.set(ID_CLOUDBASE, LANGUAGE_NO_CLOUDS);
 			this.set(ID_CLOUDBASE_LAYERS, '');
 		} else {
-			this.set(ID_CLOUDBASE, layers[0].base.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>');
-			this.set(ID_CLOUDBASE_LAYERS, LANGUAGE_LOWEST_LAYER + ' &middot; ' + layers.map(layer => cloudAmountCode(layer.okta) + ' ' + layer.okta + '/8').join(' &middot; '));
+			var lowest = layers[0];
+			this.set(ID_CLOUDBASE, lowest.base.toLocaleString(document.config.locale)
+				+ '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>'
+				+ '<span class="metrics-cloudbase-code">' + cloudAmountCode(lowest.okta) + ' ' + lowest.okta + '/8</span>');
+			/* the layers above it, so the headline stays about the lowest one */
+			this.set(ID_CLOUDBASE_LAYERS, layers.slice(1).map(layer => cloudAmountCode(layer.okta) + ' ' + layer.okta + '/8 '
+				+ LANGUAGE_AT + ' ' + layer.base.toLocaleString(document.config.locale) + ' ' + UNIT_FEET).join(' &middot; '));
 		}
 
 		/* Wind, in the unit from config.json */
@@ -259,7 +266,6 @@ class Module {
 		this.set('wind-gust', (gust !== null && wind !== null && gust > wind + 1) ? '&nbsp;G' + toUnit(gust) : '');
 		var direction = this.value('wind_dir');
 		this.set('wind-direction-degrees', direction === null ? '' : Math.round(direction));
-		this.set('wind-direction', direction === null ? '' : windDegreesToDirection(direction));
 		setCompass(ID_COMPASS_ARROW, direction === null ? 0 : direction);
 		setTrend('wind-trend', wind, previousValue('wind_kt'));
 

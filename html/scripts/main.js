@@ -14,6 +14,7 @@ import { Module as Sat24 } from './modules/sat24.js';
 import { Module as WeatherAndRadar } from './modules/weatherandradar.js';
 import { Module as WeerSlag } from './modules/weerslag.js';
 import { Module as Aloft } from './modules/aloft.js';
+import { Module as CloudProfile } from './modules/cloudprofile.js';
 
 const ID_DATETIME = 'datetime-data';
 const ID_LAYER_MAP = 'layer-map-id';
@@ -161,6 +162,9 @@ loadConfig(location).then(response => {
 	document.modules.luchtvaartmeteo = new LuchtvaartMeteo(location);
 	//weerslag = new WeerSlag(ID_IMG_LAYER_MAP);
 	document.modules.aloft = new Aloft();
+	if (document.config.cloudProfile) {
+		document.modules.cloudprofile = new CloudProfile('cloudprofile');
+	}
 
 	// Add event listener for key-down events
 	document.addEventListener('keydown', (e) => {

@@ -23,6 +23,8 @@ https://www.luchtvaartmeteo.nl/
 You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.example` to `.env` next to the `html` directory (`/var/www/.env` on the Raspberry Pi) and fill in `LVM_EMAIL` and `LVM_PASSWORD`; that file is ignored by git and lives outside the web root, so it is never served to the browser. The login is done server-side by `luchtvaartmeteo-proxy.php`.
 
 This module fills the metrics panel: the cloud layers of the ceilometer, wind and gusts, visibility, precipitation, temperature, dew point and QNH, all measured at a real station rather than modelled. The summary line, the weather icon and the sunrise and sunset times are derived from those same measurements and from the position of the sun, so no second weather source is needed. Settings in config.json under `luchtvaartmeteo`: `station` (the id in the API), `stationName` and `note` (shown under the panel, so it is clear where the measurements come from), `windUnit` (`ms` or `kt`), and `jumpLimit` with `jumpLimitText` for a warning when the wind or the gusts reach that limit.
+#### Cloud and wind chart
+No source of its own: it draws what the luchtvaartmeteo and Open-Meteo modules already fetched. The hours behind the line marked "now" are the cloud layers of the ceilometer and the wind measured at the station, the hours after it are what the model expects. The altitude axis is deliberately not linear, because the first few thousand feet decide whether jumping is possible. Settings in config.json under `cloudProfile`: `hoursBack` and `hoursAhead`; remove the block to leave the chart out.
 #### NOAA METAR
 https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/
 #### Open-Meteo (wind profile)

@@ -64,7 +64,7 @@ class Module {
 	apiUrl() {
 		var fields = ['freezing_level_height', 'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'];
 		WIND_LEVELS.forEach(level => {
-			fields.push('wind_speed_' + level + 'hPa', 'wind_direction_' + level + 'hPa', 'geopotential_height_' + level + 'hPa');
+			fields.push('wind_speed_' + level + 'hPa', 'wind_direction_' + level + 'hPa', 'geopotential_height_' + level + 'hPa', 'temperature_' + level + 'hPa');
 		});
 		CLOUD_LEVELS.forEach(level => {
 			fields.push('cloud_cover_' + level + 'hPa');
@@ -101,6 +101,7 @@ class Module {
 					kt: Math.round(Math.sqrt(east * east + north * north)),
 					/* the direction the wind comes from */
 					dir: Math.round((Math.atan2(-east, -north) * 180 / Math.PI + 360) % 360),
+					temp: (below.temp === null || above.temp === null) ? null : Math.round(below.temp + fraction * (above.temp - below.temp)),
 				};
 			}
 		}
@@ -186,6 +187,7 @@ class Module {
 				var height = hourly['geopotential_height_' + level + 'hPa'][index];
 				var speed = hourly['wind_speed_' + level + 'hPa'][index];
 				var direction = hourly['wind_direction_' + level + 'hPa'][index];
+				var temperature = (hourly['temperature_' + level + 'hPa'] || [])[index];
 				if (height === null || speed === null || direction === null) {
 					return;
 				}
@@ -195,6 +197,7 @@ class Module {
 					/* where the wind blows to, as a vector */
 					east: -speed * Math.sin(radians),
 					north: -speed * Math.cos(radians),
+					temp: (temperature === null || temperature === undefined) ? null : Number(temperature),
 				});
 			});
 			profile.sort((first, second) => first.feet - second.feet);
@@ -241,11 +244,11 @@ class Module {
 		return '<span class="wind-arrow iconify" data-icon="mdi-arrow-up" style="transform: rotate(' + ((direction + 180) % 360) + 'deg)"></span>';
 	}
 
-	cell(wind, extra) {
+	cell(wind, extra, forecast) {
 		if (!wind) {
-			return '<td class="windcell"></td>';
+			return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"></td>';
 		}
-		return '<td class="windcell">' + this.arrow(wind.dir)
+		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '">' + this.arrow(wind.dir)
 			+ '<span class="windspeed">' + wind.kt + '</span>'
 			+ (extra || '')
 			+ '<span class="winddirection">' + wind.dir + '&deg;</span></td>';
@@ -260,7 +263,7 @@ class Module {
 
 		/* Column headers: now and the hours after it */
 		document.getElementById(ID_TABLE_HEAD).innerHTML = '<tr><th><span class="windtext-header">' + UNIT_FEET + '</span></th>'
-			+ columns.map((hour, index) => '<th><span class="windtext-header">' + (index === 0 ? LANGUAGE_NOW : clock(hour.time)) + '</span></th>').join('')
+			+ columns.map((hour, index) => '<th' + (index === 0 ? '' : ' class="windcell-forecast"') + '><span class="windtext-header">' + (index === 0 ? LANGUAGE_NOW : clock(hour.time)) + '</span></th>').join('')
 			+ '</tr>';
 
 		/* One row per altitude, highest first, with the freezing level drawn in between */
@@ -273,8 +276,10 @@ class Module {
 					+ LANGUAGE_FREEZING_LEVEL_AT + ' ' + freezing.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + '</td></tr>';
 				freezingDrawn = true;
 			}
-			rows += '<tr><td class="windtext">' + feet.toLocaleString(document.config.locale) + '</td>'
-				+ columns.map(hour => this.cell(hour.levels[feet])).join('') + '</tr>';
+			var temperature = (columns[0].levels[feet] && columns[0].levels[feet].temp !== null)
+				? '<span class="windtemperature">' + columns[0].levels[feet].temp + '&nbsp;&deg;C</span>' : '';
+			rows += '<tr><td class="windtext">' + feet.toLocaleString(document.config.locale) + temperature + '</td>'
+				+ columns.map((hour, index) => this.cell(hour.levels[feet], '', index > 0)).join('') + '</tr>';
 		});
 
 		/* The ground row: measured now, modelled for the hours after it */
@@ -288,7 +293,7 @@ class Module {
 				return this.cell({ kt: Math.round(observation.wind_kt), dir: Math.round(observation.wind_dir) }, gust);
 			}
 			var modelled = (hour.ground.gust > hour.ground.kt + 1) ? '<span class="windgust">G' + hour.ground.gust + '</span>' : '';
-			return this.cell(hour.ground, modelled);
+			return this.cell(hour.ground, modelled, index > 0);
 		}).join('');
 		rows += '</tr>';
 		document.getElementById(ID_TABLE_BODY).innerHTML = rows;

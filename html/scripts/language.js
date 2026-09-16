@@ -5,6 +5,7 @@ const LANGUAGE_INTERNET_RESTORED = 'De internet verbinding is hersteld';
 const LANGUAGE_LAST_UPDATED = 'Laatste update:';
 const LANGUAGE_SOURCE = 'Bron:';
 const LANGUAGE_NOW = 'Nu';
+const LANGUAGE_CLOUD_BASE = 'Wolkenbasis';
 const LANGUAGE_GROUND = 'Grond';
 const LANGUAGE_FREEZING_LEVEL_AT = '0 \u00b0C op';
 const LANGUAGE_MEASURED = 'grond gemeten, hoogtes uit het model';
@@ -19,7 +20,7 @@ const LANGUAGE_FREEZING_ALTITUDE = '0 \u00b0C-niveau';
 const LANGUAGE_PRESSURE = 'QNH';
 const LANGUAGE_SUNRISE = 'Zon op';
 const LANGUAGE_SUNSET = 'Zon onder';
-const LANGUAGE_LOWEST_LAYER = 'Laagste laag';
+const LANGUAGE_AT = 'op';
 const LANGUAGE_NO_CLOUDS = 'Onbewolkt';
 const LANGUAGE_DRY = 'Droog';
 const LANGUAGE_MEASURED_AT = 'Gemeten op';
@@ -43,6 +44,7 @@ export {
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
         LANGUAGE_NOW,
+        LANGUAGE_CLOUD_BASE,
         LANGUAGE_GROUND,
         LANGUAGE_FREEZING_LEVEL_AT,
         LANGUAGE_MEASURED,
@@ -57,7 +59,7 @@ export {
         LANGUAGE_PRESSURE,
         LANGUAGE_SUNRISE,
         LANGUAGE_SUNSET,
-        LANGUAGE_LOWEST_LAYER,
+        LANGUAGE_AT,
         LANGUAGE_NO_CLOUDS,
         LANGUAGE_DRY,
         LANGUAGE_MEASURED_AT,

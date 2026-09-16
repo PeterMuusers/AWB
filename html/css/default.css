@@ -176,6 +176,7 @@ header,
 .weather,
 .upper-winds {
 	flex: 1;
+	min-width: 0;
 	position: relative;
 	padding-bottom: 10pt;
 }
@@ -231,6 +232,29 @@ header,
 	margin-left: 5px;
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
+}
+/* The hours ahead are a model estimate: quieter and narrower than the column for now */
+.upper-winds-content .windcell-forecast {
+	opacity: 0.6;
+	padding-left: 2px;
+	padding-right: 2px;
+	width: 1%;
+}
+.upper-winds-content .windcell-forecast .windspeed {
+	font-size: var(--main-fontsize-small);
+}
+.upper-winds-content .windcell-forecast .wind-arrow {
+	font-size: 0.8em;
+	margin-right: 2px;
+}
+.upper-winds-content td:nth-child(2) {
+	width: 40%;
+}
+.windtemperature {
+	display: block;
+	font-size: var(--metadata-fontsize);
+	color: var(--metadata-textcolor);
+	line-height: 1.1;
 }
 .windgust {
 	margin-left: 4px;
@@ -319,6 +343,39 @@ header,
 	bottom: 0;
 }
 
+/* Cloud and wind chart, drawn by scripts/modules/cloudprofile.js */
+.cloudprofile {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--block-background-color);
+	border-radius: 10px;
+	border: 1px solid var(--block-border-color);
+	box-shadow: var(--block-shadow, none);
+	margin: 4px;
+	padding: 12px 14px;
+}
+.cloudprofile-header {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--text-header-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--metadata-textcolor);
+	display: flex;
+	justify-content: space-between;
+}
+.cloudprofile-hours {
+	font-weight: 500;
+}
+.cloudprofile-canvas {
+	width: 100%;
+	flex: 1;
+	min-height: 180px;
+	margin-top: 6px;
+}
+
 /* Metrics panel, filled by scripts/modules/luchtvaartmeteo.js */
 .metrics-header {
 	display: flex;
@@ -342,6 +399,14 @@ header,
 	font-size: calc(var(--value-fontsize, var(--text-contents-fontsize)) * 2.1);
 	line-height: 1;
 	font-variant-numeric: tabular-nums;
+}
+.metrics-cloudbase-code {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--value-fontsize, var(--text-contents-fontsize));
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	margin-left: 10px;
+	color: var(--textcolor-2, var(--textcolor));
 }
 .metrics-cloudbase-layers {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
