@@ -310,17 +310,18 @@ class Module {
 		return (spec.grayscale === false ? '' : 'grayscale(1) ') + 'brightness(' + brightness.toFixed(2) + ') contrast(' + spec.contrast + ')';
 	}
 
-	/* Wind at cloud level as {east, north} in m/s, from the upper winds module; null when unknown */
-	windAtCloudLevel() {
-		var winds = (document.modules || {}).windsaloft;
-		if (!winds || !winds.wind_speed || !winds.wind_direction) {
+	/* Wind at cloud level as {east, north} in m/s, from the wind profile module; null when unknown.
+	   Takes the forecast hour closest to the moment being drawn, and within it the altitude closest
+	   to the level the clouds are assumed to drift at. */
+	windAtCloudLevel(time) {
+		var aloft = (document.modules || {}).aloft;
+		if (!aloft || !aloft.hours || aloft.hours.length === 0) {
 			return null;
 		}
+		var hour = aloft.hours.reduce((closest, candidate) =>
+			Math.abs(candidate.time.getTime() - time.getTime()) < Math.abs(closest.time.getTime() - time.getTime()) ? candidate : closest);
 		var best = null;
-		Object.keys(winds.wind_speed).forEach(altitude => {
-			if (winds.wind_speed[altitude] === undefined || winds.wind_direction[altitude] === undefined) {
-				return;
-			}
+		Object.keys(hour.levels).forEach(altitude => {
 			if (best === null || Math.abs(Number(altitude) - this.satelliteAltitude) < Math.abs(best - this.satelliteAltitude)) {
 				best = Number(altitude);
 			}
@@ -328,8 +329,8 @@ class Module {
 		if (best === null) {
 			return null;
 		}
-		var speed = Number(winds.wind_speed[best]) * KNOTS_TO_MS;
-		var radians = Number(winds.wind_direction[best]) * Math.PI / 180;
+		var speed = Number(hour.levels[best].kt) * KNOTS_TO_MS;
+		var radians = Number(hour.levels[best].dir) * Math.PI / 180;
 		if (isNaN(speed) || isNaN(radians)) {
 			return null;
 		}
@@ -341,7 +342,7 @@ class Module {
 	cloudBounds(frameTime, imageTime) {
 		var bounds = this.satBounds;
 		var seconds = (frameTime.getTime() - imageTime.getTime()) / 1000;
-		var wind = this.satelliteAdvect ? this.windAtCloudLevel() : null;
+		var wind = this.satelliteAdvect ? this.windAtCloudLevel(frameTime) : null;
 		if (wind === null || seconds <= 0) {
 			return bounds;
 		}
