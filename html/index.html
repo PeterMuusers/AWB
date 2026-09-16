@@ -10,6 +10,7 @@
 -->
 		<link rel="manifest" href="/site.webmanifest">
 		<link rel="preconnect" href="https://www.huininga.nl">
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 		<link rel="stylesheet" type="text/css" title="default" href="css/blue-blue.css">
 		<link rel="stylesheet" type="text/css" title="default" href="css/default.css">
 		<title>Aviation Weather Board</title>
@@ -167,7 +168,6 @@
 					layer	radar/radar-sat/sat
 					-->
 					<div class="layer-map" id="layer-map-id">
-						<img class="layer-map" alt="" src="#" id="img-layer-map-id">
 					</div>
 					<img class="layer-cloud" alt="" src="#" id="img-layer-cloud-id">
 					<img class="layer-rain" alt="" src="#" id="img-layer-rain-id">
@@ -212,6 +212,9 @@
 
 		<!-- JavaScript sources: icons -->
 		<script src="https://code.iconify.design/1/1.0.6/iconify.min.js"></script>
+
+		<!-- JavaScript sources: Leaflet (radar map) -->
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 		<!-- JavaScript sources: main code -->
 		<script src="scripts/main.js" type="module"></script>

@@ -31,6 +31,8 @@ https://opensky-network.org/aircraft-profile
 https://openweathermap.org/
 #### Sat24
 https://www.sat24.com/
+#### Radar map (KNMI / EUMETSAT / jumprun.nl)
+Own radar map (Leaflet) instead of the Weather and radar iframe, based on the radar screen of https://weer.jumprun.nl/: KNMI precipitation radar for the last hours, precipitation forecast for the next hours and the EUMETSAT satellite image as background. Enabled by the `radar` block in config.json (remove it to get the Weather and radar iframe back). The forecast frames come from jumprun.nl through `jumprun-proxy.php` (server-side, with an optional API key `JUMPRUN_API_KEY` in `.env` and a frame cache); as fallback (`forecast.fallback`) or as source (`forecast.source`) the KNMI Data Platform WMS can be used, which needs a free API key in `.env` (`KNMI_WMS_KEY`, see `.env.example`), added server-side by `knmi-wms-proxy.php`.
 #### Weather and radar
 https://www.weatherandradar.com/
 #### Weerlive

@@ -10,6 +10,7 @@ import { Module as LuchtvaartMeteo } from './modules/luchtvaartmeteo.js';
 import { Module as NOAAMETAR } from './modules/noaa_metar.js';
 import { Module as OpenSkyNetwork } from './modules/openskynetwork.js';
 import { Module as OpenWeatherMap } from './modules/openweathermap.js';
+import { Module as Radar } from './modules/radar.js';
 import { Module as Sat24 } from './modules/sat24.js';
 import { Module as WeatherAndRadar } from './modules/weatherandradar.js';
 import { Module as WeerLive } from './modules/weerlive.js';
@@ -165,7 +166,11 @@ loadConfig(location).then(response => {
 	//document.modules.knmi = new KNMI(ID_IMG_LAYER_RAIN);
 	document.modules.knmi_llfc = new KNMI_LLFC();
 	//document.modules.sat24 = new Sat24(ID_IMG_LAYER_CLOUD);
-	document.modules.weatherandradar = new WeatherAndRadar(ID_LAYER_MAP);
+	if (document.config.radar) {
+		document.modules.radar = new Radar(ID_LAYER_MAP);
+	} else {
+		document.modules.weatherandradar = new WeatherAndRadar(ID_LAYER_MAP);
+	}
 	//document.modules.openweathermap = new OpenWeatherMap();
 	document.modules.weerlive = new WeerLive();
 	if (document.config.luchtvaartmeteo) {
