@@ -3,7 +3,7 @@
 
 import { DATE_OPTIONS_UTC, DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET } from '../const.js';
 import { localiseTimes } from '../functions.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL, LANGUAGE_VALID_FOR } from '../language.js';
 
 const SOURCE = 'KNMI';
 /* How far the forecast text may be scaled down to keep the board inside the screen, and in what
@@ -372,6 +372,27 @@ class Module {
 		this.updateData();
 	}
 
+	/* What the header says after the moment the bulletin was issued. The KNMI writes the GELDIG
+	   line in two forms: a pair of UTC stamps on a bulletin that runs for a set number of hours,
+	   and a sentence naming a daylight period on the one issued in the evening for the next day.
+	   The first becomes a closing time in local time; the second keeps the words of the bulletin,
+	   because a daylight period has no single hour to put there. */
+	validityText() {
+		var validity = this.validity();
+		if (validity !== null) {
+			var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+			return LANGUAGE_VALID_UNTIL + ' ' + clock(validity.until);
+		}
+		var item = this.llfc_items ? this.llfc_items['GELDIG'] : null;
+		if (item === null || item === undefined) {
+			return null;
+		}
+		/* "Voor: de daglichtperiode van donderdag 17 september 2026." leaves the period itself; the
+		   year says nothing on a board that only ever shows today and tomorrow */
+		var text = String(item).replace(/^\s*voor:?\s*/i, '').replace(/\s*\.\s*$/, '').replace(/\s+\d{4}$/, '').trim();
+		return (text === '') ? null : LANGUAGE_VALID_FOR + ' ' + text;
+	}
+
 	/* The period the bulletin applies to, from the GELDIG line: DDHHMM/DDHHMM in UTC. Converted
 	   here rather than by the model, because this is arithmetic and the board shows local time. */
 	validity() {
@@ -560,10 +581,9 @@ class Module {
 						this.showRewrite();
 					}
 					/* issued at, and how long it applies */
-					var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
-					var validity = this.validity();
+					var validity = this.validityText();
 					document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL)
-						+ (validity === null ? '' : '<span class="llfc-validity">' + LANGUAGE_VALID_UNTIL + ' ' + clock(validity.until) + '</span>');
+						+ (validity === null ? '' : '<span class="llfc-validity">' + validity + '</span>');
 					document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 				} else {
 					document.getElementById(ID_LLFC_LAST_UPDATED_WARNING).style.display = 'block';
