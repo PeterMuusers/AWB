@@ -25,8 +25,9 @@ You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.e
 This module fills the metrics panel: the cloud layers of the ceilometer, wind and gusts, visibility, precipitation, temperature, dew point and QNH, all measured at a real station rather than modelled. The summary line, the weather icon and the sunrise and sunset times are derived from those same measurements and from the position of the sun, so no second weather source is needed. Settings in config.json under `luchtvaartmeteo`: `station` (the id in the API), `stationName` and `note` (shown under the panel, so it is clear where the measurements come from), `windUnit` (`ms` or `kt`), and `jumpLimit` with `jumpLimitText` for a warning when the wind or the gusts reach that limit.
 #### NOAA METAR
 https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/
-#### Open-Meteo
+#### Open-Meteo (wind profile)
 https://open-meteo.com/en/docs
+Free and without a key, and it allows cross origin requests, so the board asks for it directly. The module reads wind and the geopotential height of a set of pressure levels per hour and interpolates the wind as a vector to the altitudes in `upperwinds`, which is more honest than reading a fixed table: the model does not publish values at 3.000 ft, it publishes them at pressure levels. It also reports the freezing level and the cloud layers the model expects. Settings in config.json under `aloft`: `model` (default `icon_d2`, which covers the Netherlands at 2 km) and `hoursAhead` for the number of forecast columns. The wind at the bottom of the table is not modelled but measured, from the luchtvaartmeteo module.
 #### Open Sky Network
 https://opensky-network.org/aircraft-profile
 #### Open Weather Map
@@ -47,3 +48,4 @@ https://www.weerplaza.nl/
 https://www.weerslag.nl/
 #### Windsaloft
 https://www.windsaloft.us/
+Not started by default any more: the wind profile comes from Open-Meteo, which gives hourly columns and needs no scraping.

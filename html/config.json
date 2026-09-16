@@ -21,12 +21,17 @@
 	],
 	"taf": [
 	],
+	"aloft": {
+		"model": "icon_d2",
+		"hoursAhead": 2
+	},
 	"upperwinds": [
 		1000,
 		2000,
 		3000,
 		5000,
-		10000,
+		9000,
+		12000,
 		15000
 	],
 	"airplanes": [
@@ -48,8 +53,8 @@
 		"station": "hoogeveen",
 		"stationName": "Hoogeveen",
 		"note": "Ceilometer en wind gemeten op Hoogeveen, 4 km van de dropzone",
-		"windUnit": "ms",
-		"jumpLimit": 11,
+		"windUnit": "kt",
+		"jumpLimit": 21,
 		"jumpLimitText": "Alleen ervaren springers"
 	},
 	"openweathermap": {

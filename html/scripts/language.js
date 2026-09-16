@@ -4,6 +4,11 @@ const LANGUAGE_INTERNET_DOWN = 'Geen internet verbinding';
 const LANGUAGE_INTERNET_RESTORED = 'De internet verbinding is hersteld';
 const LANGUAGE_LAST_UPDATED = 'Laatste update:';
 const LANGUAGE_SOURCE = 'Bron:';
+const LANGUAGE_NOW = 'Nu';
+const LANGUAGE_GROUND = 'Grond';
+const LANGUAGE_FREEZING_LEVEL_AT = '0 \u00b0C op';
+const LANGUAGE_MEASURED = 'grond gemeten, hoogtes uit het model';
+const LANGUAGE_WIND_PROFILE = 'Windprofiel';
 const LANGUAGE_WIND = 'Wind';
 const LANGUAGE_WIND_DIRECTION = 'Richting';
 const LANGUAGE_VISIBILITY = 'Zicht';
@@ -37,6 +42,11 @@ export {
         LANGUAGE_SOURCE,
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
+        LANGUAGE_NOW,
+        LANGUAGE_GROUND,
+        LANGUAGE_FREEZING_LEVEL_AT,
+        LANGUAGE_MEASURED,
+        LANGUAGE_WIND_PROFILE,
         LANGUAGE_WIND,
         LANGUAGE_WIND_DIRECTION,
         LANGUAGE_VISIBILITY,

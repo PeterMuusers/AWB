@@ -1,7 +1,6 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { loadConfig } from './config.js';
-import { UNIT_CELCIUS, UNIT_DIRECTION, UNIT_FEET, UNIT_KNOTS } from './const.js';
 import { createSystemMessage, removeSystemMessage } from './functions.js';
 import { LANGUAGE_INTERNET_DOWN, LANGUAGE_INTERNET_RESTORED } from './language.js';
 import { Module as KNMI } from './modules/knmi.js';
@@ -14,7 +13,7 @@ import { Module as Radar } from './modules/radar.js';
 import { Module as Sat24 } from './modules/sat24.js';
 import { Module as WeatherAndRadar } from './modules/weatherandradar.js';
 import { Module as WeerSlag } from './modules/weerslag.js';
-import { Module as WindsAloft } from './modules/windsaloft.js';
+import { Module as Aloft } from './modules/aloft.js';
 
 const ID_DATETIME = 'datetime-data';
 const ID_LAYER_MAP = 'layer-map-id';
@@ -149,18 +148,6 @@ loadConfig(location).then(response => {
 	/* Set up ADS-B module(s) */
 	var airplanes = new OpenSkyNetwork(document.config.airplanes);
 
-	/* Add altitudes to upper winds table */
-	if (document.config.upperwinds) {
-		for (var i = 0; i < document.config.upperwinds.length; i++) {
-			document.getElementById(ID_UPPERWINDS_TABLE).innerHTML += `<tr>
-<td><span class="windtext" id="wind` + document.config.upperwinds[i] + `-label">` + document.config.upperwinds[i] + `&nbsp;` + UNIT_FEET + `</span></td>
-<td><span class="winddirection" id="wind` + document.config.upperwinds[i] + `-direction">&nbsp;` + UNIT_DIRECTION + `</span></td>
-<td><span class="windspeed" id="wind` + document.config.upperwinds[i] + `-speed">&nbsp;` + UNIT_KNOTS + `</span></td>
-<td><span class="windtemperature" id="wind` + document.config.upperwinds[i] + `-temperature">&nbsp;` + UNIT_CELCIUS + `</span></td>
-</tr>`;
-		}
-	}
-
 	document.modules = {};
 	//document.modules.knmi = new KNMI(ID_IMG_LAYER_RAIN);
 	document.modules.knmi_llfc = new KNMI_LLFC();
@@ -173,7 +160,7 @@ loadConfig(location).then(response => {
 	//document.modules.openweathermap = new OpenWeatherMap();
 	document.modules.luchtvaartmeteo = new LuchtvaartMeteo(location);
 	//weerslag = new WeerSlag(ID_IMG_LAYER_MAP);
-	document.modules.windsaloft = new WindsAloft();
+	document.modules.aloft = new Aloft();
 
 	// Add event listener for key-down events
 	document.addEventListener('keydown', (e) => {

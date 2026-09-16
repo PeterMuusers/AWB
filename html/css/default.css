@@ -154,30 +154,6 @@ header,
 	padding-bottom: 11px;
 }
 .metrics-content,
-.upper-winds-content {
-	font-variant-numeric: tabular-nums;
-}
-.upper-winds-content td:not(:first-child),
-.metrics-content td:nth-child(even) {
-	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-weight: 600;
-	font-size: var(--value-fontsize, var(--text-contents-fontsize));
-	line-height: 1.25;
-}
-.upper-winds-content tbody tr:nth-child(odd) {
-	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
-}
-.upper-winds-content td {
-	padding: 2px 6px;
-}
-.upper-winds-content td:first-child {
-	border-top-left-radius: 6px;
-	border-bottom-left-radius: 6px;
-}
-.upper-winds-content td:last-child {
-	border-top-right-radius: 6px;
-	border-bottom-right-radius: 6px;
-}
 .llfc {
 	flex: 2 100%;
 	position: relative;
@@ -194,8 +170,6 @@ header,
 	letter-spacing: 0.02em;
 	color: var(--textcolor-2, var(--textcolor));
 }
-.llfc-item-text {
-}
 .llfc-item-text-alert {
 	color: var(--textcolor-alert);
 }
@@ -205,17 +179,78 @@ header,
 	position: relative;
 	padding-bottom: 10pt;
 }
-.weather td {
-	padding: 0;
-}
 .upper-winds-content {
-	text-align: end;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
 }
-.upper-winds-content thead {
-	display: none;
+.upper-winds-content table {
+	border-collapse: separate;
+	border-spacing: 0 2px;
+}
+.upper-winds-content th {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--metadata-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--metadata-textcolor);
+	text-align: right;
+	padding: 0 6px 4px;
 }
 .upper-winds-content td {
-	width: 25%;
+	padding: 3px 6px;
+}
+.upper-winds-content tbody tr:nth-child(odd) {
+	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
+}
+.upper-winds-content td:first-child {
+	border-top-left-radius: 6px;
+	border-bottom-left-radius: 6px;
+	text-align: left;
+	color: var(--textcolor-2, var(--textcolor));
+}
+.upper-winds-content td:last-child {
+	border-top-right-radius: 6px;
+	border-bottom-right-radius: 6px;
+}
+.windcell {
+	white-space: nowrap;
+}
+.wind-arrow {
+	display: inline-block;
+	margin-right: 4px;
+	color: var(--wind-color, var(--textcolor));
+	vertical-align: -0.1em;
+}
+.windspeed {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 600;
+	font-size: var(--value-fontsize, var(--text-contents-fontsize));
+}
+.winddirection {
+	margin-left: 5px;
+	font-size: var(--metadata-fontsize);
+	color: var(--metadata-textcolor);
+}
+.windgust {
+	margin-left: 4px;
+	font-size: var(--main-fontsize-small);
+	color: var(--gust-color, var(--jumplimit-color));
+}
+.upper-winds-content .ground-row td {
+	font-weight: 600;
+}
+.upper-winds-content .freezing-row td,
+.upper-winds-content tbody tr.freezing-row:nth-child(odd) {
+	background-color: transparent;
+	border-top: 1px dashed var(--block-border-color);
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--metadata-fontsize);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--metadata-textcolor);
+	text-align: right;
+	padding-top: 5px;
 }
 .metadata-source {
 	font-size: var(--metadata-fontsize);
