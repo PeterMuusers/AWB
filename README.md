@@ -5,6 +5,39 @@ Aviation Weather Board
 
 `curl -s https://raw.githubusercontent.com/eelcohn/AWB/main/rpi/install.sh | sudo bash`
 
+### Setting it up for your own dropzone
+
+Nothing in the code is tied to one club. Every place name in the source is a fallback for when the
+config says nothing, so a new dropzone fills in `config.json` and `.env` rather than changing code.
+
+Start with where you are. `location` holds the name and the coordinates of the field (the key is
+spelled `lattitude`), and the sun times, the wind profile and the marker on the radar map all hang
+off it. Then the things that are yours alone: `luchtvaartmeteo.jumpLimit` and `jumpLimitText` for
+your own wind limit and the warning that goes with it, `metar` and `taf` for the airfield codes you
+want to read, and `airplanes` for the ICAO hex of your own jump plane. `radar.bounds` covers the
+whole country as it stands, which works anywhere in the Netherlands; narrow it if you would rather
+look closer. `locale` sets the language and the clock format, and `theme` picks the palette:
+`navy`, the night blue the board runs, `dark` or `light` for a screen in a bright room.
+
+The measuring station is the one thing worth settling before you start. The metrics panel and the
+cloud chart come from a single station of luchtvaartmeteo.nl, named in `luchtvaartmeteo.station`,
+and not every airfield has one. Ask the proxy for the list with
+`luchtvaartmeteo-proxy.php?action=locations` and pick the nearest. Then write down how far away it
+actually is in `luchtvaartmeteo.stationName` and `note`, which is printed under the panel: at four
+kilometres that is a detail, at twenty it is the difference between the wind on the screen and the
+wind above your head, and a jumper should be able to see which one they are reading.
+
+The keys go in `.env` next to the `html` directory, never in `config.json`, because that file is
+served to the browser. Copy `.env.example` and fill in what you need: an account at
+luchtvaartmeteo.nl for the measurements, two free KNMI Data Platform keys for the precipitation
+forecast on the map, a Claude key if you want the bulletin rewritten in plain language, and
+optionally a jumprun.nl key for its forecast frames. Each one is independent. Leave the Claude key
+out and the board shows the bulletin as the KNMI writes it; leave the jumprun key out and the map
+falls back to the KNMI layer.
+
+The rest needs nothing. The low level forecast is one bulletin for the whole country, the wind
+profile is fetched for your own coordinates, and radar and satellite are national layers.
+
 ### Keyboard shortcuts
 
 | Key | Description |
