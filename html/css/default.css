@@ -222,6 +222,11 @@ header,
 	margin-right: 4px;
 	color: var(--wind-color, var(--textcolor));
 	vertical-align: -0.1em;
+	line-height: 1;
+}
+/* a turn of thirty degrees or more against the wind of now */
+.wind-arrow-shifted {
+	color: var(--gust-color, var(--jumplimit-color));
 }
 .windspeed {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);

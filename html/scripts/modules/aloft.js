@@ -34,6 +34,7 @@ const CLOUD_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 30
 const CLOUD_MIN_PERCENT = 12.5;			// one eighth
 const FEET_PER_METER = 3.28084;
 const MAX_LAYERS = 3;
+const SIGNIFICANT_SHIFT = 30;			// degrees; a turn of this much gets a colour of its own
 
 class Module {
 	constructor() {
@@ -239,19 +240,32 @@ class Module {
 		return this.hours.slice(nearest, nearest + this.hoursAhead + 1);
 	}
 
-	/* An arrow pointing the way the wind blows */
-	arrow(direction) {
-		return '<span class="wind-arrow iconify" data-icon="mdi-arrow-up" style="transform: rotate(' + ((direction + 180) % 360) + 'deg)"></span>';
+	/* An arrow pointing the way the wind blows. The rotation sits on an outer span: iconify
+	   replaces the inner element with an svg of its own and would drop the style. */
+	arrow(direction, shifted) {
+		return '<span class="wind-arrow' + (shifted ? ' wind-arrow-shifted' : '') + '"'
+			+ ' style="transform: rotate(' + ((direction + 180) % 360) + 'deg)">'
+			+ '<span class="iconify" data-icon="mdi-arrow-up"></span></span>';
 	}
 
-	cell(wind, extra, forecast) {
+	/* How far a direction differs from the one measured now, in degrees */
+	shift(direction, reference) {
+		if (reference === null || reference === undefined) {
+			return 0;
+		}
+		var difference = Math.abs(direction - reference) % 360;
+		return (difference > 180) ? 360 - difference : difference;
+	}
+
+	cell(wind, extra, forecast, reference) {
 		if (!wind) {
 			return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"></td>';
 		}
-		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '">' + this.arrow(wind.dir)
+		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '">' + this.arrow(wind.dir, forecast && this.shift(wind.dir, reference) >= SIGNIFICANT_SHIFT)
 			+ '<span class="windspeed">' + wind.kt + '</span>'
 			+ (extra || '')
-			+ '<span class="winddirection">' + wind.dir + '&deg;</span></td>';
+			/* for the hours ahead the arrow says enough; the degrees would only add noise */
+			+ (forecast ? '' : '<span class="winddirection">' + wind.dir + '&deg;</span>') + '</td>';
 	}
 
 	showData() {
@@ -279,12 +293,14 @@ class Module {
 			var temperature = (columns[0].levels[feet] && columns[0].levels[feet].temp !== null)
 				? '<span class="windtemperature">' + columns[0].levels[feet].temp + '&nbsp;&deg;C</span>' : '';
 			rows += '<tr><td class="windtext">' + feet.toLocaleString(document.config.locale) + temperature + '</td>'
-				+ columns.map((hour, index) => this.cell(hour.levels[feet], '', index > 0)).join('') + '</tr>';
+				+ columns.map((hour, index) => this.cell(hour.levels[feet], '', index > 0,
+					columns[0].levels[feet] ? columns[0].levels[feet].dir : null)).join('') + '</tr>';
 		});
 
 		/* The ground row: measured now, modelled for the hours after it */
 		var measured = (document.modules || {}).luchtvaartmeteo;
 		var observation = measured ? measured.observation : null;
+		var groundNow = (observation && observation.wind_dir !== null) ? Math.round(observation.wind_dir) : columns[0].ground.dir;
 		rows += '<tr class="ground-row"><td class="windtext">' + LANGUAGE_GROUND + '</td>';
 		rows += columns.map((hour, index) => {
 			if (index === 0 && observation && observation.wind_kt !== null && observation.wind_dir !== null) {
@@ -293,7 +309,7 @@ class Module {
 				return this.cell({ kt: Math.round(observation.wind_kt), dir: Math.round(observation.wind_dir) }, gust);
 			}
 			var modelled = (hour.ground.gust > hour.ground.kt + 1) ? '<span class="windgust">G' + hour.ground.gust + '</span>' : '';
-			return this.cell(hour.ground, modelled, index > 0);
+			return this.cell(hour.ground, modelled, index > 0, groundNow);
 		}).join('');
 		rows += '</tr>';
 		document.getElementById(ID_TABLE_BODY).innerHTML = rows;
