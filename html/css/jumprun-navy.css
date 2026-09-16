@@ -1,0 +1,50 @@
+/* Variables - the blue of the board taken a few steps deeper, so the cards lift off the page and
+   the satellite map next to them does not sit against a bright field. Same tokens as the other
+   themes; only the colours differ. */
+:root {
+	color-scheme: dark;
+
+	/* Surfaces: a night blue for the page, a lighter one for the cards */
+	--background-color: #04264a;
+	--block-background-color: #0a3a6b;
+	--block-border-color: rgba(255, 255, 255, 0.12);
+	--block-shadow: none;
+	--surface-2: rgba(255, 255, 255, 0.10);
+	--systemmessage-background-color: #eef4fb;
+	--systemmessage-textcolor: #00325f;
+
+	/* Text */
+	--textcolor: #ffffff;
+	--textcolor-2: #cfe1f4;
+	--metadata-textcolor: #8fb3d6;
+	--textcolor-alert: #ffcc33;
+	--jumplimit-color: #ff8a4d;
+
+	/* Data: warmer and lighter than on the dark theme, because blue on blue disappears */
+	--wind-color: #7fd6ff;
+	--gust-color: #ff9a5c;
+	--rain-color: #4fd8a5;
+	--cold-color: #ff9a5c;		/* orange: a freezing level under twelve thousand feet is a warning, not a fact */
+	--cloud-color: #d3e4f5;
+
+	/* Weather alerts: the backgrounds stay bright, so their text stays dark */
+	--alert-color: #00325f;
+	--alert0-background-color: #28a745;
+	--alert1-background-color: #ffe959;
+	--alert2-background-color: #f16e2a;
+	--alert3-background-color: #d3361a;
+
+	/* Type: Barlow for text, Barlow Condensed for labels and numbers */
+	--font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-condensed: 'Barlow Condensed', system-ui, -apple-system, sans-serif;
+	--header-fontsize: 15pt;
+	--main-fontsize: 14pt;
+	--main-fontsize-small: 11pt;
+	--footer-fontsize: 14pt;
+	--metadata-fontsize: 8.5pt;
+	--location-fontsize: 19pt;
+	--label-fontsize: 10.5pt;
+	--text-header-fontsize: 10.5pt;
+	--text-contents-fontsize: 14pt;
+	--value-fontsize: 16pt;
+}

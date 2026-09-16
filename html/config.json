@@ -5,6 +5,7 @@
 		"longitude": 6.521150287956746
 	},
 	"locale": "nl-NL",
+	"theme": "dark",
 	"options": {
 		"timeZoneName": "short",
 		"weekday": "short",

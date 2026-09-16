@@ -1,6 +1,6 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
-import { loadConfig } from './config.js';
+import { applyTheme, loadConfig } from './config.js';
 import { createSystemMessage, removeSystemMessage } from './functions.js';
 import { LANGUAGE_INTERNET_DOWN, LANGUAGE_INTERNET_RESTORED } from './language.js';
 import { Module as KNMI } from './modules/knmi.js';
@@ -118,7 +118,10 @@ var location = getURLParameter('location');
 document.config = {};
 loadConfig(location).then(response => {
     /* Check if a custom location is given */
-    
+
+	/* The palette comes first, so the board never paints itself twice */
+	applyTheme(document.config ? document.config.theme : undefined);
+
 
 	/* Enable/disable METAR & TAF */
 	if (document.config.metar) {
