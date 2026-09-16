@@ -189,8 +189,20 @@ header,
 	font-variant-numeric: tabular-nums;
 }
 .upper-winds-content table {
+	width: 100%;
+	/* fixed, so a wide row like the ground one cannot push the table past the card */
+	table-layout: fixed;
 	border-collapse: separate;
 	border-spacing: 0 2px;
+}
+.upper-winds-content th:first-child {
+	width: 24%;
+}
+.upper-winds-content th:nth-child(2) {
+	width: 32%;
+}
+.upper-winds-content th.windcell-forecast {
+	width: 22%;
 }
 .upper-winds-content th {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
@@ -204,6 +216,7 @@ header,
 }
 .upper-winds-content td {
 	padding: 3px 6px;
+	overflow: hidden;
 }
 .upper-winds-content tbody tr:nth-child(odd) {
 	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
@@ -224,7 +237,8 @@ header,
 .windcell-row {
 	display: flex;
 	align-items: baseline;
-	gap: 4px;
+	gap: 3px;
+	min-width: 0;
 }
 .windcell-row .windspeed {
 	min-width: 2.2ch;
@@ -253,7 +267,7 @@ header,
 	font-size: var(--value-fontsize, var(--text-contents-fontsize));
 }
 .winddirection {
-	margin-left: 5px;
+	margin-left: 4px;
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
 }
@@ -271,9 +285,6 @@ header,
 	font-size: 0.8em;
 	margin-right: 2px;
 }
-.upper-winds-content td:nth-child(2) {
-	width: 40%;
-}
 .windtemperature {
 	display: block;
 	font-size: var(--metadata-fontsize);
@@ -281,8 +292,7 @@ header,
 	line-height: 1.1;
 }
 .windgust {
-	margin-left: 4px;
-	font-size: var(--main-fontsize-small);
+	font-size: var(--metadata-fontsize);
 	color: var(--gust-color, var(--jumplimit-color));
 }
 .upper-winds-content .ground-row td {
