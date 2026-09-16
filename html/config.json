@@ -16,7 +16,7 @@
 		"minute": "2-digit",
 		"second": "2-digit"
 	},
-	"compass": true,
+	"compass": false,
 	"metar": [
 	],
 	"taf": [
