@@ -75,6 +75,12 @@ function configured_model() {
 	return $DEFAULT_MODEL;
 }
 
+/* The small and older models have no effort setting and reject one; the larger ones think before
+   they answer unless told to keep it short, which this job does not need. */
+function takes_effort($model) {
+	return (strpos($model, 'haiku') === false && strpos($model, '-4-5') === false);
+}
+
 /* One call to the API. Returns array(status, body). */
 function ask_claude($key, $model, $bulletin, $with_fallback) {
 	global $API_URL, $API_VERSION, $FALLBACK_BETA, $MAX_TOKENS, $SYSTEM_PROMPT, $CURL_TIMEOUT;
@@ -83,12 +89,14 @@ function ask_claude($key, $model, $bulletin, $with_fallback) {
 		'model' => $model,
 		'max_tokens' => $MAX_TOKENS,
 		'system' => $SYSTEM_PROMPT,
-		/* a short, factual rewrite needs no deep reasoning */
-		'output_config' => array('effort' => 'low'),
 		'messages' => array(
 			array('role' => 'user', 'content' => $bulletin),
 		),
 	);
+	if (takes_effort($model)) {
+		/* a short, factual rewrite needs no deep reasoning */
+		$body['output_config'] = array('effort' => 'low');
+	}
 	$headers = array(
 		'Content-Type: application/json',
 		'x-api-key: ' . $key,
@@ -154,7 +162,9 @@ if (is_readable($cache_file) && (time() - filemtime($cache_file)) < $CACHE_TTL) 
 	exit;
 }
 
-list($status, $response) = ask_claude(awb_env('ANTHROPIC_API_KEY'), $model, $bulletin, true);
+/* the refusal fallback is a feature of the large models; asking for it elsewhere only costs a
+   round trip, and the retry below would have to undo it anyway */
+list($status, $response) = ask_claude(awb_env('ANTHROPIC_API_KEY'), $model, $bulletin, takes_effort($model));
 $data = json_decode($response, true);
 if ($status === 400 && is_string($response) && stripos($response, 'fallback') !== false) {
 	/* the account or the model does not have that beta: ask again without it */
