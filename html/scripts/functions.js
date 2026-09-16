@@ -98,6 +98,33 @@ function sunTimes(date, latitude, longitude) {
 	return result;
 }
 
+/* Times in an aviation bulletin are in UTC while the board shows local time. Converting them is
+   arithmetic, so it happens here rather than being asked of a language model, which proved to get
+   it right one time and wrong the next. Only a run of times directly followed by UTC is touched,
+   which leaves a stamp like 161500/162100 alone. */
+const TIMES_BEFORE_UTC = /((?:\b\d{1,2}(?::\d{2})?\b(?:\s*uur)?(?:\s*(?:en|tot|t\/m|-|\u2013|,)\s*)?)+)\s*UTC\b\.?/gi;
+
+/* The short name of the board's own time zone, CEST or CET here */
+function timeZoneName(date) {
+	var locale = (document.config && document.config.locale) ? document.config.locale : undefined;
+	var parts = new Intl.DateTimeFormat(locale, { timeZoneName: 'short' }).formatToParts(date || new Date());
+	var zone = parts.find(part => part.type === 'timeZoneName');
+	return zone ? zone.value : '';
+}
+
+function localiseTimes(text, date) {
+	var offset = -(date || new Date()).getTimezoneOffset();
+	var zone = timeZoneName(date);
+	return String(text).replace(TIMES_BEFORE_UTC, (whole, times) => {
+		var converted = times.replace(/\b(\d{1,2})(?::(\d{2}))?\b/g, (match, hour, minute) => {
+			var total = (Number(hour) * 60 + Number(minute || 0) + offset + 1440) % 1440;
+			return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+		}).replace(/\s*uur\b/gi, '');
+		/* the zone takes the place of the UTC that was there, so it stays clear what is meant */
+		return converted.replace(/\s+$/, '') + (zone ? ' ' + zone : '') + (whole.endsWith('.') ? '.' : '');
+	});
+}
+
 /* Returns a readable string representing the wind direction */
 function windDegreesToDirection(degrees) {
 	degrees += ((360 / WIND_DIRECTIONS.length) / 2);
@@ -112,6 +139,8 @@ export {
 	removeSystemMessage,
 	setCompass,
 	setTrend,
+	localiseTimes,
+	timeZoneName,
 	sunElevation,
 	sunTimes,
 	windDegreesToDirection,

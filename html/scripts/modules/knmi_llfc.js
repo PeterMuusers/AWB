@@ -2,6 +2,7 @@
 /* jshint esversion: 6 */ 
 
 import { DATE_OPTIONS_UTC, DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET } from '../const.js';
+import { localiseTimes } from '../functions.js';
 import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL } from '../language.js';
 
 const SOURCE = 'KNMI';
@@ -407,7 +408,8 @@ class Module {
 				throw new Error(data && data.error ? data.error : ('HTTP ' + response.status));
 			});
 		}).then(data => {
-			var lines = String(data.text).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+			/* the model keeps the UTC times of the bulletin; the board turns them into local time */
+			var lines = localiseTimes(data.text, this.valid_from).split('\n').map(line => line.trim()).filter(line => line.length > 0);
 			var content = '';
 			lines.forEach(line => {
 				var colon = line.indexOf(':');
@@ -494,7 +496,7 @@ class Module {
 						this.showRewrite();
 					}
 					/* issued at, and how long it applies */
-					var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' });
+					var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 					var validity = this.validity();
 					document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL)
 						+ (validity === null ? '' : '<span class="llfc-validity">' + LANGUAGE_VALID_UNTIL + ' ' + clock(validity.until) + '</span>');
