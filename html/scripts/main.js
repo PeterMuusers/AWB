@@ -91,23 +91,43 @@ class OnlineStatus {
 	}
 }
 
+const NIGHTLY_RELOAD_HOUR = 4;		// local time, when nobody is looking at the screen
+const NIGHTLY_RELOAD_MINUTE = 0;
+
 /* The board runs all day on a screen with no keyboard and no mouse, so it has to get itself out of
    trouble. Every module records the moment it last brought data in. When not one of them has
    managed that for half an hour, twice the slowest interval on the board, while the machine says it
    is online, it is the page that is stuck rather than the sources that are down, and loading it
    again is the only cure left. A source that is genuinely unreachable keeps its own warning on its
-   own card and does not trigger this, because the other modules keep succeeding. */
+   own card and does not trigger this, because the other modules keep succeeding.
+
+   It also loads the page once a night, when nobody is looking. A board that has been up for a day
+   starts clean, and it is the moment a new version of the board reaches the screen, because the
+   page, the stylesheets and the config are only read when it loads. */
 class Watchdog {
 	constructor() {
 		this.started = Date.now();
 		this.refreshInterval = 60 * 1000; // Check once a minute
 		this.staleAfter = 30 * 60 * 1000;
+		this.nextNightly = this.nightlyAfter(new Date());
 
 		/* Schedule the check */
 		this.task = setInterval(
 			this.check.bind(this),
 			this.refreshInterval
 		);
+	}
+
+	/* The next time the clock passes the nightly hour, always in the future. A page that reloaded
+	   at two in the morning therefore waits for the next night instead of reloading again for the
+	   rest of that minute. Built from the parts rather than by adding a day, so the hour stays put
+	   when the clocks go forward or back. */
+	nightlyAfter(now) {
+		var next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), NIGHTLY_RELOAD_HOUR, NIGHTLY_RELOAD_MINUTE, 0, 0);
+		if (next <= now) {
+			next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, NIGHTLY_RELOAD_HOUR, NIGHTLY_RELOAD_MINUTE, 0, 0);
+		}
+		return next;
 	}
 
 	/* The moment any module last brought data in, or null when none of them ever did */
@@ -123,6 +143,13 @@ class Watchdog {
 	}
 
 	check() {
+		/* Once a night, whatever the state of the board: it has then been running for a day, and a
+		   fresh page is also how a new version of the board reaches the screen. */
+		if (Date.now() >= this.nextNightly.getTime()) {
+			console.log('Nightly reload of the board.');
+			window.location.reload();
+			return;
+		}
 		if (window.navigator.onLine === false) {
 			/* nothing to fetch, so reloading would only empty the screen */
 			return;
