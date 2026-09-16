@@ -167,10 +167,18 @@ class Module {
 		var ahead = hours.filter(hour => hour.time.getTime() >= now - 1800000 && hour.time.getTime() <= end);
 		var hourWidth = ((ahead.length > 1) ? Math.abs(x(ahead[1].time.getTime()) - x(ahead[0].time.getTime())) : 40) * 0.62;
 		ahead.forEach(hour => {
+			/* a block is centred on the hour it is valid for, but it must not reach back over the
+			   line for now: that half would sit in the measured part of the chart */
+			var centre = x(hour.time.getTime());
+			var left = Math.max(x(now), centre - hourWidth / 2) + 1;
+			var right = centre + hourWidth / 2 - 1;
+			if (right <= left) {
+				return;
+			}
 			hour.layers.forEach(layer => {
 				var top = y(Math.max(layer.top, layer.base + 200));
 				context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', ' + (0.15 + 0.6 * (layer.okta / 8)).toFixed(2) + ')';
-				context.fillRect(x(hour.time.getTime()) - hourWidth / 2 + 1, top, hourWidth - 2, y(layer.base) - top);
+				context.fillRect(left, top, right - left, y(layer.base) - top);
 			});
 		});
 
