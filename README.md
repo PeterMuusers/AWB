@@ -18,6 +18,9 @@ Aviation Weather Board
 https://www.knmi.nl/
 #### KNMI GAFOR (Weerbulletin voor de kleine luchtvaart)
 https://www.knmi.nl/nederland-nu/luchtvaart/weerbulletin-kleine-luchtvaart
+#### Luchtvaartmeteo (KNMI observations)
+https://www.luchtvaartmeteo.nl/
+You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.example` to `.env` next to the `html` directory (`/var/www/.env` on the Raspberry Pi) and fill in `LVM_EMAIL` and `LVM_PASSWORD`; that file is ignored by git and lives outside the web root, so it is never served to the browser. The login is done server-side by `luchtvaartmeteo-proxy.php`. The station is set in config.json under `luchtvaartmeteo.station`.
 #### NOAA METAR
 https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/
 #### Open-Meteo

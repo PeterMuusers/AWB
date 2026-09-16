@@ -6,6 +6,7 @@ import { createSystemMessage, removeSystemMessage } from './functions.js';
 import { LANGUAGE_INTERNET_DOWN, LANGUAGE_INTERNET_RESTORED } from './language.js';
 import { Module as KNMI } from './modules/knmi.js';
 import { Module as KNMI_LLFC } from './modules/knmi_llfc.js';
+import { Module as LuchtvaartMeteo } from './modules/luchtvaartmeteo.js';
 import { Module as NOAAMETAR } from './modules/noaa_metar.js';
 import { Module as OpenSkyNetwork } from './modules/openskynetwork.js';
 import { Module as OpenWeatherMap } from './modules/openweathermap.js';
@@ -167,6 +168,9 @@ loadConfig(location).then(response => {
 	document.modules.weatherandradar = new WeatherAndRadar(ID_LAYER_MAP);
 	//document.modules.openweathermap = new OpenWeatherMap();
 	document.modules.weerlive = new WeerLive();
+	if (document.config.luchtvaartmeteo) {
+		document.modules.luchtvaartmeteo = new LuchtvaartMeteo(location);
+	}
 	//weerslag = new WeerSlag(ID_IMG_LAYER_MAP);
 	document.modules.windsaloft = new WindsAloft();
 
