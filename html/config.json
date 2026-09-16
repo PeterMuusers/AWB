@@ -52,6 +52,10 @@
 		"Thermiek",
 		"Vooruitzichten"
 	],
+	"llfc": {
+		"mode": "raw",
+		"model": "claude-opus-5"
+	},
 	"luchtvaartmeteo": {
 		"station": "hoogeveen",
 		"stationName": "Hoogeveen",

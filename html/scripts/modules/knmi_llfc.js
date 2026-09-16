@@ -2,9 +2,10 @@
 /* jshint esversion: 6 */ 
 
 import { DATE_OPTIONS_UTC, DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET } from '../const.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN } from '../language.js';
 
 const SOURCE = 'KNMI';
+const REWRITE_URL = './llfc-rewrite.php';
 
 const ID_LLFC_SOURCE_LABEL = 'llfc-source-label';
 const ID_LLFC_SOURCE_DATA = 'llfc-source-data';
@@ -339,6 +340,7 @@ class Module {
 
 		this.llfc = null;
 		this.llfc_items = {};
+		this.rewrite = ((document.config.llfc || {}).mode === 'ai');
 		this.valid_from = null;
 		this.last_updated = null;
 
@@ -355,6 +357,54 @@ class Module {
 
 		/* Initial fill of document content */
 		this.updateData();
+	}
+
+	/* The bulletin as the KNMI writes it, item by item */
+	showBulletin() {
+		var content = '';
+		for (var i = 0; i < document.config.knmi_llfc.length; i++) {
+			var item = this.llfc_items[document.config.knmi_llfc[i].toUpperCase()];
+			if (item !== null && item !== undefined) {
+				content += '<div class=llfc-item><span class="llfc-item-header">' + document.config.knmi_llfc[i] + ':</span>&nbsp;<span class="llfc-item-text">' + item + '</span></div>';
+			}
+		}
+		document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
+		document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE;
+	}
+
+	/* The same bulletin in plain language, rewritten server-side. The bulletin itself stays on
+	   screen until the rewrite arrives, and stays there if it never does. */
+	showRewrite() {
+		fetch(REWRITE_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'text/plain' },
+			body: this.llfc,
+		}).then(response => {
+			return response.json().then(data => {
+				if (response.ok === true) {
+					return data;
+				}
+				throw new Error(data && data.error ? data.error : ('HTTP ' + response.status));
+			});
+		}).then(data => {
+			var lines = String(data.text).split('\n').map(line => line.trim()).filter(line => line.length > 0);
+			var content = '';
+			lines.forEach(line => {
+				var colon = line.indexOf(':');
+				if (colon > 0 && colon < 30) {
+					content += '<div class=llfc-item><span class="llfc-item-header">' + line.slice(0, colon) + ':</span>&nbsp;<span class="llfc-item-text">' + line.slice(colon + 1).trim() + '</span></div>';
+				} else {
+					content += '<div class=llfc-item><span class="llfc-item-text">' + line + '</span></div>';
+				}
+			});
+			if (content !== '') {
+				document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
+				document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE + ' ' + LANGUAGE_REWRITTEN;
+			}
+		}).catch(error => {
+			/* the bulletin itself is already on screen, so there is nothing to put right */
+			console.warn('Rewritten forecast unavailable: ' + error.message);
+		});
 	}
 
 	updateData() {
@@ -418,12 +468,10 @@ class Module {
 						this.llfc_items[LLFC_ITEMS[i].toUpperCase()] = this.llfc_decompose(LLFC_ITEMS[i].toUpperCase());
 					}
 
-					/* Fill document contents */
-					document.getElementById(ID_LLFC_CONTENT).innerHTML = '';
-					for (i = 0; i < document.config.knmi_llfc.length; i++) {
-						if (this.llfc_items[document.config.knmi_llfc[i].toUpperCase()] !== null) {
-							document.getElementById(ID_LLFC_CONTENT).innerHTML += '<div class=llfc-item><span class="llfc-item-header">' + document.config.knmi_llfc[i] + ':</span>&nbsp;<span class="llfc-item-text">' + this.llfc_items[document.config.knmi_llfc[i].toUpperCase()] + '</span></div>';
-						}
+					/* Fill document contents, either the bulletin itself or a rewrite of it */
+					this.showBulletin();
+					if (this.rewrite) {
+						this.showRewrite();
 					}
 					document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 					document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);

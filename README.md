@@ -18,6 +18,7 @@ Aviation Weather Board
 https://www.knmi.nl/
 #### KNMI GAFOR (Weerbulletin voor de kleine luchtvaart)
 https://www.knmi.nl/nederland-nu/luchtvaart/weerbulletin-kleine-luchtvaart
+The bulletin is written for pilots. Set `llfc.mode` in config.json to `ai` and it is rewritten into a few plain lines by `llfc-rewrite.php`, which asks Claude to simplify only: add nothing, leave nothing out, keep every number as it is and give no advice about whether to jump. That needs `ANTHROPIC_API_KEY` in `.env` (see `.env.example`); the model is `llfc.model`. The answer is cached under a hash of the bulletin, so the model is asked about four times a day however many screens are running. Anything that goes wrong, a missing key included, leaves the bulletin itself on screen. `raw` shows the bulletin as the KNMI writes it.
 #### Luchtvaartmeteo (KNMI observations)
 https://www.luchtvaartmeteo.nl/
 You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.example` to `.env` next to the `html` directory (`/var/www/.env` on the Raspberry Pi) and fill in `LVM_EMAIL` and `LVM_PASSWORD`; that file is ignored by git and lives outside the web root, so it is never served to the browser. The login is done server-side by `luchtvaartmeteo-proxy.php`.
