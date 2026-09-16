@@ -365,7 +365,7 @@ class Module {
 		for (var i = 0; i < document.config.knmi_llfc.length; i++) {
 			var item = this.llfc_items[document.config.knmi_llfc[i].toUpperCase()];
 			if (item !== null && item !== undefined) {
-				content += '<div class=llfc-item><span class="llfc-item-header">' + document.config.knmi_llfc[i] + ':</span>&nbsp;<span class="llfc-item-text">' + item + '</span></div>';
+				content += '<div class=llfc-item><span class="llfc-item-header">' + document.config.knmi_llfc[i] + '</span><span class="llfc-item-text">' + item + '</span></div>';
 			}
 		}
 		document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
@@ -392,7 +392,7 @@ class Module {
 			lines.forEach(line => {
 				var colon = line.indexOf(':');
 				if (colon > 0 && colon < 30) {
-					content += '<div class=llfc-item><span class="llfc-item-header">' + line.slice(0, colon) + ':</span>&nbsp;<span class="llfc-item-text">' + line.slice(colon + 1).trim() + '</span></div>';
+					content += '<div class=llfc-item><span class="llfc-item-header">' + line.slice(0, colon) + '</span><span class="llfc-item-text">' + line.slice(colon + 1).trim() + '</span></div>';
 				} else {
 					content += '<div class=llfc-item><span class="llfc-item-text">' + line + '</span></div>';
 				}

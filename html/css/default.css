@@ -135,14 +135,31 @@ header,
 .llfc-content {
 	height: 100%;
 }
+/* one tile per subject of the bulletin, filling the width of the card evenly */
+.llfc-content {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 8px;
+	align-content: start;
+}
 .llfc-item {
-	margin-bottom: 5pt;
+	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
+	border-radius: 8px;
+	padding: 8px 10px;
+}
+.llfc-item-text {
+	/* a shade smaller than the rest of the card, so the subject stands out above it */
+	font-size: 0.85em;
 }
 .llfc-item-header {
+	display: block;
+	margin-bottom: 2px;
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-weight: 700;
-	letter-spacing: 0.02em;
-	color: var(--textcolor-2, var(--textcolor));
+	font-size: var(--text-header-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--textcolor);
 }
 .llfc-item-text-alert {
 	color: var(--textcolor-alert);
