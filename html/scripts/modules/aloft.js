@@ -319,7 +319,9 @@ class Module {
 			document.getElementById(ID_FREEZING_ALTITUDE).innerHTML = freezing.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>';
 		}
 
-		document.getElementById(ID_VALID_FROM).innerHTML = UNIT_KNOTS + ' &middot; ' + LANGUAGE_MEASURED;
+		/* the unit stays on the title line, the explanation goes on its own line below it */
+		document.getElementById(ID_VALID_FROM).innerHTML = UNIT_KNOTS
+			+ '<span class="upper-winds-note">' + LANGUAGE_MEASURED + '</span>';
 		document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 	}
 }

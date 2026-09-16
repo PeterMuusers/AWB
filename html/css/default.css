@@ -180,6 +180,10 @@ header,
 	position: relative;
 	padding-bottom: 10pt;
 }
+.upper-winds-note {
+	display: block;
+	font-weight: 500;
+}
 .upper-winds-content {
 	text-align: right;
 	font-variant-numeric: tabular-nums;
@@ -208,7 +212,7 @@ header,
 	border-top-left-radius: 6px;
 	border-bottom-left-radius: 6px;
 	text-align: left;
-	color: var(--textcolor-2, var(--textcolor));
+	color: var(--textcolor);
 }
 .upper-winds-content td:last-child {
 	border-top-right-radius: 6px;
