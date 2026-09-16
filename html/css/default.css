@@ -123,31 +123,22 @@ header,
 .metrics-content,
 .upper-winds-content,
 .metar-content,
-.llfc-validity {
-	margin-left: 10px;
-	color: var(--metadata-textcolor);
-}
 .llfc-content {
 	padding-top: 9px;
 	padding-bottom: 11px;
 }
-.metrics-content,
 .llfc {
 	flex: 2 100%;
 	position: relative;
 }
-.llfc-validity {
-	margin-left: 10px;
-	color: var(--metadata-textcolor);
-}
 .llfc-content {
 	height: 100%;
 }
-/* one tile per subject of the bulletin, filling the width of the card evenly */
 .llfc-validity {
 	margin-left: 10px;
 	color: var(--metadata-textcolor);
 }
+/* one tile per subject of the bulletin, filling the width of the card evenly */
 .llfc-content {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
