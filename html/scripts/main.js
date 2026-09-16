@@ -13,7 +13,6 @@ import { Module as OpenWeatherMap } from './modules/openweathermap.js';
 import { Module as Radar } from './modules/radar.js';
 import { Module as Sat24 } from './modules/sat24.js';
 import { Module as WeatherAndRadar } from './modules/weatherandradar.js';
-import { Module as WeerLive } from './modules/weerlive.js';
 import { Module as WeerSlag } from './modules/weerslag.js';
 import { Module as WindsAloft } from './modules/windsaloft.js';
 
@@ -172,10 +171,7 @@ loadConfig(location).then(response => {
 		document.modules.weatherandradar = new WeatherAndRadar(ID_LAYER_MAP);
 	}
 	//document.modules.openweathermap = new OpenWeatherMap();
-	document.modules.weerlive = new WeerLive();
-	if (document.config.luchtvaartmeteo) {
-		document.modules.luchtvaartmeteo = new LuchtvaartMeteo(location);
-	}
+	document.modules.luchtvaartmeteo = new LuchtvaartMeteo(location);
 	//weerslag = new WeerSlag(ID_IMG_LAYER_MAP);
 	document.modules.windsaloft = new WindsAloft();
 

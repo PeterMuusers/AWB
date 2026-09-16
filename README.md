@@ -20,7 +20,9 @@ https://www.knmi.nl/
 https://www.knmi.nl/nederland-nu/luchtvaart/weerbulletin-kleine-luchtvaart
 #### Luchtvaartmeteo (KNMI observations)
 https://www.luchtvaartmeteo.nl/
-You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.example` to `.env` next to the `html` directory (`/var/www/.env` on the Raspberry Pi) and fill in `LVM_EMAIL` and `LVM_PASSWORD`; that file is ignored by git and lives outside the web root, so it is never served to the browser. The login is done server-side by `luchtvaartmeteo-proxy.php`. The station is set in config.json under `luchtvaartmeteo.station`.
+You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.example` to `.env` next to the `html` directory (`/var/www/.env` on the Raspberry Pi) and fill in `LVM_EMAIL` and `LVM_PASSWORD`; that file is ignored by git and lives outside the web root, so it is never served to the browser. The login is done server-side by `luchtvaartmeteo-proxy.php`.
+
+This module fills the metrics panel: the cloud layers of the ceilometer, wind and gusts, visibility, precipitation, temperature, dew point and QNH, all measured at a real station rather than modelled. The summary line, the weather icon and the sunrise and sunset times are derived from those same measurements and from the position of the sun, so no second weather source is needed. Settings in config.json under `luchtvaartmeteo`: `station` (the id in the API), `stationName` and `note` (shown under the panel, so it is clear where the measurements come from), `windUnit` (`ms` or `kt`), and `jumpLimit` with `jumpLimitText` for a warning when the wind or the gusts reach that limit.
 #### NOAA METAR
 https://tgftp.nws.noaa.gov/data/forecasts/taf/stations/
 #### Open-Meteo
@@ -38,6 +40,7 @@ https://www.weatherandradar.com/
 #### Weerlive
 https://www.weerlive.nl/
 You'll need an API key to use this module, see https://weerlive.nl/delen.php
+Not started by default any more: the metrics panel is filled by the luchtvaartmeteo module, which measures at a station instead of interpolating, and has no daily request limit. Add it back in `scripts/main.js` if you prefer Weerlive.
 #### Weerplaza
 https://www.weerplaza.nl/
 #### Weerslag

@@ -71,10 +71,9 @@ footer {
 .text table {
 	width: 100%;
 }
-.wind-jumplimit {
+#wind-jumplimit {
 	display: none;
 	color: var(--jumplimit-color);
-	font-size: smaller;
 }
 header,
 .weather,
@@ -124,8 +123,9 @@ header,
 }
 .compass {
 	position: relative;
-	width: 200px;
-	height: 200px;
+	width: 132px;
+	height: 132px;
+	opacity: 0.85;
 }
 .compass-rose,
 .compass-arrow {
@@ -135,15 +135,15 @@ header,
 }
 .compass-rose {
 	position: absolute;
-	left: 10px;
-	height: 200px;
-	width: 200px;
+	left: 0;
+	height: 132px;
+	width: 132px;
 }
 .compass-arrow {
-	height: 200px;
-	width: 200px;
+	height: 132px;
+	width: 132px;
 	position: absolute;
-	left: 10px;
+	left: 0;
 	transition: transform 1s;
 }
 .metrics-content,
@@ -207,10 +207,6 @@ header,
 }
 .weather td {
 	padding: 0;
-}
-.weather img {
-	width: 72px;
-	float: right;
 }
 .upper-winds-content {
 	text-align: end;
@@ -286,6 +282,83 @@ header,
 	left: 0;
 	right: 0;
 	bottom: 0;
+}
+
+/* Metrics panel, filled by scripts/modules/luchtvaartmeteo.js */
+.metrics-header {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+.metrics-icon {
+	margin-right: 6px;
+	vertical-align: -0.15em;
+}
+.metrics-cloudbase {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 10px;
+}
+.metrics-cloudbase-value {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 700;
+	font-size: calc(var(--value-fontsize, var(--text-contents-fontsize)) * 2.1);
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+.metrics-cloudbase-layers {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--metadata-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--metadata-textcolor);
+}
+.metrics-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+	gap: 10px 14px;
+}
+.metrics-cell {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+.metrics-label {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--metadata-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--metadata-textcolor);
+}
+.metrics-value {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 600;
+	font-size: var(--value-fontsize, var(--text-contents-fontsize));
+	font-variant-numeric: tabular-nums;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+.metrics-unit {
+	font-family: var(--font-body, 'Roboto', sans-serif);
+	font-size: var(--main-fontsize-small);
+	font-weight: 400;
+	color: var(--textcolor-2, var(--textcolor));
+}
+.metrics-gust {
+	color: var(--gust-color, var(--jumplimit-color));
+}
+.metrics-sub {
+	font-size: var(--metadata-fontsize);
+	color: var(--metadata-textcolor);
+}
+.metrics-note {
+	margin-top: 10px;
+	font-size: var(--metadata-fontsize);
+	color: var(--metadata-textcolor);
 }
 
 /* Radar map (Leaflet), see scripts/modules/radar.js */
