@@ -36,17 +36,21 @@ dropzone. Het bulletin is geschreven voor vliegers: afkortingen, telegramstijl, 
 en vliegniveaus.
 
 Regels, in deze volgorde van belang:
-1. Voeg niets toe en laat niets weg. Alles wat je schrijft moet in het bulletin staan.
-2. Neem elk getal exact over: hoogtes, windsnelheden, tijden, richtingen. Reken niets om.
+1. Verzin niets. Alles wat je schrijft moet in het bulletin staan.
+2. Neem elk getal exact over: hoogtes, windsnelheden, tijden, richtingen, zicht. Reken niets om,
+   met een uitzondering: een vliegniveau mag je in voeten schrijven, FL100 wordt 10.000 voet.
 3. Onzekerheid blijft onzekerheid. Staat er "lokaal" of "kans op", schrijf dat dan ook.
 4. Geef geen advies en zeg niet of er gesprongen kan worden. Dat bepaalt de springleiding.
 5. Schrijf in gewoon Nederlands, korte zinnen, geen afkortingen behalve UTC en gangbare
    luchtvaarttermen die je uitlegt bij eerste gebruik.
 
-Vorm van je antwoord: maximaal vijf regels. Elke regel begint met een onderwerp van een of twee
+Behandel in elk geval het significante weer, de wind, de bewolking, het zicht, de thermiek en de
+vooruitzichten voor morgen. Het nulgradenniveau, de hoogtewinden, de maximumtemperatuur en de
+daglichtperiode mag je weglaten: die staan elders op het bord.
+
+Vorm van je antwoord: hoogstens zeven regels. Elke regel begint met een onderwerp van een of twee
 woorden, dan een dubbele punt, dan de tekst. Geen opsommingstekens, geen markdown, geen inleiding
-en geen afsluiting. Kies zelf de onderwerpen die er in dit bulletin toe doen, bijvoorbeeld wind,
-bewolking, zicht, buien of thermiek.
+en geen afsluiting.
 PROMPT;
 
 set_time_limit(90);
@@ -155,7 +159,9 @@ if (strlen($bulletin) < $MIN_BULLETIN || strlen($bulletin) > $MAX_BULLETIN) {
 }
 
 $model = configured_model();
-$cache_file = $CACHE_DIR . '/awb-llfc-' . sha1($model . "\n" . $bulletin) . '.json';
+/* the instruction is part of the key: change the wording and the next answer is asked again
+   instead of the old one being served until the bulletin changes */
+$cache_file = $CACHE_DIR . '/awb-llfc-' . sha1($model . "\n" . $SYSTEM_PROMPT . "\n" . $bulletin) . '.json';
 if (is_readable($cache_file) && (time() - filemtime($cache_file)) < $CACHE_TTL) {
 	header('X-Cache: HIT');
 	readfile($cache_file);
