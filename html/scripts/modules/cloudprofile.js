@@ -270,21 +270,20 @@ class Module {
 		drawLine(aheadWind, windColour, true);
 		drawLine(aheadGust, gustColour, true);
 
-		/* Dots on every expected hour, so it is clear those are hourly steps */
-		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => drawMarker(point, windColour, null, false));
-		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => drawMarker(point, gustColour, null, true));
-
-		/* Numbers where they matter: where the two hours start, what it is now, and where it ends up */
+		/* Numbers where they matter: where the two hours behind us start, what it is now, and every
+		   expected hour after that. Gusts above the line, wind below it, so the two never collide. */
 		var firstWind = firstOf(winds);
 		var firstGust = firstOf(gusts);
 		drawMarker(firstWind, windColour, firstWind ? Math.round(firstWind.value) + ' ' + UNIT_KNOTS : null, false, 'left');
 		drawMarker(firstGust, gustColour, firstGust ? 'G' + Math.round(firstGust.value) : null, true, 'left');
 		drawMarker(nowWind, windColour, nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null, false);
 		drawMarker(nowGust, gustColour, nowGust ? 'G' + Math.round(nowGust.value) : null, true);
-		var lastWind = lastOf(aheadWind);
-		var lastGust = lastOf(aheadGust);
-		drawMarker(lastWind, windColour, lastWind ? Math.round(lastWind.value) + ' ' + UNIT_KNOTS : null, false);
-		drawMarker(lastGust, gustColour, lastGust ? 'G' + Math.round(lastGust.value) : null, true);
+		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => {
+			drawMarker(point, windColour, Math.round(point.value) + ' ' + UNIT_KNOTS, false);
+		});
+		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => {
+			drawMarker(point, gustColour, 'G' + Math.round(point.value), true);
+		});
 
 		context.fillStyle = muted;
 		context.textAlign = 'right';
