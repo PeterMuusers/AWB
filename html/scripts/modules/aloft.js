@@ -109,6 +109,24 @@ class Module {
 		return null;
 	}
 
+	/* The height where the temperature crosses zero, interpolated from the profile. Not every model
+	   reports a freezing level of its own, and this keeps it consistent with the temperatures shown
+	   next to the altitudes. */
+	freezingLevel(profile) {
+		for (var i = 0; i < profile.length - 1; i++) {
+			var below = profile[i];
+			var above = profile[i + 1];
+			if (below.temp === null || above.temp === null) {
+				continue;
+			}
+			if (below.temp > 0 && above.temp <= 0) {
+				var fraction = (below.temp === above.temp) ? 0 : below.temp / (below.temp - above.temp);
+				return Math.round((below.feet + fraction * (above.feet - below.feet)) / 100) * 100;
+			}
+		}
+		return null;
+	}
+
 	/* Cloud layers from the cover per pressure level: neighbouring levels with at least one eighth
 	   form one layer. A model estimate, not a ceilometer. */
 	cloudLayers(hourly, index, elevation) {
@@ -210,7 +228,10 @@ class Module {
 					levels[feet] = wind;
 				}
 			});
-			var freezing = hourly.freezing_level_height[index];
+			var reported = (hourly.freezing_level_height || [])[index];
+			var freezing = (reported === null || reported === undefined)
+				? this.freezingLevel(profile)
+				: Math.round((reported - elevation) * FEET_PER_METER / 100) * 100;
 			return {
 				time: new Date(time + 'Z'),
 				levels: levels,
@@ -219,7 +240,7 @@ class Module {
 					dir: Math.round(hourly.wind_direction_10m[index]),
 					gust: Math.round(hourly.wind_gusts_10m[index]),
 				},
-				freezing: (freezing === null) ? null : Math.round((freezing - elevation) * FEET_PER_METER / 100) * 100,
+				freezing: freezing,
 				layers: this.cloudLayers(hourly, index, elevation),
 			};
 		});

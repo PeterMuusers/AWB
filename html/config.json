@@ -26,7 +26,7 @@
 	"taf": [
 	],
 	"aloft": {
-		"model": "icon_d2",
+		"model": "knmi_seamless",
 		"hoursAhead": 2
 	},
 	"upperwinds": [
