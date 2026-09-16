@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
-
 * {
 	cursor: none;
 }
@@ -14,13 +12,21 @@ html::-webkit-scrollbar {
 body {
 	background-color: var(--background-color);
 	color: var(--textcolor);
-	font-family: 'Roboto', 'Open Sans', sans-serif;
+	font-family: var(--font-body, 'Roboto', 'Open Sans', sans-serif);
 	height: 100%;
 }
 header {
 	display: flex;
 	justify-content: space-between;
+	align-items: baseline;
 	font-size: var(--header-fontsize);
+	font-variant-numeric: tabular-nums;
+}
+header #datetime-data {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: var(--textcolor-2, var(--textcolor));
 }
 main {
 	display: flex;
@@ -37,8 +43,15 @@ footer {
 	vertical-align: top;
 }
 .metrics-location {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
 	font-size: var(--location-fontsize);
-	font-weight: bold;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	line-height: 1.1;
+}
+.metrics-text {
+	color: var(--textcolor-2, var(--textcolor));
 }
 .metrics-text {
 }
@@ -73,13 +86,13 @@ header,
 .weather-alert2,
 .weather-alert3 {
 	background-color: var(--block-background-color);
-	border-radius: 8px;
+	border-radius: 10px;
 	border-color: var(--block-border-color);
 	border-style: solid;
 	border-width: 1px;
-	font-family: 'Gilroy', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-	margin: 3px;
-	padding: 10px;
+	box-shadow: var(--block-shadow, none);
+	margin: 4px;
+	padding: 12px 14px;
 	font-size: var(--text-contents-fontsize);
 }
 .metar {
@@ -89,8 +102,19 @@ header,
 .upper-winds-header,
 .metar-header,
 .llfc-header {
-	text-align: center;
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
 	font-size: var(--text-header-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--metadata-textcolor);
+	border-bottom: 1px solid var(--block-border-color);
+	padding-bottom: 6px;
+}
+.upper-winds-header .header-name,
+.metar-header .header-name,
+.llfc-header .header-name {
+	color: var(--textcolor-2, var(--textcolor));
 }
 .metar-content{
 	font-family: "Courier New", Courier, Monospace;
@@ -102,6 +126,12 @@ header,
 	position: relative;
 	width: 200px;
 	height: 200px;
+}
+.compass-rose,
+.compass-arrow {
+	/* The graphics are drawn in white for a dark board. A light theme sets --compass-filter to
+	   invert them, so they stay visible on a light card. */
+	filter: var(--compass-filter, none);
 }
 .compass-rose {
 	position: absolute;
@@ -120,8 +150,33 @@ header,
 .upper-winds-content,
 .metar-content,
 .llfc-content {
-	padding-top: 7px;
+	padding-top: 9px;
 	padding-bottom: 11px;
+}
+.metrics-content,
+.upper-winds-content {
+	font-variant-numeric: tabular-nums;
+}
+.upper-winds-content td:not(:first-child),
+.metrics-content td:nth-child(even) {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 600;
+	font-size: var(--value-fontsize, var(--text-contents-fontsize));
+	line-height: 1.25;
+}
+.upper-winds-content tbody tr:nth-child(odd) {
+	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
+}
+.upper-winds-content td {
+	padding: 2px 6px;
+}
+.upper-winds-content td:first-child {
+	border-top-left-radius: 6px;
+	border-bottom-left-radius: 6px;
+}
+.upper-winds-content td:last-child {
+	border-top-right-radius: 6px;
+	border-bottom-right-radius: 6px;
 }
 .llfc {
 	flex: 2 100%;
@@ -134,7 +189,10 @@ header,
 	margin-bottom: 5pt;
 }
 .llfc-item-header {
-	font-weight: bold;
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--textcolor-2, var(--textcolor));
 }
 .llfc-item-text {
 }
@@ -188,11 +246,12 @@ header,
 .images {
 	width: 50%;
 	min-height: 50vw; /* TODO calculate height by doing 100vw/100% - header - footer */
-	margin: 3px;
-	border-radius: 8px;
+	margin: 4px;
+	border-radius: 10px;
 	border-color: var(--block-border-color);
 	border-style: solid;
 	border-width: 1px;
+	box-shadow: var(--block-shadow, none);
 	position: relative;
 }
 .layer-map,
@@ -204,7 +263,7 @@ header,
 	height: 100%;
 	object-fit: fill;
 	overflow: hidden;
-	border-radius: 8px;
+	border-radius: 10px;
 }
 .layer-map iframe,
 .layer-cloud iframe,
@@ -233,8 +292,8 @@ header,
 .radar-map {
 	width: 100%;
 	height: 100%;
-	border-radius: 8px;
-	background-color: var(--block-background-color);
+	border-radius: 10px;
+	background-color: var(--surface-2, rgba(127, 127, 127, 0.12));
 }
 .radar-timebar {
 	position: absolute;
@@ -341,6 +400,7 @@ header,
 .systemmessage {
 	overflow: hidden;
 	background: var(--systemmessage-background-color);
+	color: var(--systemmessage-textcolor, #fff);
 	border-color: var(--block-border-color);
 /*	box-shadow: 0 0 10px black;*/
 	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);

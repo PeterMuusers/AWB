@@ -1,0 +1,50 @@
+/* Variables - light theme, in the style of weer.jumprun.nl: white cards on a cool grey ground,
+   dark ink for the values and a muted grey for the labels. */
+:root {
+	color-scheme: light;
+
+	/* Surfaces */
+	--background-color: #e9eef3;
+	--block-background-color: #ffffff;
+	--block-border-color: rgba(17, 26, 36, 0.10);
+	--block-shadow: 0 1px 2px rgba(17, 26, 36, 0.05);
+	--surface-2: #f3f6f9;
+	--systemmessage-background-color: #111a24;
+	--systemmessage-textcolor: #ffffff;
+	/* the compass graphics are white, invert them on a light card */
+	--compass-filter: invert(1) hue-rotate(180deg);
+
+	/* Text */
+	--textcolor: #111a24;
+	--textcolor-2: #4b5866;
+	--metadata-textcolor: #8a96a3;
+	--textcolor-alert: #b4530a;
+	--jumplimit-color: #eb6834;
+
+	/* Data, the same colours as the charts on jumprun.nl */
+	--wind-color: #2a78d6;
+	--gust-color: #eb6834;
+	--rain-color: #1baf7a;
+	--cloud-color: #4c6d8c;
+
+	/* Weather alerts */
+	--alert-color: #111a24;
+	--alert0-background-color: #28a745;
+	--alert1-background-color: #ffe959;
+	--alert2-background-color: #f16e2a;
+	--alert3-background-color: #d3361a;
+
+	/* Type: Barlow for text, Barlow Condensed for labels and numbers */
+	--font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-condensed: 'Barlow Condensed', system-ui, -apple-system, sans-serif;
+	--header-fontsize: 15pt;
+	--main-fontsize: 14pt;
+	--main-fontsize-small: 11pt;
+	--footer-fontsize: 14pt;
+	--metadata-fontsize: 8.5pt;
+	--location-fontsize: 19pt;
+	--label-fontsize: 10.5pt;
+	--text-header-fontsize: 10.5pt;
+	--text-contents-fontsize: 14pt;
+	--value-fontsize: 16pt;
+}
