@@ -30,6 +30,7 @@ class Module {
 		this.hoursBack = this.config.hoursBack || 2;
 		this.hoursAhead = this.config.hoursAhead || 2;
 		this.refreshInterval = 20 * 1000; // Redraw often: it only draws, the sources do the fetching
+		this.drawn = false;
 
 		var container = document.getElementById(container_id);
 		container.innerHTML = '<div class="cloudprofile-header" id="' + ID_HEADER + '"></div>'
@@ -43,6 +44,17 @@ class Module {
 			this.updateData.bind(this),
 			this.refreshInterval
 		);
+
+		/* The chart has no source of its own, so at start up it waits for the other modules. Look
+		   every second until there is something to draw, instead of leaving the card empty for a
+		   whole interval. */
+		this.warmup = setInterval(() => {
+			if (this.drawn) {
+				clearInterval(this.warmup);
+				return;
+			}
+			this.updateData();
+		}, 1000);
 
 		/* Initial fill of document content */
 		this.updateData();
@@ -214,7 +226,7 @@ class Module {
 		};
 
 		/* A dot on a value, with the number next to it: above the line for gusts, below it for wind */
-		var drawMarker = (point, colour, label, above) => {
+		var drawMarker = (point, colour, label, above, align) => {
 			if (!point) {
 				return;
 			}
@@ -225,9 +237,14 @@ class Module {
 			context.arc(left, top, 2.5, 0, 2 * Math.PI);
 			context.fill();
 			if (label) {
-				context.textAlign = 'center';
-				context.fillText(label, left, top + (above ? -8 : 9));
+				context.textAlign = align || 'center';
+				context.fillText(label, left + (align === 'left' ? 4 : 0), top + (above ? -8 : 9));
 			}
+		};
+
+		var firstOf = points => {
+			var visible = visibleOnly(points);
+			return visible.length > 0 ? visible[0] : null;
 		};
 
 		var lastOf = points => {
@@ -257,7 +274,11 @@ class Module {
 		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => drawMarker(point, windColour, null, false));
 		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => drawMarker(point, gustColour, null, true));
 
-		/* Numbers only where they matter: what it is now and where it ends up */
+		/* Numbers where they matter: where the two hours start, what it is now, and where it ends up */
+		var firstWind = firstOf(winds);
+		var firstGust = firstOf(gusts);
+		drawMarker(firstWind, windColour, firstWind ? Math.round(firstWind.value) + ' ' + UNIT_KNOTS : null, false, 'left');
+		drawMarker(firstGust, gustColour, firstGust ? 'G' + Math.round(firstGust.value) : null, true, 'left');
 		drawMarker(nowWind, windColour, nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null, false);
 		drawMarker(nowGust, gustColour, nowGust ? 'G' + Math.round(nowGust.value) : null, true);
 		var lastWind = lastOf(aheadWind);
@@ -290,6 +311,8 @@ class Module {
 		context.fillStyle = context.strokeStyle;
 		context.textAlign = 'center';
 		context.fillText(LANGUAGE_NOW, x(now), height - LABEL_HEIGHT / 2);
+
+		this.drawn = true;
 	}
 }
 
