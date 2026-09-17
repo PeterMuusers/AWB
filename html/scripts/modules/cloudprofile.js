@@ -47,6 +47,7 @@ const TIME_TICK = 6;					// pixels, the little line above each time
 const TOP_LABEL_HEIGHT = 21;			// pixels at the top, above the chart, for 'measured | expected'
 const TOP_FONT = '500 13px "Roboto Condensed", "Roboto", sans-serif';	/* alleen als de buurman er niet is */
 const TOP_NOTE = '.upper-winds-note';	/* de ondertitel waar deze woorden zich naar voegen */
+const FREEZING_FONT = '14px sans-serif';	/* het 0 °C-niveau: een getal om te lezen, geen bijschrift */
 const TOP_BASELINE = 13;				// pixels from the top of the canvas to the foot of those words
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 /* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
@@ -290,19 +291,25 @@ class Module {
 		});
 		context.restore();
 
-		/* The freezing level of the model, as a dashed line */
+		/* De nul-gradenhoogte van het model, als streepjeslijn. In dezelfde koele kleur als de regel
+		   over dat niveau in het windprofiel ernaast: het is hetzelfde gegeven, en op één bord hoort
+		   hetzelfde gegeven dezelfde kleur te hebben. */
 		var freezing = ahead.length > 0 ? ahead[0].freezing : null;
 		if (freezing !== null && freezing < ALTITUDE_TICKS[ALTITUDE_TICKS.length - 1]) {
-			context.strokeStyle = muted;
+			var cold = style.getPropertyValue('--cold-color').trim()
+				|| style.getPropertyValue('--wind-color').trim() || muted;
+			context.strokeStyle = cold;
 			context.setLineDash([4, 3]);
 			context.beginPath();
 			context.moveTo(axis, y(freezing) + 0.5);
 			context.lineTo(width, y(freezing) + 0.5);
 			context.stroke();
 			context.setLineDash([]);
-			context.fillStyle = muted;
+			context.fillStyle = cold;
+			context.font = FREEZING_FONT;
 			context.textAlign = 'left';
-			context.fillText('0 ' + String.fromCharCode(176) + 'C', axis + 4, y(freezing) - 6);
+			context.fillText('0 ' + String.fromCharCode(176) + 'C', axis + 4, y(freezing) - 7);
+			context.font = CHART_FONT;
 		}
 
 		/* The line for now, drawn before the wind section so the lines and their numbers sit on top
