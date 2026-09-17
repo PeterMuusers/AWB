@@ -9,7 +9,8 @@
 #
 #   ./rpi/card-rescue.sh show              what the card says now, and any logs it brought back
 #   ./rpi/card-rescue.sh tailscale         put it in your Tailscale network at the next boot
-#   ./rpi/card-rescue.sh wifi "SSID"       teach it another wifi network
+#   ./rpi/card-rescue.sh wifi "SSID" [pri] teach it another wifi network (higher pri wins)
+#   ./rpi/card-rescue.sh forget "SSID"     take a network out of the Imager's own list
 #   ./rpi/card-rescue.sh debug             have the next boot leave its logs on this card
 #   ./rpi/card-rescue.sh bump              do the first-boot work again, changing nothing else
 #
@@ -25,6 +26,11 @@
 #     command line wins. Change only meta-data and the next boot does nothing whatsoever.
 #   - user-data is one YAML document, so it can hold only one write_files: and one runcmd:. Adding a
 #     second one silently replaces the first, taking whatever it held with it.
+#   - network-config holds exactly one usable wifi network, whatever it looks like. Netplan renders
+#     the access-points of one interface into a single NetworkManager profile, so a second network
+#     does not sit beside the first: it takes its data and keeps the other one's name. What you get
+#     is a profile called after one network that connects to the other. So extra networks go in as
+#     NetworkManager keyfiles of their own, which netplan never touches.
 #
 # The Python below sits at the left margin on purpose. An indented heredoc strips every leading tab,
 # Python's own indentation included, and the result is a syntax error at the worst possible moment.
@@ -93,8 +99,14 @@ def add_files(text, entries):
     return text.rstrip('\n') + '\n\nwrite_files:\n' + entries
 
 
-def add_command(text, entry):
-    m = re.search(r'^runcmd:\n(?:[ \t]+- .*\n)*', text, re.M)
+def add_command(text, entry, first=False):
+    """Last by default, so it runs after whatever was already there. Anything that brings the
+    network up wants to be first instead: a step that waits three minutes for a name to resolve is
+    no use when the wifi it waits for is configured after it."""
+    if first:
+        m = re.search(r'^runcmd:\n(?:  - \[ systemctl[^\n]*\n)?', text, re.M)
+    else:
+        m = re.search(r'^runcmd:\n(?:[ \t]+- .*\n)*', text, re.M)
     if m:
         return text[:m.end()] + entry + text[m.end():]
     return text.rstrip('\n') + '\n\nruncmd:\n' + entry
@@ -118,7 +130,8 @@ entries += '  # awb-%s end\n' % name
 text = add_files(text, entries)
 # || true, because cloud-init runs the runcmd entries as one script, and a failure here must not
 # take the rest of the boot with it - least of all the step that saves the logs.
-text = add_command(text, '  - [ /bin/sh, -c, "%s || true" ]\n' % path)
+text = add_command(text, '  - [ /bin/sh, -c, "%s || true" ]\n' % path,
+                   first=os.environ.get('AWB_FIRST') == '1')
 user_data.write_text(text)
 print('  Written to user-data.')
 PYTHON
@@ -298,48 +311,95 @@ sync' \
 # ---------------------------------------------------------------- wifi
 
 add_wifi() {
-	local ssid="$1"
-	[[ -f "${BOOT}/network-config" ]] || die "This card has no network-config on it."
-	say "Another wifi network: ${ssid}"
+	local ssid="$1" priority="${2:-0}"
+	say "Wifi network: ${ssid} (priority ${priority})"
+
 	local password=""
-	# This Mac is often on the very network the board has to join, and then the right password is
-	# already here. Taking it from the keychain beats retyping it: a wifi password that is one
-	# character off fails in a way that looks like anything but a typo - the board associates, the
-	# handshake fails, and all you see afterwards is a device that never came online.
-	if security find-generic-password -wa "${ssid}" >/dev/null 2>&1; then
-		note "This Mac knows this network; taking the password from your keychain."
+	local source=""
+	if [[ "${AWB_CLIPBOARD:-0}" == "1" ]] && command -v pbpaste >/dev/null; then
+		password="$(pbpaste)"
+		source="your clipboard"
+	elif security find-generic-password -wa "${ssid}" >/dev/null 2>&1; then
 		password="$(security find-generic-password -wa "${ssid}" 2>/dev/null)"
+		source="your keychain"
 	fi
 	if [[ -z "${password}" ]]; then
-		password="$(ask_secret "Password for \"${ssid}\" (empty for an open network)")"
+		password="$(ask_secret "Password for \"${ssid}\"")"
+		source="what you typed"
 	fi
+	[[ -n "${password}" ]] || die "No password given."
+	note "Password taken from ${source} (${#password} characters)."
 
-	SSID="${ssid}" PSK="${password}" python3 - "${BOOT}" <<'PYTHON'
+	# A NetworkManager keyfile of its own, not another entry in network-config: see the note at the
+	# top about netplan folding the access-points of one interface into a single profile. A keyfile
+	# is read straight from disk, survives every boot, and nothing regenerates over it.
+	AWB_FIRST=1 \
+	AWB_NAME="wifi-$(echo "${ssid}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')" \
+	AWB_EXTRA="/etc/NetworkManager/system-connections/${ssid}.nmconnection
+'0600'
+|
+      [connection]
+      id=${ssid}
+      type=wifi
+      autoconnect=true
+      autoconnect-priority=${priority}
+
+      [wifi]
+      mode=infrastructure
+      ssid=${ssid}
+
+      [wifi-security]
+      key-mgmt=wpa-psk
+      psk=${password}
+
+      [ipv4]
+      method=auto
+
+      [ipv6]
+      method=auto
+      addr-gen-mode=default" \
+	AWB_BODY='#!/bin/bash
+# Written onto the card by rpi/card-rescue.sh. NetworkManager refuses a keyfile that anyone else
+# can read, and cloud-init writes it before NetworkManager is up, so tell it to look again.
+chown root:root "/etc/NetworkManager/system-connections/SSID.nmconnection" 2>/dev/null
+chmod 600 "/etc/NetworkManager/system-connections/SSID.nmconnection" 2>/dev/null
+nmcli connection reload 2>/dev/null || systemctl reload NetworkManager 2>/dev/null
+echo "reloaded NetworkManager for SSID"' \
+		edit_user_data_ssid "${ssid}"
+	bump_instance_id
+	say "Done"
+	note "It joins whichever of its networks it finds; the higher priority wins when both are there."
+}
+
+# The body needs the SSID in it, and doing that inline turns into quoting soup.
+edit_user_data_ssid() {
+	AWB_BODY="${AWB_BODY//SSID/$1}" edit_user_data
+}
+
+# ---------------------------------------------------------------- forget
+
+# Only touches network-config, the list the Imager wrote. Networks this script added are keyfiles
+# and are removed by deleting them on the Pi itself; this is for undoing what was seeded there,
+# which matters because everything in that list beyond the first one is folded into the first.
+forget_wifi() {
+	local ssid="$1"
+	[[ -f "${BOOT}/network-config" ]] || die "This card has no network-config on it."
+	say "Taking ${ssid} out of the Imager's network list"
+	SSID="${ssid}" python3 - "${BOOT}" <<'PYTHON'
 import os, pathlib, re, sys
 boot = pathlib.Path(sys.argv[1])
 net = boot / 'network-config'
 text = net.read_text()
-ssid, psk = os.environ['SSID'], os.environ['PSK']
-
-# already there? then replace it, rather than have one network with two passwords
-if '"%s":' % ssid in text:
-    print('  That network was already on the card; replacing it.')
-    text = re.sub(r'\n {8}"%s":\n(?: {10}.*\n)*' % re.escape(ssid), '\n', text)
-
-entry = '        "%s":\n' % ssid
-entry += ('          password: "%s"\n' % psk) if psk else '          auth:\n            key-management: none\n'
-
-if 'access-points:' in text:
-    text = re.sub(r'^( +)access-points:\n', lambda m: m.group(0) + entry, text, count=1, flags=re.M)
-else:
-    text += ('  wifis:\n    wlan0:\n      dhcp4: true\n      optional: true\n'
-             '      access-points:\n' + entry)
+ssid = os.environ['SSID']
+if '"%s":' % ssid not in text:
+    print('  Not in there; nothing to do.')
+    sys.exit(0)
+text = re.sub(r'\n {8}"%s":\n(?: {10}.*\n)*' % re.escape(ssid), '\n', text)
 net.write_text(text)
-print('  Added.')
+rest = re.findall(r'^ {8}"?([^"\n:]+?)"?:\s*$', text, re.M)
+print('  Removed. Still in the list:', ', '.join(rest) if rest else 'nothing')
 PYTHON
 	bump_instance_id
-	say "Done"
-	note "It joins whichever of its networks it finds, so this one is a fallback and not a move."
 }
 
 # ---------------------------------------------------------------- main
@@ -348,7 +408,8 @@ case "${1:-}" in
 	show) show_card ;;
 	tailscale) add_tailscale ;;
 	debug) add_debug ;;
-	wifi) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh wifi \"SSID\""; add_wifi "$2" ;;
+	wifi) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh wifi \"SSID\" [priority]"; add_wifi "$2" "${3:-0}" ;;
+	forget) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh forget \"SSID\""; forget_wifi "$2" ;;
 	bump) say "Making cloud-init do its first-boot work again"; bump_instance_id ;;
 	*) awk 'NR > 2 { if (/^#/) { sub(/^# ?/, ""); print; next } exit }' "$0"; exit 1 ;;
 esac
