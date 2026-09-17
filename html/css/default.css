@@ -254,21 +254,34 @@ header,
 	width: 24%;
 }
 /* De kolom van nu krijgt de ruimte: daar staan de getallen waar iemand op afgaat, met de richting
-   erbij. De twee uren vooruit hebben aan minder genoeg - daar staat alleen een pijl en een getal -
-   en ze zijn toch al gedempt, want het is een schatting van het model. */
+   erbij. De twee uren vooruit hebben aan minder genoeg - daar staat alleen een pijl en een getal
+   met eventueel een stoot erboven - en ze zijn toch al gedempt, want het is een schatting. */
 .upper-winds-content th:nth-child(2) {
-	width: 40%;
+	/* Precies zo breed als er in staat plus de lucht aan weerskanten: bij 40% bleef er links twintig
+	   pixels leeg en rechts tien, en dan hangt de highlight scheef om de getallen heen. */
+	width: 35%;
+}
+/* De kolom van nu eindigt rechts, net als de uren ernaast, zodat "Nu" precies boven het gradengetal
+   staat en de getallen onder elkaar een kolom vormen. Het gradenteken hangt daarbij buiten de kolom,
+   dus het kopje lijnt uit met de cijfers en niet met dat teken. */
+.upper-winds-content .windcell:not(.windcell-forecast) .windcell-row {
+	justify-content: flex-end;
+}
+.upper-winds-content .windcell:not(.windcell-forecast),
+.upper-winds-content th:nth-child(2) {
+	padding-right: 10px;
 }
 .upper-winds-content th.windcell-forecast {
-	width: 17%;
+	width: 18.5%;
 }
 .upper-winds-content th {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--metadata-fontsize);
+	/* de kopjes zeggen welk uur je leest; op de maat van een voetnoot raad je ernaar */
+	font-size: calc(var(--metadata-fontsize) * 1.3);
 	font-weight: 600;
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	color: var(--metadata-textcolor);
+	color: var(--textcolor-2, var(--textcolor));
 	text-align: right;
 	padding: 0 6px 4px;
 }
@@ -341,6 +354,10 @@ header,
 }
 .windcell-row .winddirection {
 	white-space: nowrap;
+	/* ruimte voor drie cijfers, ook als de wind uit 95 graden komt: anders schuift de hele kolom op
+	   zodra een richting een cijfer korter is */
+	min-width: 3.3ch;
+	text-align: right;
 }
 .windcell-row .windgust {
 	flex: none;
@@ -425,8 +442,14 @@ header,
 .upper-winds-content tr.ground-row .windcell-forecast {
 	opacity: 1;
 }
+/* De grondwind vooruit is geen voetnoot bij de grondwind van nu maar hetzelfde getal, een uur later;
+   het staat daarom op negen tiende van die maat in plaats van op die van een tussenkolom. */
 .upper-winds-content tr.ground-row .windcell-forecast .windspeed {
 	color: var(--textcolor-2, var(--textcolor));
+	font-size: calc(var(--value-fontsize, var(--text-contents-fontsize)) * 0.9);
+}
+.upper-winds-content tr.ground-row .windcell-forecast .windgust {
+	font-size: calc(var(--metadata-fontsize) * 1.215);
 }
 .upper-winds-content tr.ground-row .windcell-forecast .wind-arrow {
 	opacity: 0.6;
@@ -449,7 +472,8 @@ header,
 	background-color: transparent;
 	border-top: 1px dashed var(--block-border-color);
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--metadata-fontsize);
+	/* Dit is de hoogte waarboven je handschoenen wilt: geen voetnoot maar een getal om te lezen. */
+	font-size: calc(var(--metadata-fontsize) * 1.3);
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: var(--metadata-textcolor);
