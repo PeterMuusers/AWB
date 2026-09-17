@@ -40,7 +40,13 @@ const AXIS_FONT = '17px sans-serif';
    windprofiel naast staat om naar te kijken. */
 const TIME_BASELINE = 13;				// pixels above the bottom edge for the bottom of the digits
 const TIME_TICK = 6;					// pixels, the little line above each time
-const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measured | expected'
+/* De strook bovenin met 'gemeten | verwacht'. Die twee woorden staan op dezelfde maat en dezelfde
+   regel als de ondertitel van het windprofiel ernaast, zodat de twee tegels als één bord lezen: het
+   canvas begint daarom vlak onder de kop (geen marge) en deze strook is precies zo hoog dat de
+   bovenste hoogtelijn op dezelfde plek blijft als eerst. */
+const TOP_LABEL_HEIGHT = 21;			// pixels at the top, above the chart, for 'measured | expected'
+const TOP_FONT = '600 14px "Roboto Condensed", "Roboto", sans-serif';
+const TOP_BASELINE = 13;				// pixels from the top of the canvas to the foot of those words
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 /* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
    Zo begint dat getal op de rand van het canvas en houdt het dus de veertien pixels van de tegel
@@ -444,10 +450,20 @@ class Module {
 
 		/* what the line divides, said once in the strip above the chart itself */
 		context.fillStyle = muted;
+		context.font = TOP_FONT;
+		context.textBaseline = 'alphabetic';
+		if ('letterSpacing' in context) {
+			context.letterSpacing = '0.08em';		/* zoals de ondertitel ernaast */
+		}
 		context.textAlign = 'right';
-		context.fillText(LANGUAGE_MEASURED_LABEL.toUpperCase(), x(now) - 6, TOP_LABEL_HEIGHT / 2 - 1);
+		context.fillText(LANGUAGE_MEASURED_LABEL.toUpperCase(), x(now) - 8, TOP_BASELINE);
 		context.textAlign = 'left';
-		context.fillText(LANGUAGE_EXPECTED_LABEL.toUpperCase(), x(now) + 6, TOP_LABEL_HEIGHT / 2 - 1);
+		context.fillText(LANGUAGE_EXPECTED_LABEL.toUpperCase(), x(now) + 8, TOP_BASELINE);
+		if ('letterSpacing' in context) {
+			context.letterSpacing = '0px';
+		}
+		context.font = CHART_FONT;
+		context.textBaseline = 'middle';
 
 		this.drawn = true;
 	}

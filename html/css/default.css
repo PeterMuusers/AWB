@@ -789,7 +789,9 @@ header,
 	/* Zo laag dat de grafiek zich naar het windprofiel voegt in plaats van andersom: hij vult wat er
 	   over is in zijn eigen blok en vraagt zelf nooit meer dan dit. */
 	min-height: 150px;
-	margin-top: 6px;
+	/* geen marge: de woorden 'gemeten' en 'verwacht' worden in het canvas getekend en horen op
+	   dezelfde regel te staan als de ondertitel van het windprofiel ernaast */
+	margin-top: 0;
 }
 
 /* Metrics panel, filled by scripts/modules/luchtvaartmeteo.js */
