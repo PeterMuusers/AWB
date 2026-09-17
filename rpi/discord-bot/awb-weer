@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""What the station measures, as a few lines of text.
+
+Quicker than a screenshot when all you want to know from the car park is whether it is dry and how
+hard it blows. The numbers come from the same proxy the board itself reads, so there is no second
+source that can disagree with the screen.
+"""
+import json
+import urllib.request
+
+URL = "http://127.0.0.1/luchtvaartmeteo-proxy.php?action=observations"
+
+
+def main() -> None:
+    with urllib.request.urlopen(URL, timeout=25) as response:
+        data = json.load(response)
+    observation = data.get("observation") or {}
+
+    def value(key, digits=0):
+        raw = observation.get(key)
+        if raw is None:
+            return None
+        return round(raw) if digits == 0 else round(raw, digits)
+
+    def thousands(number):
+        return f"{number:,}".replace(",", ".")
+
+    layers = []
+    for index in (1, 2, 3):
+        base, okta = value(f"base{index}_ft"), observation.get(f"okta{index}")
+        if base:
+            layers.append(f"{thousands(base)} ft {okta}/8")
+
+    wind, gust, direction = value("wind_kt"), value("gust_kt"), value("wind_dir")
+    gusting = f" met stoten {gust}" if gust and wind and gust > wind + 1 else ""
+    visibility = value("vis_m")
+    # observed_at is een tijd per veld; de tijd van de waarneming zelf staat in "time"
+    observed = str(data.get("time") or "")[11:16]
+
+    print(f"station    : {data.get('station', '?')}  {observed} UTC")
+    print(f"wolken     : {' / '.join(layers) if layers else 'onbewolkt'}")
+    print(f"wind       : {wind} kt{gusting} uit {direction} graden")
+    print(f"zicht      : {thousands(visibility) if visibility else '?'} m")
+    print(f"neerslag   : {value('rain_mmh', 1)} mm/u")
+    print(f"temperatuur: {value('temp_c', 1)} C, dauwpunt {value('dewpoint_c', 1)}")
+    print(f"QNH        : {value('qnh_hpa')} hPa")
+
+
+if __name__ == "__main__":
+    main()

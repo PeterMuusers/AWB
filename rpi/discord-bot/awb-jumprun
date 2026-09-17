@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Which jumpruns are on the board today, per dropzone.
+
+Read only. Publishing happens where the wind and the geometry of the field live; this only says
+what is there, so you can check from a distance that it stands as you meant it.
+"""
+import json
+import urllib.request
+
+DROPZONES = ("hoogeveen", "echten")
+URL = "http://127.0.0.1/jumprun-proxy.php?action=jumprun&station="
+
+
+def thousands(number: int) -> str:
+    return f"{number:,}".replace(",", ".")
+
+
+def show(dropzone: str) -> None:
+    try:
+        with urllib.request.urlopen(URL + dropzone, timeout=20) as response:
+            data = json.load(response)
+    except OSError as error:
+        print(f"{dropzone.capitalize():<11}: niet op te halen ({error})")
+        return
+
+    entry = data.get("jumprun")
+    name = data.get("station", dropzone).capitalize()
+    if not entry:
+        print(f"{name:<11}: niets gepubliceerd voor vandaag")
+        return
+
+    plan = entry.get("plan") or {}
+    # de naam alleen als er meer dan één beheerder is; bij één zegt hij niets
+    by = f" door {entry.get('set_by')}" if data.get("admins", 1) > 1 and entry.get("set_by") else ""
+    track = round(plan.get("trackDeg", 0))
+    exit_alt = plan.get("exitAltFt") or 0
+    print(f"{name:<11}: koers {track} graden, exit {thousands(exit_alt)} ft")
+    print(f"{'':<11}  geplaatst{by} om {entry.get('set_at', '')[11:16]} UTC"
+          f", notatie {data.get('notation', 'offset')}")
+
+
+if __name__ == "__main__":
+    for zone in DROPZONES:
+        show(zone)
