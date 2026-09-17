@@ -26,7 +26,7 @@ $JUMPRUN_URL = awb_env_is_set('JUMPRUN_URL') ? rtrim(awb_env('JUMPRUN_URL'), '/'
 $API_KEY = awb_env_is_set('JUMPRUN_API_KEY') ? awb_env('JUMPRUN_API_KEY') : '';
 $CACHE_DIR = sys_get_temp_dir();
 $FORECAST_TTL = 2 * 60;
-$JUMPRUN_TTL = 60;				// seconds; a jumprun is put up by hand, so the board should notice quickly
+$JUMPRUN_TTL = 20;				// seconds; a jumprun is put up by hand, so the board should notice quickly
 /* While this file exists the board shows no jumprun at all. Not the same as removing one: the plan
    stays at jumprun.nl and comes back the moment the file goes. */
 $HIDDEN_FILE = awb_env_is_set('JUMPRUN_HIDDEN_FILE') ? awb_env('JUMPRUN_HIDDEN_FILE') : '/var/lib/awb/jumprun-hidden';

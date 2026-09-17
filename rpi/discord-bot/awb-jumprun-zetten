@@ -14,11 +14,17 @@ een dropzone uit een korte lijst, hoogtes en afstanden binnen hun grenzen, een w
 Alles wat niet klopt levert een weigering op en niets anders; het rekenscript ziet die waarde dan
 nooit.
 """
+import glob
+import os
 import re
 import subprocess
 import sys
 
 SCRIPT = "/opt/AWB/rpi/jumprun-auto.mjs"
+# De proxy bewaart het antwoord van jumprun.nl even; na het publiceren gooien we dat weg, anders
+# staat een jumprun die je net ophing nog tot twintig seconden niet op het bord. lighttpd draait met
+# een eigen /tmp, vandaar het tweede pad.
+CACHE = ("/tmp/awb-jumprun-plan-*.json", "/tmp/systemd-private-*/tmp/awb-jumprun-plan-*.json")
 DROPZONES = ("hoogeveen", "echten")          # de velden waar dit bord over gaat
 EXIT_FT = (2000, 15000)
 OFFSET_NM = (0.0, 3.0)
@@ -77,6 +83,13 @@ def main(argv: list[str]) -> int:
     finished = subprocess.run(out, capture_output=True, text=True, timeout=90)
     sys.stdout.write(finished.stdout)
     sys.stdout.write(finished.stderr)
+    if finished.returncode == 0 and "--post" in out:
+        for pattern in CACHE:
+            for path in glob.glob(pattern):
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
     return finished.returncode
 
 

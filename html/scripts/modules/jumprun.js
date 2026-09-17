@@ -70,9 +70,11 @@ class Module {
 		   om de beurt zijn eigen beurt in de lus. */
 		this.stations = Array.isArray(stations) ? stations : [stations];
 		/* Een jumprun wordt met de hand opgehangen, en ook met de hand even van het bord gehaald. Wie
-		   dat doet staat meestal naar het scherm te kijken, dus een halve minuut is het wachten waard;
-		   het antwoord komt van de proxy hiernaast en niet van jumprun.nl zelf. */
-		this.refreshInterval = 30 * 1000;
+		   dat doet staat meestal naar het scherm te kijken en wil het zien gebeuren, dus vragen we het
+		   vaak. Het antwoord komt van de proxy hiernaast, niet van jumprun.nl: gemeten kost zo'n vraag
+		   41 ms, vrijwel helemaal het opstarten van PHP. Twee dropzones elke vijf seconden is daarmee
+		   ongeveer een seconde processortijd per minuut, op een Pi met vier kernen. */
+		this.refreshInterval = 5 * 1000;
 
 		this.last_updated = null;
 		this.all = {};				// station -> {notation, runs: [{entry, planned}]}
@@ -324,11 +326,17 @@ class Module {
 			delete this.all[station];
 			return;
 		}
+		/* Wat er al ligt opnieuw uitrekenen heeft geen zin: een plan verandert alleen als iemand het
+		   opnieuw ophangt, en dat staat in set_at. Zonder deze vergelijking rekent dit bord elke vijf
+		   seconden dezelfde runs nog eens door. */
+		var held = this.all[station] || { runs: [] };
+		var known = {};
+		held.runs.forEach(run => { known[run.entry.station + '|' + run.entry.set_at] = run; });
 		this.all[station] = {
 			/* de notatie is die van de dropzone, niet die van wie het plan ophing: het bord hangt op
 			   het veld en hoort de taal van dat veld te spreken */
 			notation: (notation === 'polar') ? 'polar' : 'offset',
-			runs: usable.map(entry => ({
+			runs: usable.map(entry => known[entry.station + '|' + entry.set_at] || ({
 				entry: entry,
 				planned: this.compute(entry.plan, this.profileOf(entry.wind)),
 			})),
