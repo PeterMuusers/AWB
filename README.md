@@ -18,19 +18,30 @@ else's overnight.
 
 ### Headless, over wifi, from a Mac
 
-No keyboard and no network cable, only an SD card and a laptop. In that order:
+No keyboard and no network cable, only an SD card and a laptop. Three commands and one program:
 
 1. **Raspberry Pi Imager**, with the desktop version of Raspberry Pi OS (Bookworm or Trixie). Under
    the gear: hostname `awb`, a user, SSH on, and one wifi network with the country. That first
-   network is the only one that can be set before the card is ever booted, so make it the one your
-   laptop is on too.
-2. **Boot and find it.** `ssh <user>@awb.local` over that same network.
-3. **Copy the project across.** From your own machine, in the checkout:
-   `rsync -a --exclude .git ./ <user>@awb.local:AWB/`
-4. **Run the setup.** `sudo AWB/rpi/setup.sh`, and answer the questions. The wifi step is where the
+   network is the only thing that can be set before the card has ever booted, so make it one your
+   laptop is on too. Writing the image is left to the Imager on purpose: it is the one step where a
+   mistake costs you the wrong disk.
+2. **Check the card before you eject it**, with the card still in the Mac:
+   `./rpi/deploy-from-mac.sh --check-card`
+   It says whether the hostname, the user, SSH, the wifi and the country are actually on there. A
+   card that boots without them is a Pi you cannot reach, and without a keyboard there is no way
+   back in.
+3. **Boot the Pi, wait a couple of minutes, then:** `./rpi/deploy-from-mac.sh`
+   It finds the Pi, offers to put your SSH key on it, copies this checkout across, hands over the
+   credentials file and then runs the setup on the Pi with your answers. The wifi step is where the
    other networks go in: a phone hotspot, and the one at the club. A network does not have to be in
    range to be added, so the club's wifi can go in from your kitchen table weeks in advance.
-5. **Fill in the credentials** in `/opt/AWB/.env` and reboot.
+4. **Reboot** and the board comes up on the screen by itself.
+
+After that, every change on your own machine reaches the board with:
+
+`./rpi/deploy-from-mac.sh --update`
+
+which copies what changed and asks nothing.
 
 Adding a network later is one line and needs no reinstall:
 
