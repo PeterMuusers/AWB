@@ -62,24 +62,51 @@ check_card() {
 	for candidate in /Volumes/bootfs /Volumes/boot; do
 		[[ -d "${candidate}" ]] && boot="${candidate}" && break
 	done
-	[[ -n "${boot}" ]] || die "No boot partition mounted. Put the freshly written card in this Mac."
+	[[ -n "${boot}" ]] || die "No boot partition mounted. Put the freshly written card in this Mac. The Imager ejects it when it is done, so it has to go back in."
 	note "Found ${boot}"
 
-	# The Imager leaves its settings behind in one of these two, depending on its version. Without
-	# either, the Pi boots as a factory image: no user, no network, no way in.
-	local configured=0
-	[[ -f "${boot}/custom.toml" ]] && { note "First-boot settings: custom.toml"; configured=1; }
-	[[ -f "${boot}/firstrun.sh" ]] && { note "First-boot settings: firstrun.sh"; configured=1; }
-	[[ "${configured}" -eq 1 ]] || die "This card has no Imager settings on it. Write it again with the gear icon: hostname, user, SSH and one wifi network."
+	# The Imager has written its settings two different ways. Up to 1.9 it was custom.toml, or a
+	# firstrun.sh on older versions still; from 2.0 it is cloud-init, which is three files and no
+	# toml at all. A card from a current Imager therefore has none of the old names on it, and
+	# reading the absence of custom.toml as "not configured" sends you back to rewrite a card that
+	# was perfectly good.
+	local blob="" style=""
+	for name in custom.toml firstrun.sh; do
+		[[ -f "${boot}/${name}" ]] && { blob+="$(cat "${boot}/${name}")"; style="${name}"; }
+	done
+	for name in user-data network-config; do
+		[[ -f "${boot}/${name}" ]] && { blob+="$(cat "${boot}/${name}")"; style="cloud-init"; }
+	done
+	[[ -n "${style}" ]] || die "This card has no Imager settings on it. Write it again and fill in the customisation: hostname, user, SSH and one wifi network."
+	note "First-boot settings: ${style}"
 
-	local blob=""
-	[[ -f "${boot}/custom.toml" ]] && blob="$(cat "${boot}/custom.toml")"
-	[[ -f "${boot}/firstrun.sh" ]] && blob="${blob}$(cat "${boot}/firstrun.sh")"
+	has() { grep -qiE "$1" <<<"${blob}"; }
 
-	grep -qi "ssh" <<<"${blob}" && note "SSH: on" || note "SSH: NOT found — you will not be able to reach it"
-	grep -qiE "ssid|wlan|wpa" <<<"${blob}" && note "Wifi: configured" || note "Wifi: NOT found — without a cable this Pi never comes online"
-	grep -qiE "hostname" <<<"${blob}" && note "Hostname: set" || note "Hostname: not set, so it will be raspberrypi.local"
-	grep -qiE "country" <<<"${blob}" && note "Wifi country: set" || note "Wifi country: not found — the radio stays off without one"
+	# Without a way in there is no way in: this board has no keyboard and no screen.
+	if has 'ssh_authorized_keys'; then
+		note "SSH: on, with a key"
+		if has 'ssh_pwauth:[[:space:]]*false'; then
+			note "     and passwords are off, so that key is the only way in - make sure it is yours"
+		fi
+	elif has 'ssh_pwauth:[[:space:]]*true|enable_ssh|ssh_pw'; then
+		note "SSH: on, with a password"
+	else
+		note "SSH: NOT found - you will not be able to reach it"
+	fi
+
+	has 'access-points|ssid|wlan|wpa' && note "Wifi: configured" || note "Wifi: NOT found - without a cable this Pi never comes online"
+
+	# The name matters here beyond being tidy: it is what you type to reach the thing.
+	local name
+	name="$(sed -n 's/^[[:space:]]*hostname[[:space:]]*[:=][[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' <<<"${blob}" | head -n 1)"
+	if [[ -n "${name}" ]]; then
+		note "Hostname: ${name}, so it answers to ${name}.local"
+	else
+		note "Hostname: not set, so it will be raspberrypi.local"
+	fi
+
+	# No country, no transmitter: the symptom is a Pi that sees no networks whatsoever.
+	has 'regulatory-domain|country' && note "Wifi country: set" || note "Wifi country: not found - the radio stays off without one"
 
 	say "If all four say yes, eject the card and boot the Pi."
 	note "Then run this script again without --check-card."
