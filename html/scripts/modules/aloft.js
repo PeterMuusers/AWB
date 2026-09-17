@@ -299,7 +299,10 @@ class Module {
 		if (gust === null || gust === undefined || wind === null || gust <= wind + 1) {
 			return '';
 		}
-		return '<span class="windgust">G' + Math.round(gust) + '</span>';
+		/* De G is het label, het getal is het nieuws: die G staat daarom kleiner, zoals 'kt' en het
+		   gradenteken elders op dit bord. Zo blijft de stoot ook binnen de breedte van de graden
+		   eronder, waar hij een kolom mee vormt. */
+		return '<span class="windgust"><span class="windgust-mark">G</span>' + Math.round(gust) + '</span>';
 	}
 
 	cell(wind, extra, forecast, reference, limit) {
