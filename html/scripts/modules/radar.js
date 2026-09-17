@@ -394,25 +394,47 @@ class Module {
 	   clouds come from has to reach far enough past the map to still cover it at the end of the
 	   loop. A quarter of the map width used to be it, which a wind of twenty-five knots eats
 	   through in an hour, and from there the straight edge of the image walked into view.
+	
+	   The margin is worked out from what will actually be drawn, not from the wind of this
+	   moment. Two things make the real shift bigger than that: the wind two hours from now can
+	   be stronger than the wind now, and the image being shifted can be older than one time
+	   step when a newer one failed to load. Both were enough to bring the edge back into view.
+	
 	   Only the upwind side is stretched. Making the whole square bigger would spend the same
 	   number of pixels on more sky, and the sharpness of the image is the reason to show it. The
 	   amount is rounded up to a quarter of a degree, so the images are not all fetched again every
 	   time the wind turns a little. */
 	cloudArea() {
 		var bounds = this.map.getBounds().pad(CLOUDS_MARGIN);
-		var wind = this.satelliteAdvect ? this.windAtCloudLevel(new Date()) : null;
-		if (wind === null) {
+		if (!this.satelliteAdvect) {
 			return bounds;
 		}
-		/* the newest image is already up to one step old, and it is shifted to the last frame */
-		var seconds = this.hoursAhead * 60 * 60 + SAT_STEP * 60;
+		var now = Date.now();
+		/* het beeld dat straks verschoven wordt: dat van nu, of een ouder als dat niet laadde */
+		var usable = this.satelliteFor(new Date(now));
+		var imageTime = usable !== null ? new Date(usable).getTime() : now - SAT_STEP * 60 * 1000;
 		var middle = (bounds.getSouth() + bounds.getNorth()) / 2;
-		var north = wind.north * seconds / METERS_PER_DEGREE;
-		var east = wind.east * seconds / (METERS_PER_DEGREE * Math.cos(middle * Math.PI / 180));
+		var south = 0, north = 0, west = 0, east = 0;
+		/* langs de hele lus kijken, want de verste verschuiving hoeft niet die van het laatste
+		   frame te zijn: de wind kan onderweg draaien */
+		for (var minutes = 0; minutes <= this.hoursAhead * 60; minutes += SAT_STEP) {
+			var frameTime = new Date(now + minutes * 60 * 1000);
+			var wind = this.windAtCloudLevel(frameTime);
+			if (wind === null) {
+				continue;
+			}
+			var seconds = (frameTime.getTime() - imageTime) / 1000;
+			var up = wind.north * seconds / METERS_PER_DEGREE;
+			var right = wind.east * seconds / (METERS_PER_DEGREE * Math.cos(middle * Math.PI / 180));
+			south = Math.max(south, up);
+			north = Math.min(north, up);
+			west = Math.max(west, right);
+			east = Math.min(east, right);
+		}
 		var step = amount => Math.ceil(Math.abs(amount) / CLOUDS_SHIFT_STEP) * CLOUDS_SHIFT_STEP;
 		return L.latLngBounds(
-			[bounds.getSouth() - (north > 0 ? step(north) : 0), bounds.getWest() - (east > 0 ? step(east) : 0)],
-			[bounds.getNorth() + (north < 0 ? step(north) : 0), bounds.getEast() + (east < 0 ? step(east) : 0)]
+			[bounds.getSouth() - step(south), bounds.getWest() - step(west)],
+			[bounds.getNorth() + step(north), bounds.getEast() + step(east)]
 		);
 	}
 
