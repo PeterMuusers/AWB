@@ -216,7 +216,10 @@ WAYLAND_DISPLAY="wayland-0" wlr-randr --output ${OUTPUT} --mode ${RESOLUTION} 2>
 # at the club to notice, let alone to start it again. A few seconds later it is simply back.
 while true; do
 	# A fresh profile every start: no crash bubble, no "restore pages?", no cache from last week.
-	rm -rf "\${HOME}/.config/chromium"
+	# Both directories, because Chromium keeps its profile in .config and its HTTP cache in .cache:
+	# clearing only the first leaves the board serving yesterday's stylesheet from disk, and a change
+	# you just deployed does not appear however often you restart it.
+	rm -rf "\${HOME}/.config/chromium" "\${HOME}/.cache/chromium"
 	chromium --kiosk --password-store=basic --noerrdialogs --disable-infobars \\
 		--disable-session-crashed-bubble --disable-features=Translate \\
 		--check-for-update-interval=31536000 http://127.0.0.1/

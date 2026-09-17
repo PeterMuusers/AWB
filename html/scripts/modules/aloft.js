@@ -310,12 +310,17 @@ class Module {
 		   already a coloured number, and two colours of number in one table read as one thing */
 		var over = (limit === true) ? ' windcell-limit' : '';
 		/* every part gets its own slot, so arrows, speeds and degrees line up down the column */
+		/* Voor de uren vooruit zegt de pijl genoeg; de graden zouden alleen ruis toevoegen. In de
+		   kolom van nu staan ze er wel, en dan komt een eventuele stoot erboven in plaats van
+		   ernaast: met allebei op één regel duwde de stoot de graden weg, en dat zijn juist de
+		   twee getallen waarvoor je naar deze regel kijkt. */
+		var tail = forecast
+			? (extra || '')
+			: '<span class="windcell-tail">' + (extra || '') + '<span class="winddirection">' + wind.dir + '&deg;</span></span>';
 		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + over + '"><span class="windcell-row">'
 			+ this.arrow(wind.dir, forecast && this.shift(wind.dir, reference) >= SIGNIFICANT_SHIFT)
 			+ '<span class="windspeed">' + wind.kt + '</span>'
-			+ (extra || '')
-			/* for the hours ahead the arrow says enough; the degrees would only add noise */
-			+ (forecast ? '' : '<span class="winddirection">' + wind.dir + '&deg;</span>') + '</span></td>';
+			+ tail + '</span></td>';
 	}
 
 	showData() {

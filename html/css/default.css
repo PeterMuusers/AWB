@@ -266,15 +266,29 @@ header,
 	min-width: 2.2ch;
 	text-align: right;
 }
-.windcell-row .winddirection {
-	/* pushed to the right edge, so the degrees form a column of their own */
+/* Stoot en graden staan onder elkaar aan de rechterkant, niet naast elkaar. Naast elkaar paste
+   "G18" en "222°" niet in één cel: de graden werden afgekapt tot "2°", terwijl dat een van de twee
+   getallen is waarvoor je naar deze regel kijkt. Boven elkaar houden ze allebei hun plek, en de
+   graden blijven een kolom vormen over de rijen heen. */
+.windcell-row .windcell-tail {
 	margin-left: auto;
-	min-width: 0;
-	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	line-height: 1.1;
+}
+.windcell-row .windcell-tail .windgust,
+.windcell-row .windcell-tail .winddirection {
+	margin: 0;
+	white-space: nowrap;
+}
+.windcell-row .winddirection {
+	white-space: nowrap;
 }
 .windcell-row .windgust {
 	flex: none;
 	margin-left: 1px;
+	margin-right: 2px;
 }
 .wind-arrow {
 	display: inline-block;

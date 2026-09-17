@@ -217,12 +217,21 @@ class Module {
 		   nearly and completely covered is one you can see from across the hangar rather than a
 		   shade you have to compare with the bar next to it. */
 		var step = (layers.length > 1) ? Math.abs(x(layers[1].time.getTime()) - x(layers[0].time.getTime())) : 6;
+		/* Binnen de grafiek blijven. De metingen gaan verder terug dan de uren die hier getoond
+		   worden, en zonder afkappen tekent x() die netjes links van de as - dwars door de
+		   hoogteschaal heen. Een blokje dat de rand raakt wordt afgesneden in plaats van
+		   weggelaten, zodat je ziet dat de reeks doorloopt. */
+		context.save();
+		context.beginPath();
+		context.rect(AXIS_WIDTH, TOP_LABEL_HEIGHT, width - AXIS_WIDTH, cloudBottom - TOP_LABEL_HEIGHT);
+		context.clip();
 		layers.forEach(moment => {
 			moment.layers.forEach(layer => {
 				context.fillStyle = 'rgba(' + towardsWhite(layer.okta) + ', ' + (0.45 + 0.55 * (layer.okta / 8)).toFixed(2) + ')';
 				context.fillRect(x(moment.time.getTime()) - step / 2, y(layer.base) - MEASURED_BAR / 2, Math.max(3, step - 1), MEASURED_BAR);
 			});
 		});
+		context.restore();
 
 		/* The freezing level of the model, as a dashed line */
 		var freezing = ahead.length > 0 ? ahead[0].freezing : null;
