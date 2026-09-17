@@ -525,6 +525,9 @@ header,
 .ring-label span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; padding: 1px 5px; border-radius: 5px; background: rgba(17,26,36,0.6); color: rgba(255,255,255,0.9); font-size: 10px; font-weight: 600; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .target-label span { position: absolute; white-space: nowrap; padding: 1px 6px; border-radius: 5px; background: rgba(17,26,36,0.6); color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.03em; }
 .target-label.off span { opacity: 0.45; }
+/* De legenda van de kaart hoort hier niet. Op jumprun.nl staat ze er voor wie het plan maakt; op
+   een bord waar iedereen langsloopt leidt ze af, en wie het aangaat weet wat de lens betekent. */
+.layer-jumprun .jr-legend { display: none; }
 .jr-legend { position: absolute; left: 8px; bottom: 22px; z-index: 500; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 8px; border-radius: 8px; background: rgba(17,26,36,0.72); color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; pointer-events: none; }
 .jr-legend .ln { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid var(--c, #0ca30c); margin-right: 6px; vertical-align: middle; }
 .jr-legend .ln.dash { border-top-style: dashed; border-top-width: 2px; }
