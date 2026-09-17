@@ -232,12 +232,39 @@ while true; do
 	rm -rf "\${HOME}/.config/chromium" "\${HOME}/.cache/chromium"
 	chromium --kiosk --password-store=basic --noerrdialogs --disable-infobars \\
 		--disable-session-crashed-bubble --disable-features=Translate,TranslateUI \\
-		--check-for-update-interval=31536000 http://127.0.0.1/
+		--check-for-update-interval=31536000 "http://127.0.0.1/?kiosk=1"
 	sleep 3
 done
 EOF
 chmod +x "${KIOSK}"
 chown "${USER_NAME}:${USER_NAME}" "${KIOSK}"
+
+# Geen muisaanwijzer op dit scherm, van welke muis hij ook komt. De stylesheet zet hem al op none,
+# maar dat werkt pas zodra de aanwijzer over de pagina beweegt - en er hangt geen muis aan de Pi:
+# wie op afstand meekijkt stuurt er een, en dan staat er een pijltje midden op de televisie in de
+# kantine dat daar blijft staan. Een cursorthema dat uit een doorzichtig plaatje bestaat haalt het
+# bij de wortel weg: de compositor tekent hem, maar er is niets te zien.
+CURSOR_THEME="awb-onzichtbaar"
+python3 - "/usr/share/icons/${CURSOR_THEME}/cursors" <<'PYEOF'
+import os, struct, sys
+
+# Het Xcursor-formaat, met een beeldje van één doorzichtige pixel.
+SIZE, IMAGE = 24, 0xfffd0002
+image = struct.pack('<IIIIIIIII', 36, IMAGE, SIZE, 1, 1, 1, 0, 0, 0) + struct.pack('<I', 0)
+header = struct.pack('<IIII', 0x72756358, 16, 0x00010000, 1)
+toc = struct.pack('<III', IMAGE, SIZE, len(header) + 12)
+
+folder = sys.argv[1]
+os.makedirs(folder, exist_ok=True)
+with open(os.path.join(folder, 'left_ptr'), 'wb') as handle:
+    handle.write(header + toc + image)
+for name in ('default', 'arrow', 'top_left_arrow', 'left_ptr_watch', 'watch',
+             'text', 'xterm', 'hand1', 'hand2', 'pointer', 'grab', 'grabbing'):
+    link = os.path.join(folder, name)
+    if not os.path.exists(link):
+        os.symlink('left_ptr', link)
+PYEOF
+printf '[Icon Theme]\nName=%s\n' "${CURSOR_THEME}" > "/usr/share/icons/${CURSOR_THEME}/index.theme"
 
 # Which compositor starts it depends on the version: Bookworm uses wayfire, Trixie labwc. Write the
 # one that is there, and an XDG autostart entry as a third way in case a future version changes
@@ -250,6 +277,7 @@ if command -v wayfire >/dev/null 2>&1; then
 	WAYFIRE_MODE="${RESOLUTION%Hz}"
 	WAYFIRE_MODE="${WAYFIRE_MODE%@*}@$(( ${WAYFIRE_MODE##*@} * 1000 ))"
 	crudini --set "${USER_HOME}/.config/wayfire.ini" "output:${OUTPUT}" "mode" "${WAYFIRE_MODE}"
+	crudini --set "${USER_HOME}/.config/wayfire.ini" "input" "cursor_theme" "${CURSOR_THEME}"
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/wayfire.ini"
 	STARTED_BY="wayfire"
 	note "Started by wayfire."
@@ -259,6 +287,10 @@ if command -v labwc >/dev/null 2>&1; then
 	grep -qxF "${KIOSK} &" "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
 		|| echo "${KIOSK} &" >> "${USER_HOME}/.config/labwc/autostart"
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/labwc/autostart"
+	touch "${USER_HOME}/.config/labwc/environment"
+	grep -q '^XCURSOR_THEME=' "${USER_HOME}/.config/labwc/environment" \
+		|| printf 'XCURSOR_THEME=%s\nXCURSOR_SIZE=24\n' "${CURSOR_THEME}" >> "${USER_HOME}/.config/labwc/environment"
+	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/labwc/environment"
 	STARTED_BY="labwc"
 	note "Started by labwc."
 fi

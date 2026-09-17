@@ -134,11 +134,18 @@ function watchDemo() {
    windrichting - in plaats van een kleiner bord. De kaart merkt er niets van: transform raakt de
    opmaak niet, dus Leaflet blijft rekenen met het vlak van 1920 bij 1080. */
 /* De muisaanwijzer laten zien zolang er een muis beweegt, en hem daarna weer laten verdwijnen.
-   Op het bord aan de televisie gebeurt dat nooit, dus daar blijft hij weg; op de machine van
-   waaraf je meekijkt is hij er zodra je hem nodig hebt. */
+   Op de machine van waaraf je meekijkt is hij er zodra je hem nodig hebt.
+
+   Behalve op de kiosk zelf. Daar hangt geen muis aan, maar wie van afstand meekijkt stuurt er wel
+   een: het scherm van de Pi is hetzelfde scherm als de televisie in de kantine, dus een beweging
+   op jouw bureau zette daar een pijltje in beeld. De kiosk start met ?kiosk=1 en laat de aanwijzer
+   daarom met rust. */
 const POINTER_IDLE_MS = 3000;
 var pointerTimer = null;
 function watchPointer() {
+	if (getURLParameter('kiosk')) {
+		return;
+	}
 	window.addEventListener('mousemove', () => {
 		document.body.classList.add('pointer-moving');
 		clearTimeout(pointerTimer);
