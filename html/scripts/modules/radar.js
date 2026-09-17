@@ -747,26 +747,22 @@ class Module {
 		this.satTimes = Object.keys(this.satOverlays).sort();
 	}
 
-	/* After so many complete runs of the loop, the jumprun of today takes the map over for a while.
-	   Returns whether it did, so the loop knows to wait longer before the next frame. It hides
-	   itself again on a timer of its own rather than by counting frames, because the radar keeps
-	   running underneath and should simply reappear when the time is up. */
+	/* After so many complete runs of the loop, the jumpruns of today take the map over: every run
+	   that is up, one after the other, each for jumprunSeconds. Returns how many screens that is, so
+	   the loop knows how long to wait before the next frame. The jumprun module hides itself again
+	   when the last one has had its turn, because the radar keeps running underneath and should
+	   simply reappear when the time is up. */
 	jumprunTurn() {
 		var jumprun = (document.modules || {}).jumprun;
 		if (!jumprun || !jumprun.active || !this.jumprunAfterRuns) {
-			return false;
+			return 0;
 		}
 		this.runs = (this.runs || 0) + 1;
 		if (this.runs < this.jumprunAfterRuns) {
-			return false;
+			return 0;
 		}
 		this.runs = 0;
-		if (!jumprun.show()) {
-			return false;
-		}
-		clearTimeout(this.jumprunTimer);
-		this.jumprunTimer = setTimeout(() => jumprun.hide(), this.jumprunSeconds * 1000);
-		return true;
+		return jumprun.sequence(this.jumprunSeconds);
 	}
 
 	/* Replace the forecast overlays when the run (or the source) changes */
@@ -953,9 +949,9 @@ class Module {
 		}
 		var last = (this.index === this.frames.length - 1);
 		this.index = (this.index + 1) % this.frames.length;
-		if (last && this.jumprunTurn()) {
-			/* the jumprun takes the map over for a while; the loop picks up where it left off */
-			delay += this.jumprunSeconds * 1000;
+		if (last) {
+			/* the jumpruns take the map over for a while; the loop picks up where it left off */
+			delay += this.jumprunTurn() * this.jumprunSeconds * 1000;
 		}
 		this.timer = setTimeout(this.showFrame.bind(this), delay);
 	}

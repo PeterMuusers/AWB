@@ -67,7 +67,16 @@ echo "webserver : \$(systemctl is-active lighttpd)  (\$(curl -s -o /dev/null -w 
 echo "metingen  : \$(curl -s --max-time 15 'http://127.0.0.1/luchtvaartmeteo-proxy.php?action=status' | head -c 80)"
 CACHE="\$(du -sh "\${HOME_DIR}/.cache/chromium" 2>/dev/null | cut -f1)"
 echo "cache     : \${CACHE:-leeg}"
-[ -e /var/lib/awb/jumprun-hidden ] && echo "jumpruns  : verborgen sinds \$(date -r /var/lib/awb/jumprun-hidden '+%d-%m %H:%M')"
+# Wat er tijdelijk anders staat dan normaal. Alleen noemen als het zo is: een regel die altijd
+# "niets bijzonders" zegt lees je na twee keer niet meer, en dan mis je hem juist als het ertoe doet.
+[ -e /var/lib/awb/jumprun-hidden ] && echo "tijdelijk : jumpruns van het bord sinds \$(date -r /var/lib/awb/jumprun-hidden '+%d-%m %H:%M')"
+if [ -e /run/awb-demo-until ]; then
+        EIND="\$(cat /run/awb-demo-until 2>/dev/null)"
+        NU="\$(date +%s)"
+        if [ -n "\${EIND}" ] && [ "\${EIND}" -gt "\${NU}" ] 2>/dev/null; then
+                echo "tijdelijk : mooiweerstand tot \$(date -d "@\${EIND}" '+%H:%M') (\$(( (EIND - NU + 59) / 60 )) min), /normaal stopt hem"
+        fi
+fi
 echo "schijf    : \$(df -h / | sed -n '2p' | tr -s ' ' | cut -d' ' -f4) vrij van \$(df -h / | sed -n '2p' | tr -s ' ' | cut -d' ' -f2)"
 THROTTLED="\$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)"
 case "\${THROTTLED}" in

@@ -69,7 +69,10 @@ class Module {
 		/* Meer dan één dropzone kan: het bord bij Hoogeveen kijkt ook naar Echten, en dan krijgt elk
 		   om de beurt zijn eigen beurt in de lus. */
 		this.stations = Array.isArray(stations) ? stations : [stations];
-		this.refreshInterval = 2 * 60 * 1000;	// a jumprun is put up by hand, so notice it quickly
+		/* Een jumprun wordt met de hand opgehangen, en ook met de hand even van het bord gehaald. Wie
+		   dat doet staat meestal naar het scherm te kijken, dus een halve minuut is het wachten waard;
+		   het antwoord komt van de proxy hiernaast en niet van jumprun.nl zelf. */
+		this.refreshInterval = 30 * 1000;
 
 		this.last_updated = null;
 		this.all = {};				// station -> {notation, runs: [{entry, planned}]}
@@ -105,19 +108,50 @@ class Module {
 		return this.waiting.length > 0;
 	}
 
+	/* Alles wat er hangt, achter elkaar: eerst de dropzone van dit bord met zijn runs van hoog naar
+	   laag, dan de volgende dropzone. Zo hoort het ook gelezen te worden - wie op de hoge run zit
+	   kijkt naar het eerste scherm, wie op de lage run zit wacht één schermpje - in plaats van dat
+	   je een halve radarlus moet uitzitten voordat de andere hoogte langskomt.
+
+	   Geeft terug hoeveel schermen er komen, zodat de radar weet hoe lang hij moet wachten. */
+	sequence(seconds) {
+		var waiting = this.waiting;
+		if (waiting.length === 0 || !document.getElementById(ID_LAYER)) {
+			return 0;
+		}
+		var step = 0;
+		var next = () => {
+			if (step >= waiting.length) {
+				this.hide();
+				return;
+			}
+			this.show(waiting[step]);
+			step += 1;
+			this.sequenceTimer = setTimeout(next, seconds * 1000);
+		};
+		clearTimeout(this.sequenceTimer);
+		next();
+		return waiting.length;
+	}
+
 	/* Take the map over for a while. The radar keeps running underneath, so its tiles are still
 	   there when it gets its turn back. */
-	show() {
+	show(which) {
 		var waiting = this.waiting;
 		var layer = document.getElementById(ID_LAYER);
 		if (waiting.length === 0 || !layer) {
 			return false;
 		}
-		/* om de beurt: zijn er twee dropzones, dan is de ene keer Hoogeveen aan en de volgende Echten */
-		this.turn = (this.turn + 1) % waiting.length;
-		var next = waiting[this.turn];
-		var held = this.all[next.station];
-		var chosen = held.runs[next.index];
+		/* zonder aanwijzing de volgende in de rij, zodat een los scherm ook blijft rouleren */
+		if (!which) {
+			this.turn = (this.turn + 1) % waiting.length;
+			which = waiting[this.turn];
+		}
+		var held = this.all[which.station];
+		var chosen = held && held.runs[which.index];
+		if (!chosen) {
+			return false;
+		}
 		this.entry = chosen.entry;
 		this.planned = chosen.planned;
 		this.notation = held.notation;
@@ -127,6 +161,7 @@ class Module {
 	}
 
 	hide() {
+		clearTimeout(this.sequenceTimer);
 		var layer = document.getElementById(ID_LAYER);
 		if (layer) {
 			layer.hidden = true;
