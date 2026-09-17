@@ -14,6 +14,9 @@
  *   jumprun-proxy.php?action=jumprun&station=hoogeveen
  *       -> the jumprun somebody set for this dropzone today, or nothing. Short cache: it changes
  *          when a person decides it does, not on a schedule, so the board should see it soon.
+ *          Answers "nothing" as long as the hide file exists (JUMPRUN_HIDDEN_FILE in .env, by
+ *          default /var/lib/awb/jumprun-hidden): the board then leaves the jumprun off the screen
+ *          without anything being deleted at jumprun.nl.
  * JUMPRUN_URL in .env overrides the default https://weer.jumprun.nl.
  */
 
@@ -24,6 +27,9 @@ $API_KEY = awb_env_is_set('JUMPRUN_API_KEY') ? awb_env('JUMPRUN_API_KEY') : '';
 $CACHE_DIR = sys_get_temp_dir();
 $FORECAST_TTL = 2 * 60;
 $JUMPRUN_TTL = 60;				// seconds; a jumprun is put up by hand, so the board should notice quickly
+/* While this file exists the board shows no jumprun at all. Not the same as removing one: the plan
+   stays at jumprun.nl and comes back the moment the file goes. */
+$HIDDEN_FILE = awb_env_is_set('JUMPRUN_HIDDEN_FILE') ? awb_env('JUMPRUN_HIDDEN_FILE') : '/var/lib/awb/jumprun-hidden';
 $FRAME_TTL = 60 * 60;
 $CURL_TIMEOUT = 20;
 
@@ -105,10 +111,18 @@ function action_radar_forecast() {
 /* The jumprun that was set for this dropzone today, plus who set it. Nothing set is not an error:
    on most days there is no jumprun on the board and the board simply leaves the segment out. */
 function action_jumprun() {
-	global $CACHE_DIR, $JUMPRUN_TTL;
+	global $CACHE_DIR, $JUMPRUN_TTL, $HIDDEN_FILE;
 	$station = isset($_GET['station']) ? strtolower($_GET['station']) : 'hoogeveen';
 	if (!preg_match('/^[a-z0-9_-]+$/', $station)) {
 		fail(400, 'Invalid station.');
+	}
+	/* Hidden by hand: say there is nothing, and say so straight away rather than from the cache, so
+	   that hiding and showing again both land on the board within a screen refresh. */
+	if ($HIDDEN_FILE !== '' && file_exists($HIDDEN_FILE)) {
+		header('Content-Type: application/json');
+		header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+		echo(json_encode(array('station' => $station, 'jumprun' => null, 'hidden' => true)));
+		exit;
 	}
 	$cache_file = $CACHE_DIR . '/awb-jumprun-plan-' . $station . '.json';
 	serve_cached($cache_file, $JUMPRUN_TTL, 'application/json');

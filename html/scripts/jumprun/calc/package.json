@@ -1,0 +1,5 @@
+{
+	"type": "module",
+	"private": true,
+	"description": "Alleen om Node te vertellen dat deze bestanden ES-modules zijn; de browser weet dat al van het script-type. Zo kan rpi/jumprun-auto.mjs dezelfde rekenkern gebruiken als het bord."
+}

@@ -4,7 +4,7 @@
 The board hangs in a hangar. When something looks wrong there is nobody with a keyboard, and the
 person who notices is usually standing next to it with a phone in their hand. This turns the few
 things worth doing from a distance into Discord commands: see how it is doing, look at the screen,
-restart the browser, clear its cache, reboot.
+restart the browser, clear its cache, take the jumprun off the board for a while, reboot.
 
 It holds no privileges of its own. Everything that changes something is a small script owned by
 root, and this bot may run exactly those through sudo and nothing else; see install.sh. So the worst
@@ -132,11 +132,29 @@ async def weer(interaction: discord.Interaction) -> None:
 
 
 @bot.tree.command(name="jumprun", description="Welke jumpruns staan er vandaag op het bord?")
-async def jumprun(interaction: discord.Interaction) -> None:
+@app_commands.describe(wat="laten zien wat er staat, of ze tijdelijk van het bord halen")
+@app_commands.choices(wat=[
+    app_commands.Choice(name="wat staat er", value="toon"),
+    app_commands.Choice(name="tijdelijk van het bord halen", value="verberg"),
+    app_commands.Choice(name="weer op het bord zetten", value="terug"),
+])
+async def jumprun(interaction: discord.Interaction, wat: app_commands.Choice[str] | None = None) -> None:
     if not allowed(interaction):
         return await deny(interaction)
     await interaction.response.defer(thinking=True)
-    await interaction.followup.send("```\n" + run("sudo", "-n", "/usr/local/sbin/awb-jumprun", timeout=60)[:1900] + "\n```")
+    keuze = wat.value if wat else "toon"
+    if keuze in ("verberg", "terug"):
+        # Niets wordt gewist: het plan blijft bij jumprun.nl staan, het bord laat het alleen even weg.
+        result = run("sudo", "-n", "/usr/local/sbin/awb-jumprun-tonen",
+                     "verberg" if keuze == "verberg" else "toon", timeout=30)
+        note = ("Van het bord af. Bij jumprun.nl staat hij er gewoon nog; met \u201cweer op het bord "
+                "zetten\u201d komt hij binnen een minuut terug."
+                if keuze == "verberg" else
+                "Weer op het bord. Binnen een minuut staat hij er.")
+        return await interaction.followup.send(f"{note}\n```\n{result[:1500]}\n```")
+    staat = run("sudo", "-n", "/usr/local/sbin/awb-jumprun-tonen", "status", timeout=30).strip()
+    kop = f"(op dit moment {staat} op het bord)\n" if staat.startswith("verborgen") else ""
+    await interaction.followup.send(kop + "```\n" + run("sudo", "-n", "/usr/local/sbin/awb-jumprun", timeout=60)[:1800] + "\n```")
 
 
 @bot.tree.command(name="log", description="De laatste foutmeldingen")

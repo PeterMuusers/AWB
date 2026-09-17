@@ -67,6 +67,7 @@ echo "webserver : \$(systemctl is-active lighttpd)  (\$(curl -s -o /dev/null -w 
 echo "metingen  : \$(curl -s --max-time 15 'http://127.0.0.1/luchtvaartmeteo-proxy.php?action=status' | head -c 80)"
 CACHE="\$(du -sh "\${HOME_DIR}/.cache/chromium" 2>/dev/null | cut -f1)"
 echo "cache     : \${CACHE:-leeg}"
+[ -e /var/lib/awb/jumprun-hidden ] && echo "jumpruns  : verborgen sinds \$(date -r /var/lib/awb/jumprun-hidden '+%d-%m %H:%M')"
 echo "schijf    : \$(df -h / | sed -n '2p' | tr -s ' ' | cut -d' ' -f4) vrij van \$(df -h / | sed -n '2p' | tr -s ' ' | cut -d' ' -f2)"
 THROTTLED="\$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)"
 case "\${THROTTLED}" in
@@ -123,6 +124,30 @@ chown -R root:www-data ${APP_DIR}/html && chmod -R a+rX ${APP_DIR}/html
 /usr/local/sbin/awb-cache-clear
 EOF
 
+# Jumpruns tijdelijk van het bord halen zonder er iets aan te wissen. De proxy kijkt naar dit
+# bestand en antwoordt "niets gepubliceerd" zolang het er staat; het plan blijft gewoon bij
+# jumprun.nl staan en komt terug zodra het weg is. Het overleeft een herstart, want een bewuste
+# keuze hoort niet vanzelf te vervallen; /status laat zien dat het aan staat.
+install -d -m 755 /var/lib/awb
+cat > /usr/local/sbin/awb-jumprun-tonen <<'EOF'
+#!/bin/bash
+set -uo pipefail
+VLAG=/var/lib/awb/jumprun-hidden
+case "${1:-status}" in
+        verberg)
+                : > "${VLAG}"
+                echo "jumpruns staan niet meer op het bord (er is niets gewist)"
+                ;;
+        toon)
+                rm -f "${VLAG}"
+                echo "jumpruns staan weer op het bord"
+                ;;
+        *)
+                [ -e "${VLAG}" ] && echo "verborgen sinds $(date -r "${VLAG}" '+%d-%m %H:%M')" || echo "zichtbaar"
+                ;;
+esac
+EOF
+
 cat > /usr/local/sbin/awb-reboot <<'EOF'
 
 #!/bin/bash
@@ -132,9 +157,10 @@ EOF
 
 chmod 750 /usr/local/sbin/awb-kiosk-restart /usr/local/sbin/awb-cache-clear \
         /usr/local/sbin/awb-screenshot /usr/local/sbin/awb-status /usr/local/sbin/awb-reboot \
+        /usr/local/sbin/awb-jumprun-tonen \
         /usr/local/sbin/awb-weer /usr/local/sbin/awb-jumprun /usr/local/sbin/awb-log \
         /usr/local/sbin/awb-update /usr/local/sbin/awb-summertime
-note "status, scherm, kiosk-herstart, cache leegmaken, weer, jumprun, log, update, herstart"
+note "status, scherm, kiosk-herstart, cache leegmaken, weer, jumprun (tonen/verbergen), log, update, herstart"
 
 say "The bot's own user"
 id -u "${BOT_USER}" >/dev/null 2>&1 || useradd --system --home-dir "${BOT_DIR}" --shell /usr/sbin/nologin "${BOT_USER}"
@@ -143,7 +169,7 @@ install -o root -g root -m 644 "$(dirname "$0")/bot.py" "${BOT_DIR}/bot.py"
 
 # Exactly these five, nothing else, and without a password because a service cannot type one.
 cat > /etc/sudoers.d/awb-discord <<EOF
-${BOT_USER} ALL=(root) NOPASSWD: /usr/local/sbin/awb-kiosk-restart, /usr/local/sbin/awb-cache-clear, /usr/local/sbin/awb-screenshot, /usr/local/sbin/awb-status, /usr/local/sbin/awb-reboot, /usr/local/sbin/awb-weer, /usr/local/sbin/awb-jumprun, /usr/local/sbin/awb-log, /usr/local/sbin/awb-update, /usr/local/sbin/awb-summertime
+${BOT_USER} ALL=(root) NOPASSWD: /usr/local/sbin/awb-kiosk-restart, /usr/local/sbin/awb-cache-clear, /usr/local/sbin/awb-screenshot, /usr/local/sbin/awb-status, /usr/local/sbin/awb-reboot, /usr/local/sbin/awb-weer, /usr/local/sbin/awb-jumprun, /usr/local/sbin/awb-jumprun-tonen, /usr/local/sbin/awb-log, /usr/local/sbin/awb-update, /usr/local/sbin/awb-summertime
 EOF
 chmod 440 /etc/sudoers.d/awb-discord
 visudo -c -f /etc/sudoers.d/awb-discord >/dev/null && note "sudo-regels nagekeken en in orde"

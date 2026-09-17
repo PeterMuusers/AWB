@@ -6,3 +6,6 @@ export * from './aircraft.js';
 export * from './freefall.js';
 export * from './canopy.js';
 export * from './jumprun.js';
+export * from './auto.js';
+export * from './dropzone.js';
+export * from './offset-grid.js';
