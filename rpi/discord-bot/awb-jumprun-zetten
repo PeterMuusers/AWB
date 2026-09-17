@@ -25,6 +25,9 @@ SCRIPT = "/opt/AWB/rpi/jumprun-auto.mjs"
 # staat een jumprun die je net ophing nog tot twintig seconden niet op het bord. lighttpd draait met
 # een eigen /tmp, vandaar het tweede pad.
 CACHE = ("/tmp/awb-jumprun-plan-*.json", "/tmp/systemd-private-*/tmp/awb-jumprun-plan-*.json")
+# Het bord kijkt hiernaar om te weten of het de plannen opnieuw moet ophalen; zonder dit staat een
+# jumprun die je net ophing pas bij de volgende ronde op het scherm.
+STAMP = "/var/lib/awb/jumprun-stamp"
 DROPZONES = ("hoogeveen", "echten")          # de velden waar dit bord over gaat
 EXIT_FT = (2000, 15000)
 OFFSET_NM = (0.0, 3.0)
@@ -90,6 +93,12 @@ def main(argv: list[str]) -> int:
                     os.unlink(path)
                 except OSError:
                     pass
+        try:
+            with open(STAMP, "w"):
+                pass
+            os.chmod(STAMP, 0o644)
+        except OSError:
+            pass
     return finished.returncode
 
 

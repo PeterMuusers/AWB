@@ -69,12 +69,19 @@ class Module {
 		/* Meer dan één dropzone kan: het bord bij Hoogeveen kijkt ook naar Echten, en dan krijgt elk
 		   om de beurt zijn eigen beurt in de lus. */
 		this.stations = Array.isArray(stations) ? stations : [stations];
-		/* Een jumprun wordt met de hand opgehangen, en ook met de hand even van het bord gehaald. Wie
-		   dat doet staat meestal naar het scherm te kijken en wil het zien gebeuren, dus vragen we het
-		   vaak. Het antwoord komt van de proxy hiernaast, niet van jumprun.nl: gemeten kost zo'n vraag
-		   41 ms, vrijwel helemaal het opstarten van PHP. Twee dropzones elke vijf seconden is daarmee
-		   ongeveer een seconde processortijd per minuut, op een Pi met vier kernen. */
-		this.refreshInterval = 5 * 1000;
+		/* Twee vragen met een heel ander prijskaartje, dus ook met een eigen tempo.
+
+		   "Is er iets veranderd?" is een blik op twee bestandsdatums bij de proxy hiernaast: geen
+		   cache, geen jumprun.nl. Dat mag elke vijf seconden, want wie in Discord op verbergen drukt
+		   staat naar het scherm te kijken en hoort het te zien gebeuren.
+
+		   "Wat staat er dan?" haalt de plannen zelf op en laat de proxy zo nu en dan bij jumprun.nl
+		   langsgaan. Dat hoeft maar eens per minuut - en zodra het stempel zegt dat er iets gebeurd
+		   is, meteen. */
+		this.stateInterval = 5 * 1000;
+		this.refreshInterval = 60 * 1000;
+		this.hidden = false;
+		this.stamp = null;
 
 		this.last_updated = null;
 		this.all = {};				// station -> {notation, runs: [{entry, planned}]}
@@ -86,6 +93,8 @@ class Module {
 		this.error = null;
 
 		this.task = setInterval(this.updateData.bind(this), this.refreshInterval);
+		this.watch = setInterval(this.checkState.bind(this), this.stateInterval);
+		this.checkState();
 		this.updateData();
 	}
 
@@ -283,7 +292,37 @@ class Module {
 			+ '<span class="jumprun-who">' + who + '</span>' + drift + this.numbers();
 	}
 
+	/* De goedkope vraag: staat de schakelaar nog zoals hij stond, en is er iets opgehangen? Alleen
+	   als het antwoord verandert wordt er echt iets gedaan. */
+	checkState() {
+		fetch(PROXY_URL + '?action=jumprun_state', { headers: { Accept: 'application/json' } })
+			.then(response => response.json())
+			.then(state => {
+				var hidden = state.hidden === true;
+				var changed = (this.stamp !== null && state.stamp !== this.stamp);
+				this.stamp = state.stamp;
+				if (hidden !== this.hidden) {
+					this.hidden = hidden;
+					if (hidden) {
+						/* van het bord af: meteen weg, en niets meer ophalen zolang dat zo is */
+						this.all = {};
+						this.hide();
+					} else {
+						this.updateData();
+					}
+					return;
+				}
+				if (changed && !hidden) {
+					this.updateData();
+				}
+			})
+			.catch(() => { /* de proxy even niet bereikbaar is geen reden om iets te veranderen */ });
+	}
+
 	updateData() {
+		if (this.hidden) {
+			return;
+		}
 		this.stations.forEach(station => this.fetchOne(station));
 	}
 

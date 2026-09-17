@@ -17,6 +17,11 @@
  *          Answers "nothing" as long as the hide file exists (JUMPRUN_HIDDEN_FILE in .env, by
  *          default /var/lib/awb/jumprun-hidden): the board then leaves the jumprun off the screen
  *          without anything being deleted at jumprun.nl.
+ *   jumprun-proxy.php?action=jumprun_state
+ *       -> whether the jumpruns are hidden, and a stamp that changes when somebody puts one up or
+ *          flips that switch. Costs nothing: no cache, and jumprun.nl is never asked. The board
+ *          reads this every few seconds and only fetches the plans themselves when this says
+ *          something happened.
  * JUMPRUN_URL in .env overrides the default https://weer.jumprun.nl.
  */
 
@@ -30,6 +35,10 @@ $JUMPRUN_TTL = 20;				// seconds; a jumprun is put up by hand, so the board shou
 /* While this file exists the board shows no jumprun at all. Not the same as removing one: the plan
    stays at jumprun.nl and comes back the moment the file goes. */
 $HIDDEN_FILE = awb_env_is_set('JUMPRUN_HIDDEN_FILE') ? awb_env('JUMPRUN_HIDDEN_FILE') : '/var/lib/awb/jumprun-hidden';
+/* Wordt aangeraakt zodra er iets aan de jumpruns verandert vanaf dit bord: publiceren, verbergen,
+   weer tonen. Zo hoeft het scherm niet elke paar seconden het hele plan op te halen om te merken
+   dat er niets gebeurd is. */
+$STAMP_FILE = awb_env_is_set('JUMPRUN_STAMP_FILE') ? awb_env('JUMPRUN_STAMP_FILE') : '/var/lib/awb/jumprun-stamp';
 $FRAME_TTL = 60 * 60;
 $CURL_TIMEOUT = 20;
 
@@ -143,6 +152,22 @@ function action_jumprun() {
 	echo($output);
 }
 
+/* De schakelaar en niets anders: verborgen of niet, en een stempel dat verandert zodra er iets aan
+   de jumpruns gedaan is. Geen cache, geen jumprun.nl - dit hoort goedkoop te zijn, want het bord
+   vraagt het elke paar seconden. */
+function action_jumprun_state() {
+	global $HIDDEN_FILE, $STAMP_FILE;
+	$hidden = ($HIDDEN_FILE !== '' && file_exists($HIDDEN_FILE));
+	$stamp = ($STAMP_FILE !== '' && file_exists($STAMP_FILE)) ? filemtime($STAMP_FILE) : 0;
+	/* het verbergen telt zelf ook als verandering, ook als niemand het stempel bijwerkt */
+	if ($hidden) {
+		$stamp = max($stamp, filemtime($HIDDEN_FILE));
+	}
+	header('Content-Type: application/json');
+	header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+	echo(json_encode(array('hidden' => $hidden, 'stamp' => $stamp)));
+}
+
 function action_frame() {
 	global $CACHE_DIR, $FRAME_TTL;
 	$run = isset($_GET['run']) ? $_GET['run'] : '';
@@ -179,6 +204,9 @@ switch (isset($_GET['action']) ? $_GET['action'] : '') {
 		break;
 	case 'frame' :
 		action_frame();
+		break;
+	case 'jumprun_state' :
+		action_jumprun_state();
 		break;
 	case 'jumprun' :
 		action_jumprun();

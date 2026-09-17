@@ -143,13 +143,20 @@ cat > /usr/local/sbin/awb-jumprun-tonen <<'EOF'
 #!/bin/bash
 set -uo pipefail
 VLAG=/var/lib/awb/jumprun-hidden
+# Het stempel zegt tegen het bord dat er iets gebeurd is; zo hoeft het scherm niet elke paar
+# seconden het hele plan op te halen om te merken dat alles bij het oude is.
+STEMPEL=/var/lib/awb/jumprun-stamp
 case "${1:-status}" in
         verberg)
                 : > "${VLAG}"
+                : > "${STEMPEL}"
+                chmod 644 "${VLAG}" "${STEMPEL}" 2>/dev/null
                 echo "jumpruns staan niet meer op het bord (er is niets gewist)"
                 ;;
         toon)
                 rm -f "${VLAG}"
+                : > "${STEMPEL}"
+                chmod 644 "${STEMPEL}" 2>/dev/null
                 echo "jumpruns staan weer op het bord"
                 ;;
         *)
