@@ -11,6 +11,8 @@
 #   - it sets up wifi, because a board that has no network cable has to know its networks before it
 #     is any use, and it can know several (see wifi.sh);
 #   - it puts the credentials file in place and says what happens without it;
+#   - it can put the board in your Tailscale network, which is the only way you will still
+#     reach it once it hangs on a club's wifi that you do not control;
 #   - it does not install a nightly updater. install.sh does, and that updater pulls from the
 #     repository it was built with. On a fork that means your board quietly turns back into
 #     somebody else's overnight.
@@ -97,8 +99,55 @@ fi
 say "Installing what the board needs"
 export DEBIAN_FRONTEND=noninteractive
 apt-get -qq update
-apt-get -qq -y install lighttpd php-cgi php-curl rsync chromium >/dev/null
+apt-get -qq -y install lighttpd php-cgi php-curl rsync chromium curl >/dev/null
 lighty-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
+
+# ---------------------------------------------------------------- reaching it later
+
+# A board at a club hangs on somebody else's network. You do not control that router, .local names
+# are often blocked between clients, and nobody is going to read an IP address off a screen in the
+# hangar for you. Tailscale gives the board one name that works from anywhere, over a network you
+# do not have to ask permission for.
+#
+# The key is a one-off: Tailscale trades it for the machine's own identity at first login and it is
+# never needed again. Make it single-use and short-lived at https://login.tailscale.com/admin/settings/keys
+# and it is worthless by the time anyone could find it.
+if confirm "Put this board in your Tailscale network, so you can reach it from anywhere?"; then
+	if ! command -v tailscale >/dev/null 2>&1; then
+		# Their own apt repository rather than piping their install script into a shell: signed
+		# packages, and updates come along with every other package on the machine.
+		say "Installing Tailscale"
+		# Their apt repository, so updates arrive with every other package. It is keyed on the Debian
+		# codename, and a brand new Raspberry Pi OS can be out before that path exists; then their own
+		# install script, which works out what the machine is, is the honest fallback.
+		if curl -fsSL "https://pkgs.tailscale.com/stable/raspbian/${CODENAME}.noarmor.gpg" \
+				> /usr/share/keyrings/tailscale-archive-keyring.gpg \
+			&& curl -fsSL "https://pkgs.tailscale.com/stable/raspbian/${CODENAME}.tailscale-keyring.list" \
+				> /etc/apt/sources.list.d/tailscale.list \
+			&& apt-get -qq update && apt-get -qq -y install tailscale >/dev/null; then
+			note "From the Tailscale apt repository for ${CODENAME}."
+		else
+			note "No apt repository for ${CODENAME}; using the Tailscale install script instead."
+			rm -f /etc/apt/sources.list.d/tailscale.list /usr/share/keyrings/tailscale-archive-keyring.gpg
+			curl -fsSL https://tailscale.com/install.sh | sh
+		fi
+	fi
+	if tailscale status >/dev/null 2>&1; then
+		note "Already signed in as $(tailscale status --json | sed -n 's/.*"DNSName": *"\([^.]*\).*/\1/p' | head -n 1)"
+	else
+		note "Paste an auth key (tskey-auth-...). Leave it empty to sign in from a browser instead."
+		read -r -s -p "  Auth key: " TSKEY </dev/tty
+		echo
+		if [[ -n "${TSKEY}" ]]; then
+			# --ssh: reach the board over Tailscale even when the wifi it is on blocks everything
+			# else. Same identity as the rest of your tailnet, no second set of keys to lose.
+			tailscale up --authkey "${TSKEY}" --hostname "$(hostname)" --ssh
+			note "In your tailnet as $(hostname). Reach it with: ssh ${USER_NAME}@$(hostname)"
+		else
+			tailscale up --hostname "$(hostname)" --ssh --timeout 120s || true
+		fi
+	fi
+fi
 
 # ---------------------------------------------------------------- the board itself
 
