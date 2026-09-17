@@ -331,9 +331,21 @@ header,
 }
 /* De cellen van de grondrij eindigen op dezelfde lijn: de getallen van over een en twee uur staan
    anders lager dan het getal van nu, doordat de cel uitlijnt op de eerste regel (de stoot) en die
-   in een kleinere maat staat. */
+   in een kleinere maat staat. Het woord "Grond" hoort daar niet bij - dat staat gewoon midden in
+   zijn rij. */
 .upper-winds-content tr.ground-row td {
 	vertical-align: bottom;
+}
+.upper-winds-content tr.ground-row td.windtext {
+	vertical-align: middle;
+}
+/* De stoot staat in de kolom van nu in het blokje boven de graden en in de uren vooruit op een eigen
+   regel van de rij zelf; die twee constructies leveren niet dezelfde regelhoogte op, waardoor die
+   stoten een halve regel uit elkaar stonden. Nagemeten en rechtgezet: bij 0,45 em zit er nog een
+   halve pixel tussen. In em, zodat het blijft kloppen als de maat van die getallen verandert. */
+.upper-winds-content tr.ground-row .windcell-forecast .windgust {
+	position: relative;
+	top: 0.45em;
 }
 .windcell-row .windspeed {
 	min-width: 2.2ch;

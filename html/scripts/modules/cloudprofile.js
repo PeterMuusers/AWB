@@ -33,7 +33,7 @@ const LABEL_HEIGHT = 24;				// pixels at the bottom for the times
 const CHART_FONT = '11px sans-serif';	// de getallen in deze grafiek; kleiner dan dit leest niet van een meter of drie
 /* De hoogteschaal is waar je als eerste naar kijkt - op welke hoogte hangt die wolk - dus die staat
    groter en in de kleur van de andere getallen op het bord, niet in het grijs van een asje. */
-const AXIS_FONT = '19px sans-serif';
+const AXIS_FONT = '17px sans-serif';
 /* De tijdregel hoort op dezelfde lijn te eindigen als de grondrij van het windprofiel ernaast: twee
    blokken naast elkaar die onderin allebei over "nu" gaan. Hoeveel dat is wordt gemeten - zo blijft
    het kloppen als die tabel een regel meer of minder krijgt - en dit is wat het is zolang er geen
@@ -42,7 +42,10 @@ const TIME_BASELINE = 13;				// pixels above the bottom edge for the bottom of t
 const TIME_TICK = 6;					// pixels, the little line above each time
 const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measured | expected'
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
-const AXIS_WIDTH = 52;					// pixels on the left for the altitude labels
+/* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
+   Zo begint dat getal op de rand van het canvas en houdt het dus de veertien pixels van de tegel
+   zelf aan de linkerkant - en het klopt nog steeds als de maat van die getallen verandert. */
+const AXIS_GAP = 8;						// pixels between the altitude labels and the chart
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
 const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to sit centred on its dot
 const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
@@ -137,6 +140,11 @@ class Module {
 	}
 
 	/* Position of an altitude on the axis, 0 at the bottom and 1 at the top */
+	/* Hoe een hoogte op de as heet: 9.000 ft is "9k", de grond is "0". */
+	altitudeLabel(feet) {
+		return feet >= 1000 ? (feet / 1000) + 'k' : String(feet);
+	}
+
 	altitudeFraction(feet) {
 		var ticks = ALTITUDE_TICKS;
 		if (feet <= ticks[0]) {
@@ -185,7 +193,10 @@ class Module {
 		var now = Date.now();
 		var start = now - this.hoursBack * 3600 * 1000;
 		var end = now + this.hoursAhead * 3600 * 1000;
-		var x = time => AXIS_WIDTH + (time - start) / (end - start) * (width - AXIS_WIDTH);
+		context.font = AXIS_FONT;
+		var axis = Math.ceil(ALTITUDE_TICKS.reduce((widest, feet) =>
+			Math.max(widest, context.measureText(this.altitudeLabel(feet)).width), 0)) + AXIS_GAP;
+		var x = time => axis + (time - start) / (end - start) * (width - axis);
 		var cloudBottom = height - LABEL_HEIGHT - WIND_HEIGHT;
 		var y = feet => cloudBottom - this.altitudeFraction(feet) * (cloudBottom - TOP_LABEL_HEIGHT - 2);
 
@@ -208,12 +219,12 @@ class Module {
 			context.strokeStyle = border;
 			context.lineWidth = 1;
 			context.beginPath();
-			context.moveTo(AXIS_WIDTH, line + 0.5);
+			context.moveTo(axis, line + 0.5);
 			context.lineTo(width, line + 0.5);
 			context.stroke();
 			context.font = AXIS_FONT;
 			context.fillStyle = ink;
-			context.fillText(feet >= 1000 ? (feet / 1000) + 'k' : String(feet), AXIS_WIDTH - 6, line);
+			context.fillText(this.altitudeLabel(feet), axis - AXIS_GAP, line);
 			context.font = CHART_FONT;
 		});
 
@@ -262,7 +273,7 @@ class Module {
 		   weggelaten, zodat je ziet dat de reeks doorloopt. */
 		context.save();
 		context.beginPath();
-		context.rect(AXIS_WIDTH, TOP_LABEL_HEIGHT, width - AXIS_WIDTH, cloudBottom - TOP_LABEL_HEIGHT);
+		context.rect(axis, TOP_LABEL_HEIGHT, width - axis, cloudBottom - TOP_LABEL_HEIGHT);
 		context.clip();
 		layers.forEach(moment => {
 			moment.layers.forEach(layer => {
@@ -278,13 +289,13 @@ class Module {
 			context.strokeStyle = muted;
 			context.setLineDash([4, 3]);
 			context.beginPath();
-			context.moveTo(AXIS_WIDTH, y(freezing) + 0.5);
+			context.moveTo(axis, y(freezing) + 0.5);
 			context.lineTo(width, y(freezing) + 0.5);
 			context.stroke();
 			context.setLineDash([]);
 			context.fillStyle = muted;
 			context.textAlign = 'left';
-			context.fillText('0 ' + String.fromCharCode(176) + 'C', AXIS_WIDTH + 4, y(freezing) - 6);
+			context.fillText('0 ' + String.fromCharCode(176) + 'C', axis + 4, y(freezing) - 6);
 		}
 
 		/* The line for now, drawn before the wind section so the lines and their numbers sit on top
@@ -399,9 +410,9 @@ class Module {
 
 		context.fillStyle = muted;
 		context.textAlign = 'right';
-		context.fillText(Math.round(peak) + ' ' + UNIT_KNOTS, AXIS_WIDTH - 5, windTop + 4);
+		context.fillText(Math.round(peak) + ' ' + UNIT_KNOTS, axis - 5, windTop + 4);
 		context.textAlign = 'left';
-		context.fillText(LANGUAGE_WIND.toUpperCase(), AXIS_WIDTH + 4, windTop + 4);
+		context.fillText(LANGUAGE_WIND.toUpperCase(), axis + 4, windTop + 4);
 
 		/* Hour marks and the line for now. De cijfers staan op hun eigen voet in plaats van gecentreerd
 		   in de strook, zodat hun onderkant op de grondrij van het windprofiel ernaast uitkomt, en elk
