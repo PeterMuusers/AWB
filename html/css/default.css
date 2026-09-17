@@ -388,27 +388,49 @@ header,
 .upper-winds-content .freezing-row-cold td {
 	color: var(--cold-color, var(--wind-color, var(--textcolor)));
 }
-.metadata-source {
-	font-size: var(--metadata-fontsize);
-	color: var(--metadata-textcolor);
-	position: absolute;
-	bottom: 5px;
-	left: 10px;
-	display: flex;
-}
 .metadata-spinner {
 	display: none;
 }
 .metadata-warning {
 	display: none;
 }
-.metadata-last-updated {
+/* Waar de cijfers vandaan komen en hoe oud ze zijn, in de kopbalk in plaats van onder elke tegel.
+   Vijf keer hetzelfde soort regeltje onderin het beeld leest niemand; op één plek bij elkaar is het
+   één regel die je kunt overslaan tot je hem nodig hebt. */
+.sources {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	column-gap: 10px;
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
-	position: absolute;
-	bottom: 5px;
-	right: 10px;
+	font-weight: 400;
+	letter-spacing: 0;
+	text-transform: none;
+}
+.sources .source {
 	display: flex;
+	align-items: baseline;
+	gap: 4px;
+}
+/* een streepje tussen de bronnen, niet ervoor en niet erachter */
+.sources .source + .source::before {
+	content: '|';
+	color: var(--metadata-textcolor);
+	opacity: 0.45;
+	margin-right: 6px;
+}
+/* "Bron:" hoeft er niet bij: dat het om een bron gaat blijkt uit de naam en de tijd erachter */
+.sources .source-prefix {
+	display: none;
+}
+.sources .source-name {
+	color: var(--textcolor-2, var(--textcolor));
+}
+/* Een bron die nog niets gezegd heeft laat zijn naam leeg; die regel hoort er dan ook niet te staan
+   (en het streepje ervoor evenmin). */
+.sources .source:has(> .source-name:empty) {
+	display: none;
 }
 .images {
 	width: 50%;
@@ -766,11 +788,7 @@ header,
 	border-radius: 4px;
 	overflow: hidden;
 }
-.images .metadata-source,
-.images .metadata-last-updated {
-	z-index: 1000;
-	text-shadow: 0 0 3px #000000;
-}
+
 /* Cloud images: the blend mode sits on the pane, the filter that crushes land and sea to black is
    set per image by scripts/modules/radar.js. Filter and blend mode are on different elements on
    purpose: a filter on the image itself would turn it into its own group and the blending would no

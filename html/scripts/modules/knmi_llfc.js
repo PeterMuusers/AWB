@@ -466,13 +466,12 @@ class Module {
 	}
 
 	/* The height the tiles may take: from where they start down to the bottom edge of the screen,
-	   less the room the card needs underneath them for its border and its source line. */
+	   less the room the card needs underneath them for its border and its padding. Where the source
+	   and the update time used to sit there is now nothing: those moved to the header, so this card
+	   keeps that space. */
 	room(content, card) {
 		var style = window.getComputedStyle(card);
-		var source = card.querySelector('.metadata-source');
-		/* the source line is pinned to the bottom of the card and may need more than the padding */
-		var footer = source ? (source.getBoundingClientRect().height + 5) : 0;
-		var below = Math.max(parseFloat(style.paddingBottom), footer)
+		var below = parseFloat(style.paddingBottom)
 			+ parseFloat(style.borderBottomWidth) + parseFloat(style.marginBottom);
 		return window.innerHeight - content.getBoundingClientRect().top - below - this.pageMargin();
 	}

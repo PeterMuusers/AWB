@@ -2,7 +2,7 @@
 
 const LANGUAGE_INTERNET_DOWN = 'Geen internet verbinding';
 const LANGUAGE_INTERNET_RESTORED = 'De internet verbinding is hersteld';
-const LANGUAGE_LAST_UPDATED = 'Laatste update:';
+const LANGUAGE_LAST_UPDATED = 'laatste update';   /* staat in de kopbalk achter de naam van de bron, dus zonder hoofdletter en zonder dubbele punt */
 const LANGUAGE_SOURCE = 'Bron:';
 const LANGUAGE_VALID_UNTIL = 'geldig tot';
 const LANGUAGE_VALID_FOR = 'geldig voor';

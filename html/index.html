@@ -25,6 +25,52 @@
 				<span class="header-menu iconify" data-icon="menu"></span>
 -->
 				<span class="weather-forecast" id="metrics-forecast-data"></span>
+				<!-- Waar de cijfers vandaan komen en hoe oud ze zijn. Dit hoorde onderaan elke tegel,
+				     vijf keer hetzelfde soort regeltje in beeld; hier staat het één keer, klein, en
+				     houden de tegels zelf over wat je van een afstand moet kunnen lezen. Een bron die
+				     nog niets gezegd heeft valt vanzelf weg (zie default.css). -->
+				<div class="sources" id="sources">
+					<div class="source" id="source-metrics">
+						<span class="source-prefix" id="metrics-source-label"></span>
+						<span class="source-name" id="metrics-source-data"></span>
+						<span class="metadata-warning iconify" id="metrics-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="metrics-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="metrics-last-updated-label"></span>
+						<span class="source-time" id="metrics-last-updated"></span>
+					</div>
+					<div class="source" id="source-winds">
+						<span class="source-prefix" id="winds-source-label"></span>
+						<span class="source-name" id="winds-source-data"></span>
+						<span class="metadata-warning iconify" id="winds-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="winds-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="winds-last-updated-label"></span>
+						<span class="source-time" id="winds-last-updated"></span>
+					</div>
+					<div class="source" id="source-metar">
+						<span class="source-prefix" id="metar-source-label"></span>
+						<span class="source-name" id="metar-source-data"></span>
+						<span class="metadata-warning iconify" id="metar-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="metar-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="metar-last-updated-label"></span>
+						<span class="source-time" id="metar-last-updated"></span>
+					</div>
+					<div class="source" id="source-llfc">
+						<span class="source-prefix" id="llfc-source-label"></span>
+						<span class="source-name" id="llfc-source-data"></span>
+						<span class="metadata-warning iconify" id="llfc-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="llfc-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="llfc-last-updated-label"></span>
+						<span class="source-time" id="llfc-last-updated"></span>
+					</div>
+					<div class="source" id="source-images">
+						<span class="source-prefix" id="images-source-label"></span>
+						<span class="source-name" id="images-source-data"></span>
+						<span class="metadata-warning iconify" id="images-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="images-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="images-last-updated-label"></span>
+						<span class="source-time" id="images-last-updated"></span>
+					</div>
+				</div>
 			</div>
 			<div id="header-right">
 				<span id="datetime-data"></span>
@@ -88,16 +134,6 @@
 							</div>
 							<div class="metrics-note" id="metrics-note"></div>
 						</div>
-						<div class="metadata-source">
-							<div id="metrics-source-label"></div>&nbsp;
-							<div id="metrics-source-data"></div>
-						</div>
-						<div class="metadata-last-updated">
-							<div class="metadata-warning iconify" id="metrics-last-updated-warning" data-icon="mdi:warning-outline"></div>&nbsp;
-							<div class="metadata-spinner iconify" id="metrics-last-updated-spinner" data-icon="line-md:loading-loop"></div>&nbsp;
-							<div id="metrics-last-updated-label"></div>&nbsp;
-							<div id="metrics-last-updated"></div>
-						</div>
 					</div>
 					<div class="cloudprofile" id="cloudprofile">
 					</div>
@@ -114,16 +150,6 @@
 								</tbody>
 							</table>
 						</div>
-						<div class="metadata-source">
-							<div id="winds-source-label"></div>&nbsp;
-							<div id="winds-source-data"></div>
-						</div>
-						<div class="metadata-last-updated">
-							<div class="metadata-warning iconify" id="winds-last-updated-warning" data-icon="mdi:warning-outline"></div>&nbsp;
-							<div class="metadata-spinner iconify" id="winds-last-updated-spinner" data-icon="line-md:loading-loop"></div>&nbsp;
-							<div id="winds-last-updated-label"></div>&nbsp;
-							<div id="winds-last-updated"></div>
-						</div>
 					</div>
 					<div class="metar" id="metar">
 						<div class="metar-header">
@@ -131,32 +157,12 @@
 						</div>
 						<div class="metar-content" id="metar-content">
 						</div>
-						<div class="metadata-source">
-							<div id="metar-source-label"></div>&nbsp;
-							<div id="metar-source-data"></div>
-						</div>
-						<div class="metadata-last-updated">
-							<div class="metadata-warning iconify" id="metar-last-updated-warning" data-icon="mdi:warning-outline"></div>&nbsp;
-							<div class="metadata-spinner iconify" id="metar-last-updated-spinner" data-icon="line-md:loading-loop"></div>&nbsp;
-							<div id="metar-last-updated-label"></div>&nbsp;
-							<div id="metar-last-updated"></div>
-						</div>
 					</div>
 					<div class="llfc" id="llfc">
 						<div class="llfc-header">
 							<span class="header-name">Low Level Forecast</span>&nbsp;-&nbsp;<span id="llfc-valid-from"></span>
 						</div>
 						<div class="llfc-content" id="llfc-content">
-						</div>
-						<div class="metadata-source">
-							<div id="llfc-source-label"></div>&nbsp;
-							<div id="llfc-source-data"></div>
-						</div>
-						<div class="metadata-last-updated">
-							<div class="metadata-warning iconify" id="llfc-last-updated-warning" data-icon="mdi:warning-outline"></div>&nbsp;
-							<div class="metadata-spinner iconify" id="llfc-last-updated-spinner" data-icon="line-md:loading-loop"></div>&nbsp;
-							<div id="llfc-last-updated-label"></div>&nbsp;
-							<div id="llfc-last-updated"></div>
 						</div>
 					</div>
 				</div>
@@ -191,16 +197,6 @@
 					<img class="layer-cloud" alt="" src="#" id="img-layer-cloud-id">
 					<img class="layer-rain" alt="" src="#" id="img-layer-rain-id">
 					<canvas class="layer-location" id="img-layer-location-id"></canvas>
-					<div class="metadata-source">
-						<div id="images-source-label"></div>&nbsp;
-						<div id="images-source-data"></div>
-					</div>
-					<div class="metadata-last-updated">
-						<div class="metadata-warning iconify" id="images-last-updated-warning" data-icon="mdi:warning-outline"></div>&nbsp;
-						<div class="metadata-spinner iconify" id="images-last-updated-spinner" data-icon="line-md:loading-loop"></div>&nbsp;
-						<div id="images-last-updated-label"></div>&nbsp;
-						<div id="images-last-updated"></div>
-					</div>
 				</div>
 			</div>
 			<div class="systemmessage" id="systemmessage">
