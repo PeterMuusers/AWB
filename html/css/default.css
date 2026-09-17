@@ -253,11 +253,14 @@ header,
 .upper-winds-content th:first-child {
 	width: 24%;
 }
+/* De kolom van nu krijgt de ruimte: daar staan de getallen waar iemand op afgaat, met de richting
+   erbij. De twee uren vooruit hebben aan minder genoeg - daar staat alleen een pijl en een getal -
+   en ze zijn toch al gedempt, want het is een schatting van het model. */
 .upper-winds-content th:nth-child(2) {
-	width: 32%;
+	width: 40%;
 }
 .upper-winds-content th.windcell-forecast {
-	width: 22%;
+	width: 17%;
 }
 .upper-winds-content th {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
@@ -305,7 +308,10 @@ header,
    getallen is waarvoor je naar deze regel kijkt. Boven elkaar houden ze allebei hun plek, en de
    graden blijven een kolom vormen over de rijen heen. */
 .windcell-row .windcell-tail {
-	margin-left: auto;
+	/* Vlak achter de snelheid in plaats van tegen de rand van de cel: de kolom van nu is breed genoeg
+	   geworden dat "246°" anders los van de "42" kwam te staan waar hij bij hoort. De snelheid houdt
+	   zijn vaste breedte, dus de graden vormen nog steeds een kolom over de rijen heen. */
+	margin-left: 6px;
 	display: flex;
 	flex-direction: column;
 	align-items: flex-end;
@@ -347,10 +353,12 @@ header,
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
 }
-/* In de kolom van nu telt de richting net zo hard als de sterkte: daar hoort hij wit. De uren
-   vooruit blijven gedempt - dat is een schatting van het model en dat hoor je te zien. */
+/* In de kolom van nu telt de richting net zo hard als de sterkte: daar hoort hij wit, en een maatje
+   groter dan het cijfertje dat hij in de uren vooruit is. Die blijven gedempt - dat is een schatting
+   van het model en dat hoor je te zien. */
 .upper-winds-content td:not(.windcell-forecast) .winddirection {
 	color: var(--textcolor-2, var(--textcolor));
+	font-size: calc(var(--metadata-fontsize) * 1.35);
 }
 /* The hours ahead are a model estimate: quieter and narrower than the column for now */
 .upper-winds-content .windcell-forecast {
@@ -358,6 +366,13 @@ header,
 	padding-left: 2px;
 	padding-right: 2px;
 	width: 1%;
+}
+/* In die smalle kolommen past een stoot niet meer naast de snelheid; hij zakt dan naar een eigen
+   regel in plaats van over de rand te lopen. Alleen de grondrij heeft ze daar, en die wordt er niet
+   hoger van. */
+.upper-winds-content .windcell-forecast .windcell-row {
+	flex-wrap: wrap;
+	row-gap: 0;
 }
 .upper-winds-content .windcell-forecast .windspeed {
 	font-size: var(--main-fontsize-small);
@@ -707,13 +722,17 @@ header,
 	margin-left: 10px;
 	color: var(--textcolor-2, var(--textcolor));
 }
+/* De tweede en derde laag: dit is geen voetnoot maar het vervolg van de wolkenbasis erboven, dus
+   even wit als de code ernaast. Op deze maat past de gebruikelijke regel van twee lagen ruim binnen
+   de kolom; zijn het er een keer meer, dan mag hij omlopen - liever een tweede regel dan een getal
+   dat wegvalt. */
 .metrics-cloudbase-layers {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--metadata-fontsize);
+	font-size: calc(var(--metadata-fontsize) * 1.35);
 	font-weight: 600;
-	letter-spacing: 0.06em;
+	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: var(--metadata-textcolor);
+	color: var(--textcolor-2, var(--textcolor));
 }
 .metrics-grid {
 	display: grid;
