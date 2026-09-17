@@ -215,17 +215,24 @@ header,
 	flex: 1;
 	min-width: 0;
 	position: relative;
-	padding-bottom: 10pt;
+	/* evenveel lucht onder de inhoud als ernaast; 10pt was net iets krapper dan de 14px opzij */
+	padding-bottom: 14px;
 }
-/* De drie blokken naast elkaar bepalen zelf hoe hoog ze worden - de hoogste van de drie zet de rij,
-   de andere twee rekken mee - maar niet ten koste van de verwachting eronder. Half het bord is de
-   grens; daarboven wordt er binnen het blok geschoven in plaats van dat de rij doorgroeit. In vh
-   rekenen kan hier niet: het bord is een vlak van 1920 bij 1080 dat als geheel geschaald wordt, dus
-   een venster van 800 px hoog zou anders andere verhoudingen geven dan de televisie. */
+/* De drie blokken naast elkaar bepalen zelf hoe hoog ze worden: de hoogste van de drie zet de rij en
+   de andere twee rekken mee. Dat is in de praktijk het windprofiel - gemeten 475 px, tegen 467 voor
+   het meetblok en 403 voor de wolkenbasis - en het is ook het blok met de vaste vorm: een tabel met
+   een regel per hoogte. Daar hangt de grens aan vast, met ruimte voor een regel extra voor als het
+   0 °C-niveau een eigen rij krijgt. Zonder grens kan een blok dat een keer uitschiet de verwachting
+   eronder wegdrukken.
+
+   De maat staat op de inhoud en niet op het kader: met de padding en de rand erbij wordt dit blok
+   ongeveer 527 px van de 1080. In vh rekenen kan hier niet - het bord is een vlak van 1920 bij 1080
+   dat als geheel geschaald wordt, dus een venster van 800 px hoog zou andere verhoudingen geven dan
+   de televisie. */
 .weather,
 .cloudprofile,
 .upper-winds {
-	max-height: calc(var(--board-height, 1080px) / 2);
+	max-height: 500px;
 	overflow: hidden;
 }
 .upper-winds-note {
@@ -339,6 +346,11 @@ header,
 	margin-left: 4px;
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
+}
+/* In de kolom van nu telt de richting net zo hard als de sterkte: daar hoort hij wit. De uren
+   vooruit blijven gedempt - dat is een schatting van het model en dat hoor je te zien. */
+.upper-winds-content td:not(.windcell-forecast) .winddirection {
+	color: var(--textcolor-2, var(--textcolor));
 }
 /* The hours ahead are a model estimate: quieter and narrower than the column for now */
 .upper-winds-content .windcell-forecast {
@@ -634,7 +646,8 @@ header,
 	border: 1px solid var(--block-border-color);
 	box-shadow: var(--block-shadow, none);
 	margin: 4px;
-	padding: 12px 14px;
+	/* de grafiek loopt tot onderaan door, dus dezelfde 14px eronder als ernaast */
+	padding: 12px 14px 14px;
 }
 .cloudprofile-header {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
@@ -646,13 +659,19 @@ header,
 	display: flex;
 	justify-content: space-between;
 }
+/* de naam van het blok in dezelfde witte kop als "Windprofiel" ernaast */
+.cloudprofile-header .header-name {
+	color: var(--textcolor-2, var(--textcolor));
+}
 .cloudprofile-hours {
 	font-weight: 500;
 }
 .cloudprofile-canvas {
 	width: 100%;
 	flex: 1;
-	min-height: 180px;
+	/* Zo laag dat de grafiek zich naar het windprofiel voegt in plaats van andersom: hij vult wat er
+	   over is in zijn eigen blok en vraagt zelf nooit meer dan dit. */
+	min-height: 150px;
 	margin-top: 6px;
 }
 

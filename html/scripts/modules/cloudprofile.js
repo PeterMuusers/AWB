@@ -26,10 +26,17 @@ const ID_HEADER = 'cloudprofile-header';
    drops from, so a layer sitting at one of them lands on a line of its own instead of somewhere
    between two. */
 const ALTITUDE_TICKS = [0, 1000, 3000, 5000, 7000, 9000, 12000, 15000, 20000];
-const LABEL_HEIGHT = 14;				// pixels at the bottom for the times
+const LABEL_HEIGHT = 24;				// pixels at the bottom for the times
+const CHART_FONT = '11px sans-serif';	// de getallen in deze grafiek; kleiner dan dit leest niet van een meter of drie
+/* De tijdregel hoort op dezelfde lijn te eindigen als de grondrij van het windprofiel ernaast: twee
+   blokken naast elkaar die onderin allebei over "nu" gaan. Hoeveel dat is wordt gemeten - zo blijft
+   het kloppen als die tabel een regel meer of minder krijgt - en dit is wat het is zolang er geen
+   windprofiel naast staat om naar te kijken. */
+const TIME_BASELINE = 13;				// pixels above the bottom edge for the bottom of the digits
+const TIME_TICK = 6;					// pixels, the little line above each time
 const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measured | expected'
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
-const AXIS_WIDTH = 34;					// pixels on the left for the altitude labels
+const AXIS_WIDTH = 38;					// pixels on the left for the altitude labels
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
 const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to sit centred on its dot
 const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
@@ -50,7 +57,10 @@ class Module {
 			+ '<canvas class="cloudprofile-canvas" id="' + ID_CANVAS + '"></canvas>';
 		/* The time axis and the line for now already show what is measured and what is expected,
 		   so the header stays short: this card is narrow. */
-		document.getElementById(ID_HEADER).innerHTML = '<span>' + LANGUAGE_CLOUD_BASE + ' &middot; ' + UNIT_FEET + '</span>';
+		/* De naam apart, zodat hij dezelfde witte kop krijgt als "Windprofiel" ernaast; de eenheid
+		   erachter blijft gedempt, net als daar. */
+		document.getElementById(ID_HEADER).innerHTML = '<span><span class="header-name">' + LANGUAGE_CLOUD_BASE
+			+ '</span> &middot; ' + UNIT_FEET + '</span>';
 
 		/* Schedule update of document content */
 		this.task = setInterval(
@@ -81,6 +91,24 @@ class Module {
 			return [];
 		}
 		return series.map(point => ({ time: new Date(point[0]), value: Number(point[1]) }));
+	}
+
+	/* Hoeveel ruimte er onder de cijfers van de tijdregel blijft, zodat hun onderkant gelijk ligt met
+	   de grondrij van het windprofiel ernaast. Gemeten in plaats van vastgezet: die tabel krijgt er
+	   een regel bij als het 0 °C-niveau een eigen rij heeft, en dan schuift die grondrij mee. */
+	timeBaseline(canvas) {
+		var row = document.querySelector('.upper-winds-content tr.ground-row');
+		if (!row || !canvas) {
+			return TIME_BASELINE;
+		}
+		var box = canvas.getBoundingClientRect();
+		var scale = box.height / canvas.clientHeight;      /* het bord wordt als geheel geschaald */
+		if (!(scale > 0)) {
+			return TIME_BASELINE;
+		}
+		var offset = (box.bottom - row.getBoundingClientRect().bottom) / scale;
+		/* binnen de strook blijven: een windprofiel dat er raar bij staat mag de tijd niet wegdrukken */
+		return Math.min(LABEL_HEIGHT - 9, Math.max(3, Math.round(offset)));
 	}
 
 	/* The measured cloud layers per moment: the three ceilometer layers merged by timestamp */
@@ -161,7 +189,7 @@ class Module {
 		var background = style.getPropertyValue('--block-background-color').trim() || '#151d27';
 		var cloudInk = 'rgba(' + CLOUD_COLOUR + ', 0.95)';
 
-		context.font = '9px sans-serif';
+		context.font = CHART_FONT;
 		context.textBaseline = 'middle';
 
 		/* Altitude gridlines and their labels */
@@ -364,22 +392,33 @@ class Module {
 		context.textAlign = 'left';
 		context.fillText(LANGUAGE_WIND.toUpperCase(), AXIS_WIDTH + 4, windTop + 4);
 
-		/* Hour marks and the line for now */
+		/* Hour marks and the line for now. De cijfers staan op hun eigen voet in plaats van gecentreerd
+		   in de strook, zodat hun onderkant op de grondrij van het windprofiel ernaast uitkomt, en elk
+		   uur krijgt een streepje boven zijn getal - anders zweeft de tijd los onder de grafiek. */
+		var baseline = height - this.timeBaseline(canvas);
 		context.textAlign = 'center';
+		context.textBaseline = 'alphabetic';
 		var hour = new Date(start);
 		hour.setMinutes(0, 0, 0);
 		hour.setHours(hour.getHours() + 1);
 		while (hour.getTime() <= end) {
 			/* skip an hour that would collide with the label for now */
-			if (Math.abs(x(hour.getTime()) - x(now)) > 20) {
+			if (Math.abs(x(hour.getTime()) - x(now)) > 24) {
 				context.fillStyle = muted;
-				context.fillText(hour.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' }), x(hour.getTime()), height - LABEL_HEIGHT / 2);
+				context.fillText(hour.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' }), x(hour.getTime()), baseline);
+				context.strokeStyle = muted;
+				context.lineWidth = 1;
+				context.beginPath();
+				context.moveTo(Math.round(x(hour.getTime())) + 0.5, height - LABEL_HEIGHT);
+				context.lineTo(Math.round(x(hour.getTime())) + 0.5, height - LABEL_HEIGHT + TIME_TICK);
+				context.stroke();
 			}
 			hour.setHours(hour.getHours() + 1);
 		}
 		context.fillStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
 		context.textAlign = 'center';
-		context.fillText(LANGUAGE_NOW, x(now), height - LABEL_HEIGHT / 2);
+		context.fillText(LANGUAGE_NOW, x(now), baseline);
+		context.textBaseline = 'middle';
 
 		/* what the line divides, said once in the strip above the chart itself */
 		context.fillStyle = muted;
