@@ -442,23 +442,26 @@ header,
    waar de luchtfoto toevallig licht is. */
 /* Bovenaan, niet onderaan: onderin staan de legenda van de kaart en de bronvermelding van de
    luchtfoto, en daar is geen plaats voor een regel die je in twintig seconden moet kunnen lezen. */
+/* Het blok staat op een kaart die twintig seconden in beeld is, en wordt van een meter of vier
+   gelezen. Eén knop om het geheel groter of kleiner te zetten: alles hieronder rekent ermee. */
 .jumprun-caption {
+	--jr-scale: 1.5;
 	position: absolute;
 	left: 0;
 	right: 0;
 	top: 0;
 	z-index: 500;
-	padding: 10px 14px 26px;
+	padding: calc(10px * var(--jr-scale)) calc(14px * var(--jr-scale)) calc(26px * var(--jr-scale));
 	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
 	color: #ffffff;
-	font-size: var(--metadata-fontsize);
+	font-size: calc(var(--metadata-fontsize) * var(--jr-scale));
 	line-height: 1.45;
 	pointer-events: none;
 }
 .jumprun-caption .jumprun-where {
 	display: block;
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--location-fontsize, 19pt);
+	font-size: calc(var(--location-fontsize, 19pt) * var(--jr-scale));
 	font-weight: 700;
 	letter-spacing: 0.02em;
 	text-transform: uppercase;
@@ -467,7 +470,7 @@ header,
 .jumprun-caption .jumprun-headline {
 	display: block;
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--text-header-fontsize);
+	font-size: calc(var(--text-header-fontsize) * var(--jr-scale));
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -487,8 +490,8 @@ header,
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
-	gap: 4px 22px;
-	margin-top: 8px;
+	gap: calc(4px * var(--jr-scale)) calc(22px * var(--jr-scale));
+	margin-top: calc(8px * var(--jr-scale));
 }
 .jumprun-caption .jumprun-cell {
 	display: flex;
@@ -497,13 +500,13 @@ header,
 }
 .jumprun-caption .jumprun-cell b {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: var(--value-fontsize, 16pt);
+	font-size: calc(var(--value-fontsize, 16pt) * var(--jr-scale));
 	font-weight: 700;
 	letter-spacing: 0.01em;
 	font-variant-numeric: tabular-nums;
 }
 .jumprun-caption .jumprun-cell-label {
-	font-size: var(--metadata-fontsize);
+	font-size: calc(var(--metadata-fontsize) * var(--jr-scale));
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;

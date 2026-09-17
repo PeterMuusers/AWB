@@ -34,7 +34,7 @@ import {
 	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
-	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE,
+	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE, LANGUAGE_SOURCE,
 	LANGUAGE_JUMPRUN_BEARING, LANGUAGE_JUMPRUN_DISTANCE,
 } from '../language.js';
 
@@ -137,9 +137,10 @@ class Module {
 		}
 		var nothing = () => {};
 		this.jmap = createJumprunMap(element, { onTrack: nothing, onGreen: nothing });
-		/* De luchtfoto noemt zichzelf al; de jumprun zelf komt van jumprun.nl en die hoort er in
-		   hetzelfde hoekje bij te staan, net als bij de radarkaart. */
-		this.jmap.map.attributionControl.addAttribution(LANGUAGE_JUMPRUN_SOURCE);
+		/* Eén bronregel, niet twee. De jumprun komt van jumprun.nl en de luchtfoto noemt zichzelf;
+		   als voorvoegsel staat de eerste vooraan en volgt de rest erachter, gescheiden door een
+		   streepje. Als losse vermelding ernaast las het als twee keer hetzelfde zeggen. */
+		this.jmap.map.attributionControl.setPrefix(LANGUAGE_SOURCE + ' ' + LANGUAGE_JUMPRUN_SOURCE);
 		/* linksonder: rechtsonder staat op het bord de laatste-updateregel van de kaart eronder */
 		this.jmap.map.attributionControl.setPosition('bottomleft');
 		return this.jmap;

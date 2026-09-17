@@ -107,8 +107,23 @@ const CLOUDS_FADE = 0.15;
    forecast from the KNMI radar forecast at the dropzone (jumprun.nl) after that. The cursor
    marks the frame that is on the map, so the chart doubles as the time bar of the loop. */
 const CHART_LABEL_HEIGHT = 13;							// pixels at the bottom for the times
-const CHART_COLOUR_MEASURED = 'rgba(126, 203, 255, 0.95)';
-const CHART_COLOUR_FORECAST = 'rgba(126, 203, 255, 0.55)';
+const CHART_ALPHA_MEASURED = 0.95;
+const CHART_ALPHA_FORECAST = 0.55;						// gemeten en verwacht blijven uit elkaar te houden
+/* De kleur van een balkje is die van de neerslag zelf, in dezelfde trant als de radarkaart erboven:
+   blauw voor motregen, groen voor een gewone bui, geel en oranje als het serieus wordt, rood voor
+   een plensbui. De hoogte zegt hetzelfde, maar die schaalt mee met de natste bui van het moment -
+   op een rustige dag is een hoog balkje 1 mm/u en op een natte dag 20. De kleur ligt vast en is
+   daarmee het enige wat je er van een afstand absoluut aan kunt aflezen. */
+const CHART_RAIN_COLOURS = [
+	[0.1, 126, 203, 255],	// lichtblauw: motregen
+	[1, 60, 150, 245],		// blauw: lichte regen
+	[2.5, 40, 200, 170],	// groenblauw
+	[5, 90, 215, 80],		// groen: gewone bui
+	[10, 240, 220, 70],		// geel
+	[20, 245, 150, 50],		// oranje
+	[50, 235, 60, 60],		// rood: plensbui
+	[100, 190, 70, 200],	// paars: uitzonderlijk
+];
 const CHART_SCALES = [1, 2, 5, 10, 20, 50];				// mm/h, the first one the data fits in
 const MAX_IMAGE_SIZE = 2048;							// pixels, cap for the WMS images (after scaling for the screen)
 
@@ -164,6 +179,28 @@ function timeDimensionEnd(xml, layer) {
 
 function isoMinutes(date) {
 	return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+/* De kleur bij een neerslagintensiteit in mm/u, vloeiend tussen de stappen van CHART_RAIN_COLOURS.
+   Tussen twee stappen wordt logaritmisch gewogen: van 1 naar 2,5 mm/u is gevoelsmatig een even grote
+   sprong als van 10 naar 25, en lineair interpoleren zou het lage bereik plat maken. */
+function rainColour(mm, alpha) {
+	var stops = CHART_RAIN_COLOURS;
+	var rgba = (c, f, d) => 'rgba(' + Math.round(c[1] + ((d ? d[1] - c[1] : 0) * f)) + ', '
+		+ Math.round(c[2] + ((d ? d[2] - c[2] : 0) * f)) + ', '
+		+ Math.round(c[3] + ((d ? d[3] - c[3] : 0) * f)) + ', ' + alpha + ')';
+	if (mm <= stops[0][0]) {
+		return rgba(stops[0], 0, null);
+	}
+	for (var i = 1; i < stops.length; i++) {
+		if (mm <= stops[i][0] || i === stops.length - 1) {
+			var low = stops[i - 1];
+			var high = stops[i];
+			var f = Math.min(1, (Math.log(mm) - Math.log(low[0])) / (Math.log(high[0]) - Math.log(low[0])));
+			return rgba(low, f, high);
+		}
+	}
+	return rgba(stops[stops.length - 1], 0, null);
 }
 
 /* jumprun run id 'YYYYMMDDHHMM' to Date */
@@ -779,19 +816,19 @@ class Module {
 		var all = this.rainMeasured.concat(this.rainForecast);
 		var peak = all.reduce((most, point) => Math.max(most, point.value || 0), 0);
 		var scale = CHART_SCALES.find(step => peak <= step) || peak || 1;
-		var draw = (points, colour, minutes) => {
-			context.fillStyle = colour;
+		var draw = (points, alpha, minutes) => {
 			var barWidth = Math.max(2, minutes * 60 * 1000 / span * width - 1);
 			points.forEach(point => {
 				if (!(point.value > 0) || point.time.getTime() < start || point.time.getTime() > end) {
 					return;
 				}
+				context.fillStyle = rainColour(point.value, alpha);
 				var barHeight = Math.max(1, (point.value / scale) * (bottom - 3));
 				context.fillRect(x(point.time.getTime()) - barWidth / 2, bottom - barHeight, barWidth, barHeight);
 			});
 		};
-		draw(this.rainMeasured, CHART_COLOUR_MEASURED, 10);
-		draw(this.rainForecast, CHART_COLOUR_FORECAST, 5);
+		draw(this.rainMeasured, CHART_ALPHA_MEASURED, 10);
+		draw(this.rainForecast, CHART_ALPHA_FORECAST, 5);
 
 		/* Scale and hour marks */
 		context.fillStyle = 'rgba(255, 255, 255, 0.8)';
