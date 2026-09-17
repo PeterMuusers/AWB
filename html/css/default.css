@@ -411,12 +411,6 @@ header,
 	color: var(--metadata-textcolor);
 	line-height: 1.1;
 }
-/* De G is het label bij het getal, niet het getal zelf; kleiner gezet houdt hij de stoot binnen de
-   breedte van de graden waar hij boven staat. */
-.windgust-mark {
-	font-size: 0.72em;
-	letter-spacing: 0;
-}
 .windgust {
 	font-size: var(--metadata-fontsize);
 	color: var(--gust-color, var(--jumplimit-color));
