@@ -206,6 +206,15 @@ ${key}" \
 set -uo pipefail
 exec >>/var/log/awb-tailscale.log 2>&1
 echo "== $(date -Is) putting this board in the tailnet =="
+# Wait for the network rather than assume it. cloud-init starts this early - a minute after power
+# on, seen on a real board - and wifi association plus DHCP can easily take longer than that. No
+# network is a reason to wait; three minutes without one is a reason to stop and say so.
+for attempt in $(seq 1 36); do
+    getent hosts pkgs.tailscale.com >/dev/null 2>&1 && break
+    [ "$attempt" = 36 ] && echo "no name resolution after three minutes; giving up" && exit 1
+    sleep 5
+done
+echo "network is up after about $((attempt * 5)) seconds"
 . /etc/os-release
 # Their apt repository, so Tailscale is updated along with everything else on the machine. That
 # path is keyed on the Debian codename, and a fresh Raspberry Pi OS can be out before it exists;
