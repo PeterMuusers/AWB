@@ -1,5 +1,12 @@
+/* Geen muisaanwijzer op het bord: er is er geen, en een pijltje dat ergens in beeld blijft staan
+   is precies het soort detail dat een scherm er onverzorgd uit laat zien. Maar zodra er wél een muis
+   beweegt - jij die vanaf je eigen machine meekijkt - hoort hij er gewoon te zijn. main.js zet
+   daarom 'moving' op de body bij beweging en haalt hem er na een paar seconden stilte weer af. */
 * {
 	cursor: none;
+}
+body.pointer-moving, body.pointer-moving * {
+	cursor: auto;
 }
 html {
 	scrollbar-width: none; /* Firefox */
@@ -9,14 +16,23 @@ html::-webkit-scrollbar {
 	background: transparent; /* Chrome/Safari/Webkit */
 	width: 0px;
 }
+/* Het bord wordt als geheel geschaald in plaats van opnieuw ingedeeld. De verhoudingen zijn op één
+   16:9-scherm afgestemd - lettergroottes, kolombreedtes, hoeveel er in een kaartje past - en bij een
+   kleiner venster opnieuw laten verdelen levert afgekapte getallen op in plaats van een kleiner
+   bord. Nu is elk scherm dezelfde indeling, alleen groter of kleiner, en is een browservenster een
+   getrouwe verkleining van wat er op de televisie staat. Zie fit() in scripts/main.js. */
+html {
+	background-color: var(--background-color);
+	overflow: hidden;
+}
 body {
 	background-color: var(--background-color);
 	color: var(--textcolor);
 	font-family: var(--font-body, 'Roboto', 'Open Sans', sans-serif);
-	/* The board hangs on one 16:9 screen that nobody scrolls, so the page is exactly as tall as
-	   the screen and never a pixel more. Everything inside divides that height between itself
-	   instead of pushing the bottom of the page out of sight. */
-	height: 100vh;
+	/* Het vaste vlak waarop alles is afgestemd; main.js schaalt dit naar het venster. */
+	width: var(--board-width, 1920px);
+	height: var(--board-height, 1080px);
+	transform-origin: top left;
 	box-sizing: border-box;
 	overflow: hidden;
 	display: flex;

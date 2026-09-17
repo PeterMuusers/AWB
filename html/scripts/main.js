@@ -92,6 +92,37 @@ class OnlineStatus {
 	}
 }
 
+/* Het bord op het venster passen: dezelfde indeling, alleen groter of kleiner, en gecentreerd zodat
+   de overgebleven rand gelijk verdeeld is. Bij precies 1920 bij 1080 is de factor 1.
+
+   Schalen in plaats van opnieuw indelen, omdat de verhoudingen op één 16:9-scherm zijn afgestemd:
+   lettergroottes, kolombreedtes, hoeveel er in een kaartje past. Bij een smaller venster opnieuw
+   verdelen levert afgekapte getallen op - "245" wordt "24" en dat ziet eruit als een geldige
+   windrichting - in plaats van een kleiner bord. De kaart merkt er niets van: transform raakt de
+   opmaak niet, dus Leaflet blijft rekenen met het vlak van 1920 bij 1080. */
+/* De muisaanwijzer laten zien zolang er een muis beweegt, en hem daarna weer laten verdwijnen.
+   Op het bord aan de televisie gebeurt dat nooit, dus daar blijft hij weg; op de machine van
+   waaraf je meekijkt is hij er zodra je hem nodig hebt. */
+const POINTER_IDLE_MS = 3000;
+var pointerTimer = null;
+function watchPointer() {
+	window.addEventListener('mousemove', () => {
+		document.body.classList.add('pointer-moving');
+		clearTimeout(pointerTimer);
+		pointerTimer = setTimeout(() => document.body.classList.remove('pointer-moving'), POINTER_IDLE_MS);
+	});
+}
+
+function fit() {
+	var style = getComputedStyle(document.documentElement);
+	var width = parseFloat(style.getPropertyValue('--board-width')) || 1920;
+	var height = parseFloat(style.getPropertyValue('--board-height')) || 1080;
+	var scale = Math.min(window.innerWidth / width, window.innerHeight / height);
+	var left = Math.round((window.innerWidth - width * scale) / 2);
+	var top = Math.round((window.innerHeight - height * scale) / 2);
+	document.body.style.transform = 'translate(' + left + 'px, ' + top + 'px) scale(' + scale + ')';
+}
+
 const NIGHTLY_RELOAD_HOUR = 4;		// local time, when nobody is looking at the screen
 const NIGHTLY_RELOAD_MINUTE = 0;
 
@@ -218,6 +249,17 @@ loadConfig(location).then(response => {
 	/* Set up online/offline status monitor */
 	var online_status = new OnlineStatus();
 
+	/* Het bord is één vast vlak dat als geheel meeschaalt met het venster. De verhoudingen zijn op
+	   een 16:9-scherm afgestemd; opnieuw indelen bij een andere maat levert afgekapte getallen op
+	   in plaats van een kleiner bord. Zo is elk scherm dezelfde indeling, en is een browservenster
+	   een getrouwe verkleining van wat er straks op de televisie staat.
+	
+	   De kaart wordt hier niet door van slag gebracht: transform raakt de opmaak niet, dus Leaflet
+	   blijft rekenen met het vlak van 1920 bij 1080 en het beeld wordt alleen visueel verkleind. */
+	fit();
+	window.addEventListener('resize', fit);
+	watchPointer();
+	
 	/* Nobody is going to press a key on this screen, so the board watches itself. It hangs off the
 	   document like the modules do, so a check can be triggered by hand over a remote console. */
 	document.watchdog = new Watchdog();
