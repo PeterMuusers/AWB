@@ -35,6 +35,9 @@ const LABEL_HEIGHT = 24;				// pixels at the bottom for the times
    (--font-condensed), de maten staan hier. */
 const CHART_SIZE = 12;					// px; kleiner dan dit leest niet van een meter of drie
 const CHART_WEIGHT = 500;
+/* De knopen onder de grafiek: dat zijn getallen waar iemand op afgaat, geen bijschrift bij een lijn.
+   Ze staan daarom flink groter dan de rest van de grafiek, en het winddeel is navenant hoger. */
+const WIND_SIZE = 16;
 /* De hoogteschaal is waar je als eerste naar kijkt - op welke hoogte hangt die wolk - dus die staat
    groter en in de kleur van de andere getallen op het bord, niet in het grijs van een asje. */
 const AXIS_SIZE = 17;					// px, de hoogteschaal
@@ -54,7 +57,7 @@ const TOP_FONT = '500 13px "Roboto Condensed", "Roboto", sans-serif';	/* alleen 
 const TOP_NOTE = '.upper-winds-note';	/* de ondertitel waar deze woorden zich naar voegen */
 const FREEZING_SIZE = 14;				// px; het 0 °C-niveau is een getal om te lezen, geen bijschrift
 const TOP_BASELINE = 13;				// pixels from the top of the canvas to the foot of those words
-const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
+const WIND_HEIGHT = 74;					// pixels at the bottom for the wind lines
 /* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
    Zo begint dat getal op de rand van het canvas en houdt het dus de veertien pixels van de tegel
    zelf aan de linkerkant - en het klopt nog steeds als de maat van die getallen verandert. */
@@ -209,6 +212,7 @@ class Module {
 		var family = window.getComputedStyle(document.documentElement)
 			.getPropertyValue('--font-condensed').trim() || '"Roboto Condensed", "Roboto", sans-serif';
 		var CHART_FONT = CHART_WEIGHT + ' ' + CHART_SIZE + 'px ' + family;
+		var WIND_FONT = '600 ' + WIND_SIZE + 'px ' + family;
 		var AXIS_FONT = AXIS_WEIGHT + ' ' + AXIS_SIZE + 'px ' + family;
 		var FREEZING_FONT = CHART_WEIGHT + ' ' + FREEZING_SIZE + 'px ' + family;
 		context.font = AXIS_FONT;
@@ -383,6 +387,7 @@ class Module {
 			context.setLineDash([]);
 		};
 
+		context.font = WIND_FONT;
 		/* A dot on a value, with the number next to it: above the line for gusts, below it for wind.
 		   A number placed to the right of its dot never starts before `from`, so it cannot run into
 		   the number that is already standing there. */
@@ -394,7 +399,7 @@ class Module {
 			var top = windY(point.value);
 			context.fillStyle = colour;
 			context.beginPath();
-			context.arc(left, top, 2.5, 0, 2 * Math.PI);
+			context.arc(left, top, 3, 0, 2 * Math.PI);
 			context.fill();
 			if (label) {
 				/* Het getal zelf in de gewone kleur van de cijfers op dit bord: de stip en de lijn
@@ -403,7 +408,7 @@ class Module {
 				context.fillStyle = (colour === gustColour) ? colour : ink;
 				context.textAlign = align || 'center';
 				var at = (align === 'left') ? Math.max(left + 4, from || 0) : left;
-				context.fillText(label, at, top + (above ? -8 : 9));
+				context.fillText(label, at, top + (above ? -10 : 12));
 			}
 		};
 
@@ -451,19 +456,41 @@ class Module {
 		var clearOf = label => x(now) + (label ? context.measureText(label).width / 2 : 0) + 6;
 		var windFrom = clearOf(nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null);
 		var gustFrom = clearOf(nowGust ? 'G' + Math.round(nowGust.value) : null);
+		/* Een getal dat over het vorige heen zou vallen wordt overgeslagen: twee getallen door elkaar
+		   zijn onleesbaarder dan één getal minder. De lijn met zijn stippen loopt gewoon door, dus je
+		   ziet nog steeds wat de wind doet. */
+		var room = context.measureText('00 ' + UNIT_KNOTS).width + 10;
+		var lastWind = windFrom;
 		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => {
+			if (x(point.time.getTime()) < lastWind) {
+				return;
+			}
 			drawMarker(point, windColour, Math.round(point.value) + ' ' + UNIT_KNOTS, false, placement(point), windFrom);
+			lastWind = x(point.time.getTime()) + room;
 		});
+		var lastGust = gustFrom;
 		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => {
+			if (x(point.time.getTime()) < lastGust) {
+				return;
+			}
 			drawMarker(point, gustColour, 'G' + Math.round(point.value), true, placement(point), gustFrom);
+			lastGust = x(point.time.getTime()) + room;
 		});
 
+		/* Langs deze as stonden de hoogste waarde van dit stukje grafiek en het woord "wind". Allebei
+		   weg: de twee lijnen met hun getallen in knopen zeggen al wat hier staat. */
+		context.font = CHART_FONT;
 		context.fillStyle = muted;
 		context.textAlign = 'right';
-		/* De hoogste waarde van dit stukje grafiek stond hier als getal langs de as. Dat zegt niets
-		   wat de getallen bij de punten zelf niet al zeggen, dus het is weg. */
-		/* Het woord "wind" stond hier langs de as. De twee lijnen met hun getallen in knopen zeggen
-		   al wat dit is, dus het woord kan weg. */
+
+		/* De grondlijn onder de grafiek: de streepjes bij de uren hangen eraan, en zonder die lijn
+		   zweven ze los onder het beeld. */
+		context.strokeStyle = border;
+		context.lineWidth = 1;
+		context.beginPath();
+		context.moveTo(axis, height - LABEL_HEIGHT + 0.5);
+		context.lineTo(width, height - LABEL_HEIGHT + 0.5);
+		context.stroke();
 
 		/* Hour marks and the line for now. De cijfers staan op hun eigen voet in plaats van gecentreerd
 		   in de strook, zodat hun onderkant op de grondrij van het windprofiel ernaast uitkomt, en elk
