@@ -345,6 +345,15 @@ header,
 	text-align: right;
 	padding-top: 5px;
 }
+/* Wind over the limit at the height a canopy flies: the cell itself is washed, not the number.
+   The gusts in this same table are already a coloured number, and two coloured numbers next to
+   each other read as one signal instead of two. */
+.upper-winds-content td.windcell-limit {
+	background-color: var(--limit-wash, rgba(255, 197, 61, 0.16));
+}
+.upper-winds-content td.windcell-limit .windspeed {
+	color: var(--limit-color, var(--textcolor-alert));
+}
 /* the same mark as in the metrics panel: a freezing level you climb through rather than over */
 .upper-winds-content .freezing-row-cold td {
 	color: var(--cold-color, var(--wind-color, var(--textcolor)));
@@ -541,6 +550,15 @@ header,
 .metrics-sub {
 	font-size: var(--metadata-fontsize);
 	color: var(--metadata-textcolor);
+}
+/* not a remark but a rule, so it stands on its own line and keeps the colour of the cell */
+.metrics-sub-cold {
+	display: block;
+	margin-top: 1px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--cold-color, var(--wind-color, var(--textcolor)));
 }
 .metrics-note {
 	margin-top: 10px;

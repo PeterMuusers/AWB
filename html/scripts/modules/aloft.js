@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED, LANGUAGE_GLOVES } from '../language.js';
 
 /*
  * Wind profile for the dropzone: wind per altitude for now and the coming hours, plus the height
@@ -34,8 +34,14 @@ const CLOUD_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 30
 const CLOUD_MIN_PERCENT = 12.5;			// one eighth
 const FEET_PER_METER = 3.28084;
 const MAX_LAYERS = 3;
-const FREEZING_COLD_BELOW = 12000;		// feet; at or under this the freezing level is marked as cold
+/* The altitude the aircraft drops from. A freezing level under it means the jumpers meet the cold
+   on the way out, which is where the club rule about gloves comes from, so the board marks it. */
+const EXIT_ALTITUDE = 12000;			// feet
 const SIGNIFICANT_SHIFT = 30;			// degrees; a turn of this much gets a colour of its own
+/* The wind just above the circuit decides how far out the spot has to be and whether a canopy can
+   still make it back. Above this it is marked, on the levels a jumper actually flies through. */
+const LOW_WIND_LIMIT = 25;				// knots
+const LOW_WIND_LEVELS = [1000, 2000];	// feet
 
 class Module {
 	constructor() {
@@ -43,6 +49,10 @@ class Module {
 		this.model = this.config.model || 'icon_d2';
 		this.hoursAhead = (this.config.hoursAhead !== undefined) ? this.config.hoursAhead : 2;
 		this.altitudes = (document.config.upperwinds || []).slice().sort((first, second) => second - first);
+		this.exitAltitude = (this.config.exitAltitude !== undefined) ? this.config.exitAltitude : EXIT_ALTITUDE;
+		this.coldText = (this.config.coldText !== undefined) ? this.config.coldText : LANGUAGE_GLOVES;
+		this.windLimit = (this.config.windLimit !== undefined) ? this.config.windLimit : LOW_WIND_LIMIT;
+		this.windLimitLevels = this.config.windLimitLevels || LOW_WIND_LEVELS;
 		this.refreshInterval = 15 * 60 * 1000; // Refresh interval is 15 minutes
 
 		this.last_updated = null;
@@ -287,12 +297,15 @@ class Module {
 		return '<span class="windgust">G' + Math.round(gust) + '</span>';
 	}
 
-	cell(wind, extra, forecast, reference) {
+	cell(wind, extra, forecast, reference, limit) {
 		if (!wind) {
 			return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"></td>';
 		}
+		/* over the limit the whole cell is marked, not just the number: the gusts in this table are
+		   already a coloured number, and two colours of number in one table read as one thing */
+		var over = (limit === true) ? ' windcell-limit' : '';
 		/* every part gets its own slot, so arrows, speeds and degrees line up down the column */
-		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + '"><span class="windcell-row">'
+		return '<td class="windcell' + (forecast ? ' windcell-forecast' : '') + over + '"><span class="windcell-row">'
 			+ this.arrow(wind.dir, forecast && this.shift(wind.dir, reference) >= SIGNIFICANT_SHIFT)
 			+ '<span class="windspeed">' + wind.kt + '</span>'
 			+ (extra || '')
@@ -319,16 +332,18 @@ class Module {
 		this.altitudes.forEach(feet => {
 			if (freezing !== null && !freezingDrawn && feet < freezing) {
 				/* marked the same way as in the metrics panel when it is low enough to climb through */
-				var cold = (freezing <= FREEZING_COLD_BELOW) ? ' freezing-row-cold' : '';
+				var cold = (freezing <= this.exitAltitude) ? ' freezing-row-cold' : '';
 				rows += '<tr class="freezing-row' + cold + '"><td colspan="' + (columns.length + 1) + '">'
 					+ LANGUAGE_FREEZING_LEVEL_AT + ' ' + freezing.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + '</td></tr>';
 				freezingDrawn = true;
 			}
 			var temperature = (columns[0].levels[feet] && columns[0].levels[feet].temp !== null)
 				? '<span class="windtemperature">' + columns[0].levels[feet].temp + '&nbsp;&deg;C</span>' : '';
+			var watched = this.windLimitLevels.indexOf(feet) !== -1;
 			rows += '<tr><td class="windtext">' + feet.toLocaleString(document.config.locale) + temperature + '</td>'
 				+ columns.map((hour, index) => this.cell(hour.levels[feet], '', index > 0,
-					columns[0].levels[feet] ? columns[0].levels[feet].dir : null)).join('') + '</tr>';
+					columns[0].levels[feet] ? columns[0].levels[feet].dir : null,
+					watched && hour.levels[feet] && hour.levels[feet].kt >= this.windLimit)).join('') + '</tr>';
 		});
 
 		/* The ground row: measured now, modelled for the hours after it, with the gust behind the
@@ -348,13 +363,15 @@ class Module {
 
 		document.getElementById(ID_TABLE_BODY).innerHTML = rows;
 
-		/* The freezing level also goes in the metrics panel. Sitting at or below twelve thousand feet
-		   it is low enough to matter on the way up, so it is marked as cold there. */
+		/* The freezing level also goes in the metrics panel. Below the altitude the aircraft drops
+		   from, the jumpers leave it into air under zero, and the board says what that means here
+		   rather than leaving it to be worked out from a number. */
 		var element = document.getElementById(ID_FREEZING_ALTITUDE);
 		if (freezing !== null && element) {
-			var cold = freezing <= FREEZING_COLD_BELOW;
+			var cold = freezing <= this.exitAltitude;
 			element.innerHTML = (cold ? '<span class="iconify metrics-cold-icon" data-icon="mdi-snowflake"></span>' : '')
-				+ freezing.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>';
+				+ freezing.toLocaleString(document.config.locale) + '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>'
+				+ ((cold && this.coldText) ? '<span class="metrics-sub metrics-sub-cold">' + this.coldText + '</span>' : '');
 			var cell = element.closest('.metrics-cell');
 			if (cell) {
 				cell.classList.toggle('metrics-cell-cold', cold);

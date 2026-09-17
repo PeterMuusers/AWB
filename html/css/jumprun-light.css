@@ -20,10 +20,12 @@
 	--jumplimit-color: #eb6834;
 
 	/* Data, the same colours as the charts on jumprun.nl */
-	--wind-color: #2a78d6;
+	--wind-color: #6b7f96;		/* direction and measured speed are on every row, so they stay quiet; colour is for the exceptions */
 	--gust-color: #eb6834;
 	--rain-color: #1baf7a;
-	--cold-color: #1c6fc4;		/* the colour the board marks a freezing level with when it is low enough to meet on the way up */
+	--cold-color: #0a7f96;		/* a freezing level under exit altitude: gloves, so it has to be noticed */
+	--limit-color: #b07800;		/* wind over the limit where a canopy flies */
+	--limit-wash: rgba(176, 120, 0, 0.12);
 	--cloud-color: #4c6d8c;
 
 	/* Weather alerts */
