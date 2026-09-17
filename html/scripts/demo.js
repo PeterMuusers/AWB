@@ -26,16 +26,23 @@
    (-151.74, -16.51), Whitehaven Beach in de Whitsundays (148.99, -20.27), of Empuriabrava aan de
    Costa Brava (3.14, 42.26) - ook een dropzone, en een die de meesten hebben gezien. */
 const PALM = {
-	/* Gecentreerd op de dropzone van Skydive Dubai, die op de stam van de palm ligt. Centreren in
-	   plaats van een stip ergens op de foto uitrekenen: dan staat hij altijd in het midden, op elk
-	   schermformaat, zonder een enkele berekening die mis kan gaan. */
-	center: { lon: 55.1370, lat: 25.0897 },
-	lonSpan: 0.062,		// breed genoeg om de palm erbij te houden
+	/* De foto staat erbij in img/, want de grap hoort meteen in beeld te staan en niet pas als een
+	   trage verbinding hem heeft opgehaald. Het kaartvlak heeft altijd dezelfde vorm - het bord is
+	   een vast vlak van 1920 bij 1080 dat als geheel meeschaalt - dus één uitsnede volstaat en er
+	   valt niets bij te snijden.
+	
+	   Zo is hij gemaakt, mocht je een ander stukje wereld willen:
+	   https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export
+	     ?bbox=<west>,<zuid>,<oost>,<noord>&bboxSR=4326&imageSR=3857&size=1600,1692&format=jpg&f=image
+	   Andere plekken die van bovenaf de moeite waard zijn: Bora Bora (-151.74, -16.51), Whitehaven
+	   Beach in de Whitsundays (148.99, -20.27), of Empuriabrava (3.14, 42.26) - ook een dropzone. */
+	image: 'img/dubai-palm.jpg',
+	west: 55.106, south: 25.060015, east: 55.168, north: 25.119377,
+	/* De dropzone zelf, uitgemeten op deze foto: het groene veld met de landingsstrook. */
+	dropzone: { lon: 55.1436, lat: 25.0909 },
 	label: 'Skydive Dubai \u00b7 Palm Drop Zone',
 	place: 'Dubai',		// zolang de demo loopt heet het bord hiernaar
-};
-
-/* Waar het naartoe moet. Alles wat het bord leest wordt hierheen gerekend, in plaats van dat er
+};/* Waar het naartoe moet. Alles wat het bord leest wordt hierheen gerekend, in plaats van dat er
    losse getallen worden neergezet: de grafieken hebben reeksen nodig, geen momentopnamen. */
 const SUNNY = {
 	windKt: 4,			// grondwind
@@ -176,16 +183,12 @@ function rewrite(response, change) {
 
 /* De kaart vervangen door een luchtfoto. Aan een radarbeeld van Dubai valt niets te beleven, en dit
    is het beeld waar het om begonnen is. */
-/* Mercator in graden: de projectie waarin de luchtfoto's staan. Alleen nodig om een uitsnede te
-   vragen die precies past, zodat er niets bijgesneden hoeft te worden en een punt op de foto op zijn
-   plek blijft staan - ongeacht de vorm van het scherm. */
+/* Mercator in graden: de projectie waarin de luchtfoto staat. Nodig om de dropzone op zijn plek
+   te zetten - noord-zuid loopt daarin niet gelijkmatig. */
 function mercator(lat) {
 	return (180 / Math.PI) * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
 }
 
-function unmercator(y) {
-	return (2 * Math.atan(Math.exp(y * Math.PI / 180)) - Math.PI / 2) * 180 / Math.PI;
-}
 
 export function showDemoMap(mapId) {
 	var element = (typeof mapId === 'string') ? document.getElementById(mapId) : mapId;
@@ -194,7 +197,7 @@ export function showDemoMap(mapId) {
 	}
 
 	var marker = document.createElement('div');
-	marker.style.cssText = 'position:absolute;left:50%;top:50%;z-index:600;transform:translate(-50%,-50%);'
+	marker.style.cssText = 'position:absolute;z-index:600;transform:translate(-50%,-50%);'
 		+ 'display:flex;align-items:center;gap:8px;pointer-events:none;';
 	marker.innerHTML = '<span style="width:13px;height:13px;border-radius:50%;background:#e23b2e;'
 		+ 'box-shadow:0 0 0 3px rgba(255,255,255,0.9), 0 2px 8px rgba(0,0,0,0.5);"></span>'
@@ -202,20 +205,12 @@ export function showDemoMap(mapId) {
 		+ 'letter-spacing:0.04em;text-shadow:0 1px 8px rgba(0,0,0,0.75);">' + PALM.label + '</span>';
 
 	var teken = () => {
-		var width = Math.max(1, element.clientWidth);
-		var height = Math.max(1, element.clientHeight);
-		/* De uitsnede krijgt de verhouding van het vlak, zodat de foto hem vult zonder bijsnijden
-		   en het middelpunt ook echt het midden is. */
-		var halfLon = PALM.lonSpan / 2;
-		var midY = mercator(PALM.center.lat);
-		var halfY = (PALM.lonSpan * height / width) / 2;
-		var url = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export'
-			+ '?bbox=' + [PALM.center.lon - halfLon, unmercator(midY - halfY),
-				PALM.center.lon + halfLon, unmercator(midY + halfY)].join(',')
-			+ '&bboxSR=4326&imageSR=3857&format=jpg&f=image'
-			+ '&size=' + Math.round(Math.min(2048, width * 2)) + ',' + Math.round(Math.min(2048, height * 2));
-		element.style.backgroundImage = 'url("' + url + '")';
+		element.style.backgroundImage = 'url("' + PALM.image + '")';
 		element.style.backgroundSize = '100% 100%';
+		/* De foto past precies in het vlak, dus graden zijn hier rechtstreeks percentages. */
+		marker.style.left = (((PALM.dropzone.lon - PALM.west) / (PALM.east - PALM.west)) * 100) + '%';
+		marker.style.top = (((mercator(PALM.north) - mercator(PALM.dropzone.lat))
+			/ (mercator(PALM.north) - mercator(PALM.south))) * 100) + '%';
 	};
 
 	element.innerHTML = '';
