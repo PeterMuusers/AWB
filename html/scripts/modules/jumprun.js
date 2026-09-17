@@ -17,6 +17,12 @@
  *
  * The calculation itself is the one from jumprun.nl, copied into scripts/jumprun; see the README
  * there. The plan carries a version, and a plan from a newer version is not drawn at all.
+ *
+ * How a spot is spoken differs per dropzone, and jumprun.nl says which way with every plan.
+ * Hoogeveen and Echten call out a track, an offset and a green light; Texel calls out a bearing
+ * and a distance from the middle of the field, and then the run-in heading. The same jump and the
+ * same sums, other words, so the board writes it down the way they say it there. Without an answer
+ * it is the offset notation, which is what this board assumed before it could ask.
  */
 
 import { computeJumprun } from '../jumprun/calc/jumprun.js';
@@ -29,6 +35,7 @@ import {
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
 	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE,
+	LANGUAGE_JUMPRUN_BEARING, LANGUAGE_JUMPRUN_DISTANCE,
 } from '../language.js';
 
 const PROXY_URL = './jumprun-proxy.php';
@@ -50,6 +57,12 @@ const SPEED_KT = 5;
 const LOW_FT = 3000;					// "below this" is the canopy ride and the circuit
 const LARGE_GROUP_EXTRA_S = 2;			// AXIS-regel: zoveel seconden extra achter een grote groep
 const CARDINALS = ['N', 'O', 'Z', 'W'];
+/* Bij de poolnotatie wordt de peiling op vijf graden afgerond, zoals op jumprun.nl zelf: fijner
+   dan dat leest niemand van een bord af, en het zou een nauwkeurigheid suggereren die de wind
+   niet heeft. Ligt het groene licht vrijwel op de bak, dan is er geen peiling en staat er een
+   streepje: een richting over twintig meter is geen richting. */
+const POLAR_STEP_DEG = 5;
+const POLAR_MIN_M = 20;
 
 class Module {
 	constructor(stations) {
@@ -62,6 +75,7 @@ class Module {
 		this.all = {};				// station -> {entry, planned}
 		this.turn = -1;				// welke dropzone het laatst aan de beurt was
 		this.entry = null;			// wat er nu getoond wordt: plan, wind, who, when
+		this.notation = 'offset';	// hoe deze dropzone de spot uitspreekt: 'offset' of 'polar'
 		this.admins = 2;			// how many people can put one up; until we know, assume more than one
 		this.planned = null;		// the jumprun as it was decided, computed with the plan's wind
 		this.error = null;
@@ -93,6 +107,7 @@ class Module {
 		var chosen = this.all[waiting[this.turn]];
 		this.entry = chosen.entry;
 		this.planned = chosen.planned;
+		this.notation = chosen.notation;
 		layer.hidden = false;
 		this.draw();
 		return true;
@@ -171,7 +186,7 @@ class Module {
 		var r = this.planned;
 		var entry = this.entry;
 		var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' });
-		var wind = Math.round(r.windAtExit.fromDeg) + '&deg; ' + Math.round(r.windAtExit.speedKt) + ' kt';
+		var wind = degrees(r.windAtExit.fromDeg) + ' ' + Math.round(r.windAtExit.speedKt) + ' kt';
 
 		/* Waar dit over gaat, en dat is niet vanzelfsprekend: dit bord kan bij Echten hangen en dan
 		   staat er een andere jumprun. Boven alles, want het is het eerste wat je wilt weten. */
@@ -184,7 +199,7 @@ class Module {
 			: entry.station.charAt(0).toUpperCase() + entry.station.slice(1);
 		/* het aantal exits staat op de kaart zelf, genummerd langs de lijn; in de kop zou het alleen
 		   een getal zijn dat je nog moet thuisbrengen */
-		var headline = LANGUAGE_JUMPRUN + ' ' + Math.round(r.trackMagneticDeg) + '&deg; &middot; '
+		var headline = LANGUAGE_JUMPRUN + ' ' + degrees(r.trackMagneticDeg) + ' &middot; '
 			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft';
 		/* De datum laten we weg: wat er staat geldt altijd vandaag. En de naam alleen als er meer
 		   mensen zijn die een jumprun kunnen ophangen; bij één iemand zegt hij niets en kost hij
@@ -235,7 +250,7 @@ class Module {
 			/* hoeveel mensen hier iets kunnen ophangen; ontbreekt het, dan zetten we de naam er
 			   liever wel bij dan ten onrechte niet */
 			this.admins = (typeof data.admins === 'number') ? data.admins : 2;
-			this.adopt(station, data.jumprun || null);
+			this.adopt(station, data.jumprun || null, data.notation);
 		}).catch(error => {
 			/* jumprun.nl out of reach is not a reason to drop a plan that is already on screen */
 			this.error = error.message;
@@ -244,7 +259,7 @@ class Module {
 	}
 
 	/* Take over a plan and work out the line it stands for. */
-	adopt(station, entry) {
+	adopt(station, entry, notation) {
 		if (entry === null) {
 			delete this.all[station];
 			return;
@@ -254,7 +269,13 @@ class Module {
 			console.warn('Jumprun plan version ' + entry.version + ' needs a newer board (this one reads ' + PLAN_VERSION + ')');
 			return;
 		}
-		this.all[station] = { entry: entry, planned: this.compute(entry.plan, this.profileOf(entry.wind)) };
+		this.all[station] = {
+			entry: entry,
+			planned: this.compute(entry.plan, this.profileOf(entry.wind)),
+			/* de notatie is die van de dropzone, niet die van wie het plan ophing: het bord hangt op
+			   het veld en hoort de taal van dat veld te spreken */
+			notation: (notation === 'polar') ? 'polar' : 'offset',
+		};
 	}
 
 	/* The wind as the calculation wants it. The plan carries levels; so does this board. */
@@ -319,11 +340,22 @@ class Module {
 
 	/* De twee dingen waar een springer op het bord naar zoekt: hoe de spot hier uitgesproken wordt,
 	   en hoeveel tijd er tussen de exits zit. Groter dan de rest, want dit is wat je onthoudt.
-	   De spot in de notatie van deze dropzone: koers, offset en groen licht. De offset staat niet
-	   als getal in het plan maar volgt uit waar het aanvliegpunt ligt ten opzichte van de bak. */
+	   De separatie staat er in elke notatie hetzelfde bij; de spot ervoor is per dropzone anders. */
 	numbers() {
 		var r = this.planned;
 		var plan = this.entry.plan;
+		var spot = (this.notation === 'polar') ? this.polarCells(r, plan) : this.offsetCells(r, plan);
+		var normal = Math.round(r.separation.seconds);
+		var extra = (plan.largeGroupExtraS !== undefined) ? plan.largeGroupExtraS : LARGE_GROUP_EXTRA_S;
+		return '<span class="jumprun-numbers">' + spot
+			+ cell(normal + ' s', LANGUAGE_JUMPRUN_SEPARATION)
+			+ (extra > 0 ? cell((normal + extra) + ' s', LANGUAGE_JUMPRUN_LARGE_GROUP) : '')
+			+ '</span>';
+	}
+
+	/* Hoogeveen en Echten: koers, offset en groen licht. De offset staat niet als getal in het plan
+	   maar volgt uit waar het aanvliegpunt ligt ten opzichte van de bak. */
+	offsetCells(r, plan) {
 		var landing = plan.landing || plan.target;
 		var offsetM = distance(landing, plan.target);
 		/* zonder NM erachter: onder dit getal staat het woord offset en die wordt nergens anders in
@@ -333,19 +365,25 @@ class Module {
 			offset += ' ' + CARDINALS[Math.round(bearing(landing, plan.target) / 90) % 4];
 		}
 		var green = (r.greenLight.nm >= 0 ? '+' : '\u2212') + Math.abs(r.greenLight.nm).toFixed(1) + ' NM';
-
-		var normal = Math.round(r.separation.seconds);
-		var extra = (plan.largeGroupExtraS !== undefined) ? plan.largeGroupExtraS : LARGE_GROUP_EXTRA_S;
-
-		var cell = (value, label) => '<span class="jumprun-cell"><b>' + value + '</b>'
-			+ '<span class="jumprun-cell-label">' + label + '</span></span>';
-		return '<span class="jumprun-numbers">'
-			+ cell(Math.round(r.trackMagneticDeg) + '&deg;', LANGUAGE_JUMPRUN_TRACK)
+		return cell(degrees(r.trackMagneticDeg), LANGUAGE_JUMPRUN_TRACK)
 			+ cell(offset, LANGUAGE_JUMPRUN_OFFSET)
-			+ cell(green, LANGUAGE_JUMPRUN_GREEN)
-			+ cell(normal + ' s', LANGUAGE_JUMPRUN_SEPARATION)
-			+ (extra > 0 ? cell((normal + extra) + ' s', LANGUAGE_JUMPRUN_LARGE_GROUP) : '')
-			+ '</span>';
+			+ cell(green, LANGUAGE_JUMPRUN_GREEN);
+	}
+
+	/* Texel: waar het groene licht ligt gezien vanaf het midden van het veld, als peiling en afstand,
+	   en daarna de richting waarin de lijn gevlogen wordt. Het groene licht in NM ten opzichte van
+	   de bak komt er niet bij te staan: dat is hetzelfde punt nog eens, in andere woorden.
+	   Magnetisch, want dat is wat er in het vliegtuig op de GPS staat, en met de declinatie die het
+	   plan zelf meedraagt, zodat het bord er geen eigen waarde naast zet. */
+	polarCells(r, plan) {
+		var middle = plan.landing || plan.target;
+		var metres = distance(middle, r.greenLight.point);
+		var declination = Number(plan.magneticDeclinationDeg) || 0;
+		var brg = Math.round((bearing(middle, r.greenLight.point) - declination) / POLAR_STEP_DEG) * POLAR_STEP_DEG;
+		var pointing = (metres < POLAR_MIN_M) ? '&mdash;' : degrees(brg);
+		return cell(pointing, LANGUAGE_JUMPRUN_BEARING)
+			+ cell((metres / NM).toFixed(1) + ' NM', LANGUAGE_JUMPRUN_DISTANCE)
+			+ cell(degrees(r.trackMagneticDeg), LANGUAGE_JUMPRUN_TRACK);
 	}
 
 	/* What the wind did since the plan was made, per group of levels that mean different things.
@@ -386,6 +424,21 @@ class Module {
 		}
 		return current.canopy.allReachTarget === true;
 	}
+}
+
+/* Eén getal met zijn woord eronder: dit is het blok dat van de andere kant van de ruimte leesbaar
+   moet zijn. */
+/* Een richting zoals ze hardop gezegd wordt: noord is 360 en niet 0. Op dit bord staan koersen,
+   peilingen en windrichtingen door elkaar en ze horen alle drie hetzelfde te lezen. Verschillen
+   gaan hier niet doorheen: twintig graden gedraaid is twintig, niet driehonderdtachtig. */
+function degrees(value) {
+	var whole = ((Math.round(value) % 360) + 360) % 360;
+	return (whole === 0 ? 360 : whole) + '&deg;';
+}
+
+function cell(value, label) {
+	return '<span class="jumprun-cell"><b>' + value + '</b>'
+		+ '<span class="jumprun-cell-label">' + label + '</span></span>';
 }
 
 function style(name) {

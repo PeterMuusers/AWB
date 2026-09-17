@@ -126,6 +126,13 @@ https://openweathermap.org/
 https://www.sat24.com/
 #### Radar map (KNMI / EUMETSAT / jumprun.nl)
 Own radar map (Leaflet) instead of the Weather and radar iframe, based on the radar screen of https://weer.jumprun.nl/: KNMI precipitation radar for the last hours, precipitation forecast for the next hours and the EUMETSAT satellite image as background. Enabled by the `radar` block in config.json (remove it to get the Weather and radar iframe back). The forecast frames come from jumprun.nl through `jumprun-proxy.php` (server-side, with an optional API key `JUMPRUN_API_KEY` in `.env` and a frame cache); as fallback (`forecast.fallback`) or as source (`forecast.source`) the KNMI Data Platform WMS can be used, which needs a free API key in `.env` (`KNMI_WMS_KEY`, see `.env.example`), added server-side by `knmi-wms-proxy.php`.
+#### Jumprun (jumprun.nl)
+The jumprun somebody set on https://weer.jumprun.nl/ for today, drawn on the same map and on the same aerial photograph as the radar, in between a couple of runs of the loop. Only an administrator of jumprun.nl can put one up, with a passkey, and only for the day itself: a plan disappears from the board by itself the next morning. Enabled by the `jumprun` block in config.json: `stations` names the dropzones the board looks at (a board can watch more than one, and they take turns, so Hoogeveen also shows what is set for Echten), `afterRuns` how many complete radar loops go by first and `seconds` how long it stays up. The plan comes in through `jumprun-proxy.php`, like the forecast frames.
+
+The board draws two sums. The line, the exits and the green light are the ones the jump organiser decided on; the reach under the canopy is worked out again with the wind of the moment, because that is what a jumper wants to know now. When the wind has turned or picked up enough to matter, the caption says so in as many words - "20 degrees turned at 3.000 ft" - and never what that means for where you personally land. That conclusion belongs to an instructor, not to a screen in the hallway.
+
+How the spot is spoken is the dropzone's own business, and jumprun.nl says which way with every plan. Hoogeveen and Echten call out a track, an offset and a green light. Texel calls out a bearing and a distance from the middle of the field and then the run-in heading, which says the same thing in one pair of numbers instead of two. The board writes down whichever one belongs to the dropzone; a field that says nothing gets the offset notation. Nothing needs to be set on this side for that: change the notation on jumprun.nl and the board follows.
+
 #### Weather and radar
 https://www.weatherandradar.com/
 #### Weerlive
