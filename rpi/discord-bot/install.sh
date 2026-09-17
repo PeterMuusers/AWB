@@ -65,9 +65,16 @@ echo "adressen  : \$(hostname -I)"
 echo "browser   : \$(pgrep -c chromium 2>/dev/null || echo 0) processen"
 echo "webserver : \$(systemctl is-active lighttpd)  (\$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1/))"
 echo "metingen  : \$(curl -s --max-time 15 'http://127.0.0.1/luchtvaartmeteo-proxy.php?action=status' | head -c 80)"
-echo "cache     : \$(du -sh "\${HOME_DIR}/.cache/chromium" 2>/dev/null | cut -f1 || echo leeg)"
+CACHE="\$(du -sh "\${HOME_DIR}/.cache/chromium" 2>/dev/null | cut -f1)"
+echo "cache     : \${CACHE:-leeg}"
 echo "schijf    : \$(df -h / | sed -n '2p' | tr -s ' ' | cut -d' ' -f4) vrij van \$(df -h / | sed -n '2p' | tr -s ' ' | cut -d' ' -f2)"
-echo "temperatuur: \$(vcgencmd measure_temp 2>/dev/null | cut -d= -f2 || echo onbekend)"
+THROTTLED="\$(vcgencmd get_throttled 2>/dev/null | cut -d= -f2)"
+case "\${THROTTLED}" in
+        0x0) HOE="niet teruggeschroefd" ;;
+        "") HOE="" ;;
+        *) HOE="ooit teruggeschroefd (\${THROTTLED}): te heet of te weinig stroom" ;;
+esac
+echo "temperatuur: \$(vcgencmd measure_temp 2>/dev/null | cut -d= -f2 || echo onbekend)  \${HOE}"
 echo "bord bijgewerkt: \$(date -r ${APP_DIR}/html/scripts/main.js '+%d-%m %H:%M' 2>/dev/null)"
 EOF
 
