@@ -248,6 +248,14 @@ chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/autostart/awb.desktop"
 # A board that goes black after ten minutes is not a board.
 if command -v raspi-config >/dev/null 2>&1; then
 	raspi-config nonint do_blanking 1 >/dev/null 2>&1 || true
+	# And a board showing a login screen is not a board either. Nobody types a password into a
+	# screen in a hangar, and until somebody logs in there is no session, so nothing starts the
+	# browser at all. B4 is the desktop with automatic login, for the first user.
+	if [ "$(raspi-config nonint get_autologin 2>/dev/null)" != "0" ]; then
+		raspi-config nonint do_boot_behaviour B4 >/dev/null 2>&1 \
+			&& note "Logging in automatically as ${USER_NAME} from now on." \
+			|| note "Could not switch on automatic login; the board will stop at a login screen."
+	fi
 fi
 
 # ---------------------------------------------------------------- check
