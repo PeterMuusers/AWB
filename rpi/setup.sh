@@ -221,7 +221,7 @@ while true; do
 	# you just deployed does not appear however often you restart it.
 	rm -rf "\${HOME}/.config/chromium" "\${HOME}/.cache/chromium"
 	chromium --kiosk --password-store=basic --noerrdialogs --disable-infobars \\
-		--disable-session-crashed-bubble --disable-features=Translate \\
+		--disable-session-crashed-bubble --disable-features=Translate,TranslateUI \\
 		--check-for-update-interval=31536000 http://127.0.0.1/
 	sleep 3
 done

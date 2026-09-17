@@ -75,6 +75,7 @@ EOF
 # aanhalingstekens, en die overleeft het niet om door drie lagen shell heen geschreven te worden.
 install -o root -g root -m 750 "$(dirname "$0")/awb-weer" /usr/local/sbin/awb-weer
 install -o root -g root -m 750 "$(dirname "$0")/awb-jumprun" /usr/local/sbin/awb-jumprun
+install -o root -g root -m 750 "$(dirname "$0")/awb-summertime" /usr/local/sbin/awb-summertime
 
 cat > /usr/local/sbin/awb-log <<'EOF'
 #!/bin/bash
@@ -125,7 +126,7 @@ EOF
 chmod 750 /usr/local/sbin/awb-kiosk-restart /usr/local/sbin/awb-cache-clear \
         /usr/local/sbin/awb-screenshot /usr/local/sbin/awb-status /usr/local/sbin/awb-reboot \
         /usr/local/sbin/awb-weer /usr/local/sbin/awb-jumprun /usr/local/sbin/awb-log \
-        /usr/local/sbin/awb-update
+        /usr/local/sbin/awb-update /usr/local/sbin/awb-summertime
 note "status, scherm, kiosk-herstart, cache leegmaken, weer, jumprun, log, update, herstart"
 
 say "The bot's own user"
@@ -135,7 +136,7 @@ install -o root -g root -m 644 "$(dirname "$0")/bot.py" "${BOT_DIR}/bot.py"
 
 # Exactly these five, nothing else, and without a password because a service cannot type one.
 cat > /etc/sudoers.d/awb-discord <<EOF
-${BOT_USER} ALL=(root) NOPASSWD: /usr/local/sbin/awb-kiosk-restart, /usr/local/sbin/awb-cache-clear, /usr/local/sbin/awb-screenshot, /usr/local/sbin/awb-status, /usr/local/sbin/awb-reboot, /usr/local/sbin/awb-weer, /usr/local/sbin/awb-jumprun, /usr/local/sbin/awb-log, /usr/local/sbin/awb-update
+${BOT_USER} ALL=(root) NOPASSWD: /usr/local/sbin/awb-kiosk-restart, /usr/local/sbin/awb-cache-clear, /usr/local/sbin/awb-screenshot, /usr/local/sbin/awb-status, /usr/local/sbin/awb-reboot, /usr/local/sbin/awb-weer, /usr/local/sbin/awb-jumprun, /usr/local/sbin/awb-log, /usr/local/sbin/awb-update, /usr/local/sbin/awb-summertime
 EOF
 chmod 440 /etc/sudoers.d/awb-discord
 visudo -c -f /etc/sudoers.d/awb-discord >/dev/null && note "sudo-regels nagekeken en in orde"

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="nl">
+	<head>
+		<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- Chrome biedt bij een Nederlandse pagina aan te vertalen, en die balk komt over de kop heen. -->
+		<meta name="google" content="notranslate">
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+		<link rel="stylesheet" type="text/css" id="theme-stylesheet" href="css/jumprun-navy.css">
+		<link rel="stylesheet" type="text/css" href="css/default.css">
+		<title>Aviation Weather Board &middot; demo</title>
+		<style>
+			/* Het bord van een dag die er niet is. Dezelfde kleuren en dezelfde indeling als het echte
+			   bord, zodat je ziet hoe het eruitziet, maar met vaste getallen en zonder één verbinding
+			   naar buiten. Dat laatste is met opzet: een demo die van het weer afhangt is geen demo. */
+			body { display: grid; grid-template-rows: auto 1fr; gap: 8px; }
+			.demo-banner {
+				position: fixed; left: 0; right: 0; top: 0; z-index: 9000;
+				background: repeating-linear-gradient(135deg, #b8860b 0 18px, #8a6508 18px 36px);
+				color: #fff; text-align: center; letter-spacing: 0.22em; text-transform: uppercase;
+				font-family: var(--font-condensed, 'Barlow Condensed', sans-serif);
+				font-weight: 700; font-size: 15pt; padding: 5px 0 6px;
+				box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+			}
+			.demo-note { font-size: 10pt; letter-spacing: 0.06em; text-transform: none; opacity: 0.92; font-weight: 500; }
+			main { padding-top: 34px; }
+			.demo-grid { display: grid; grid-template-columns: 300px 1fr; gap: 8px; height: 100%; min-height: 0; }
+			.demo-left { display: grid; grid-template-rows: auto 1fr; gap: 8px; min-height: 0; }
+			.demo-right { display: grid; grid-template-rows: 1fr auto; gap: 8px; min-height: 0; }
+			.card {
+				background-color: var(--block-background-color, rgba(255,255,255,0.06));
+				border: 1px solid var(--block-border-color, rgba(127,127,127,0.2));
+				border-radius: 8px; padding: 12px 14px; min-height: 0;
+			}
+			.card h2 {
+				margin: 0 0 8px; font-family: var(--font-condensed, 'Barlow Condensed', sans-serif);
+				font-size: var(--text-header-fontsize); font-weight: 600; letter-spacing: 0.08em;
+				text-transform: uppercase; color: var(--metadata-textcolor);
+			}
+			.place { font-family: var(--font-condensed, 'Barlow Condensed', sans-serif); font-size: var(--location-fontsize, 19pt); font-weight: 700; text-transform: uppercase; }
+			.headline { font-size: var(--text-header-fontsize); color: var(--metadata-textcolor); margin-bottom: 10px; }
+			.big { font-family: var(--font-condensed, 'Barlow Condensed', sans-serif); font-size: 40pt; font-weight: 700; line-height: 1; }
+			.big small { font-size: 14pt; font-weight: 500; color: var(--metadata-textcolor); }
+			.pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; margin-top: 12px; }
+			.pairs div span { display: block; font-size: var(--metadata-fontsize); letter-spacing: 0.06em; text-transform: uppercase; color: var(--metadata-textcolor); }
+			.pairs div b { font-family: var(--font-condensed, 'Barlow Condensed', sans-serif); font-size: var(--value-fontsize, 16pt); font-weight: 700; }
+			table.winds { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-variant-numeric: tabular-nums; }
+			table.winds td { padding: 4px 8px; background: var(--surface-2, rgba(127,127,127,0.12)); }
+			table.winds td:first-child { border-radius: 6px 0 0 6px; font-family: var(--font-condensed, 'Barlow Condensed', sans-serif); font-weight: 600; }
+			table.winds td:last-child { border-radius: 0 6px 6px 0; text-align: right; color: var(--metadata-textcolor); }
+			table.winds b { font-family: var(--font-condensed, 'Barlow Condensed', sans-serif); font-size: 15pt; }
+			.llfc { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+			.llfc div { background: var(--surface-2, rgba(127,127,127,0.12)); border-radius: 6px; padding: 9px 11px; }
+			.llfc h3 { margin: 0 0 4px; font-size: var(--metadata-fontsize); letter-spacing: 0.08em; text-transform: uppercase; color: var(--metadata-textcolor); font-weight: 600; }
+			.llfc p { margin: 0; line-height: 1.4; }
+			.island { border-radius: 8px; overflow: hidden; position: relative; min-height: 0; }
+			.island svg { width: 100%; height: 100%; display: block; }
+			.island-caption {
+				position: absolute; left: 12px; bottom: 12px; color: #fff;
+				font-family: var(--font-condensed, 'Barlow Condensed', sans-serif);
+				font-size: 15pt; letter-spacing: 0.06em; text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+			}
+			.countdown { position: absolute; right: 12px; bottom: 12px; color: rgba(255,255,255,0.85); font-size: var(--metadata-fontsize); text-shadow: 0 1px 6px rgba(0,0,0,0.5); }
+		</style>
+	</head>
+	<body>
+		<div class="demo-banner">
+			Demo &mdash; geen echte gegevens
+			<div class="demo-note">Dit scherm toont verzonnen weer. Kijk voor de werkelijke situatie op het bord zelf.</div>
+		</div>
+		<main>
+			<div class="demo-grid">
+				<div class="demo-left">
+					<div class="card">
+						<div class="place">Hoogeveen</div>
+						<div class="headline">Onbewolkt</div>
+						<div class="big">40<small> km zicht</small></div>
+						<div class="pairs">
+							<div><span>Wind</span><b>4 kt</b></div>
+							<div><span>Richting</span><b>240&deg;</b></div>
+							<div><span>Temperatuur</span><b>26 &deg;C</b></div>
+							<div><span>Dauwpunt</span><b>11 &deg;C</b></div>
+							<div><span>0 &deg;C-niveau</span><b>14.500 ft</b></div>
+							<div><span>QNH</span><b>1023 hPa</b></div>
+							<div><span>Zon op</span><b>06:04</b></div>
+							<div><span>Zon onder</span><b>21:48</b></div>
+						</div>
+					</div>
+					<div class="card">
+						<h2>Windprofiel &mdash; kt</h2>
+						<table class="winds">
+							<tr><td>15.000</td><td><b>12</b></td><td>250&deg;</td></tr>
+							<tr><td>12.000</td><td><b>10</b></td><td>248&deg;</td></tr>
+							<tr><td>9.000</td><td><b>9</b></td><td>246&deg;</td></tr>
+							<tr><td>5.000</td><td><b>7</b></td><td>244&deg;</td></tr>
+							<tr><td>3.000</td><td><b>6</b></td><td>242&deg;</td></tr>
+							<tr><td>2.000</td><td><b>5</b></td><td>241&deg;</td></tr>
+							<tr><td>1.000</td><td><b>5</b></td><td>240&deg;</td></tr>
+							<tr><td>Grond</td><td><b>4</b></td><td>240&deg;</td></tr>
+						</table>
+					</div>
+				</div>
+				<div class="demo-right">
+					<div class="island">
+						<!-- Zelf getekend, want een demo hoort niets van buiten te halen. -->
+						<svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Palmeiland in een kalme zee">
+							<defs>
+								<linearGradient id="lucht" x1="0" y1="0" x2="0" y2="1">
+									<stop offset="0" stop-color="#2f8fd4"/><stop offset="1" stop-color="#8fd3f0"/>
+								</linearGradient>
+								<linearGradient id="zee" x1="0" y1="0" x2="0" y2="1">
+									<stop offset="0" stop-color="#1f7fb8"/><stop offset="1" stop-color="#0d4f78"/>
+								</linearGradient>
+								<radialGradient id="zon" cx="0.5" cy="0.5" r="0.5">
+									<stop offset="0" stop-color="#fff6c8"/><stop offset="1" stop-color="#ffd447" stop-opacity="0"/>
+								</radialGradient>
+							</defs>
+							<rect width="1200" height="300" fill="url(#lucht)"/>
+							<circle cx="960" cy="110" r="120" fill="url(#zon)"/>
+							<circle cx="960" cy="110" r="40" fill="#fff3bd"/>
+							<rect y="300" width="1200" height="320" fill="url(#zee)"/>
+							<g fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="3" stroke-linecap="round">
+								<path d="M80 360q30-12 60 0t60 0 60 0"/><path d="M700 400q30-12 60 0t60 0 60 0"/>
+								<path d="M300 470q34-14 68 0t68 0 68 0"/><path d="M820 520q34-14 68 0t68 0 68 0"/>
+								<path d="M120 560q34-14 68 0t68 0 68 0"/>
+							</g>
+							<ellipse cx="600" cy="470" rx="250" ry="66" fill="#f0dca4"/>
+							<ellipse cx="600" cy="462" rx="205" ry="48" fill="#f7e9c4"/>
+							<g stroke="#7a5a2e" stroke-width="11" stroke-linecap="round" fill="none">
+								<path d="M545 455q-14-70 10-120"/><path d="M660 460q16-58-6-98"/>
+							</g>
+							<g fill="#2f9e5a">
+								<path d="M555 336q-58-30-92 6 44 8 92-6z"/><path d="M555 336q-16-62 30-86-6 46-30 86z"/>
+								<path d="M555 336q56-32 96 2-46 10-96-2z"/><path d="M555 336q-10 52-64 66 26-42 64-66z"/>
+								<path d="M555 336q34 44 16 88-18-42-16-88z"/>
+							</g>
+							<g fill="#37b167">
+								<path d="M654 364q-46-24-74 4 36 6 74-4z"/><path d="M654 364q-12-50 24-70-4 38-24 70z"/>
+								<path d="M654 364q46-26 78 2-38 8-78-2z"/><path d="M654 364q-8 42-52 54 22-34 52-54z"/>
+							</g>
+							<ellipse cx="600" cy="500" rx="252" ry="26" fill="rgba(255,255,255,0.22)"/>
+						</svg>
+						<div class="island-caption">Geen neerslag &middot; geen bewolking &middot; 4 kt</div>
+						<div class="countdown" id="countdown"></div>
+					</div>
+					<div class="card">
+						<h2>Low level forecast</h2>
+						<div class="llfc">
+							<div><h3>Bewolking</h3><p>Onbewolkt. Het blijft de hele dag helder, met zicht tot ver voorbij de Veluwe.</p></div>
+							<div><h3>Grondwind</h3><p>Zuidwest 3 tot 5 knopen, geen stoten. Een windzak die af en toe even nadenkt.</p></div>
+							<div><h3>Buien</h3><p>Geen. Ook niet in de omgeving, ook niet vanavond.</p></div>
+							<div><h3>Zicht</h3><p>Meer dan 40 kilometer. Vanaf exithoogte zie je de Waddenzee liggen.</p></div>
+							<div><h3>Thermiek</h3><p>Rustig en gelijkmatig; onder de koepel merk je er nauwelijks iets van.</p></div>
+							<div><h3>Morgen</h3><p>Precies zo. En de dag erna ook.</p></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</main>
+		<script>
+			/* Terug naar het echte bord zodra de tijd om is. De eindtijd komt mee in de URL, zodat een
+			   herstart van de browser midden in de demo niet opnieuw vijf minuten begint. Lukt het
+			   lezen niet, dan is vijf minuten vanaf nu de veilige aanname: liever te vroeg terug naar
+			   de werkelijkheid dan te laat. */
+			(function () {
+				var until = Number(new URLSearchParams(location.search).get('until')) * 1000;
+				if (!until || isNaN(until)) {
+					until = Date.now() + 5 * 60 * 1000;
+				}
+				var label = document.getElementById('countdown');
+				function tick() {
+					var left = Math.max(0, Math.round((until - Date.now()) / 1000));
+					label.textContent = 'nog ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') + ' tot het echte bord';
+					if (left <= 0) {
+						location.href = '/';
+						return;
+					}
+					setTimeout(tick, 1000);
+				}
+				tick();
+			}());
+		</script>
+	</body>
+</html>

@@ -42,14 +42,27 @@ class Bot(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self) -> None:
-        # A guild gets its commands straight away; without one they are global and Discord takes
-        # up to an hour to hand them out, which looks exactly like a bot that does not work.
+        # A guild gets its commands straight away; without one they are global and Discord takes up
+        # to an hour to hand them out, which looks exactly like a bot that does not work.
+        #
+        # Registering them in a guild needs the applications.commands scope there. Invite the bot
+        # with only the bot scope and this fails with "Missing Access" - which used to take the
+        # whole service down in a restart loop over something a re-invite fixes. Now it says so and
+        # falls back to global commands, so the bot is at least running while you sort that out.
         if GUILD_ID.isdigit():
             guild = discord.Object(id=int(GUILD_ID))
             self.tree.copy_global_to(guild=guild)
-            await self.tree.sync(guild=guild)
-        else:
-            await self.tree.sync()
+            try:
+                await self.tree.sync(guild=guild)
+                return
+            except discord.Forbidden:
+                print(
+                    f"Geen recht om commando's in server {GUILD_ID} te zetten. Nodig de bot opnieuw "
+                    "uit met applications.commands erbij; ik val nu terug op algemene commando's, "
+                    "die tot een uur kunnen duren voordat Discord ze uitdeelt.",
+                    flush=True,
+                )
+        await self.tree.sync()
 
 
 bot = Bot()
@@ -138,6 +151,24 @@ async def update(interaction: discord.Interaction) -> None:
     await interaction.followup.send(
         "Bijgewerkt en opnieuw gestart. De instellingen en de inloggegevens van dit bord blijven staan.\n"
         "```\n" + result[:1700] + "\n```"
+    )
+
+
+@bot.tree.command(name="summertime", description="Laat het bord even een perfecte springdag zien")
+@app_commands.describe(minuten="hoe lang, standaard vijf; 0 stopt hem meteen")
+async def summertime(interaction: discord.Interaction, minuten: int = 5) -> None:
+    if not allowed(interaction):
+        return await deny(interaction)
+    minuten = max(0, min(30, minuten))
+    await interaction.response.defer(thinking=True)
+    result = run("sudo", "-n", "/usr/local/sbin/awb-summertime", str(minuten * 60), timeout=30)
+    if minuten == 0:
+        return await interaction.followup.send("Demo gestopt.\n```\n" + result[:800] + "\n```")
+    await interaction.followup.send(
+        f"Onbewolkt, 26 graden, 4 knopen en een palmeiland op de kaart. {minuten} minuten lang.\n"
+        "Er staat een balk boven het scherm dat het niet echt is: dat bord hangt op een plek waar "
+        "mensen beslissen of ze springen, en verzonnen weer mag daar nooit voor echt doorgaan.\n"
+        "```\n" + result[:800] + "\n```"
     )
 
 

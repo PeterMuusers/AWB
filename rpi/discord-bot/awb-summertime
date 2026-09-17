@@ -1,0 +1,23 @@
+#!/bin/bash
+# Zet het bord een paar minuten op een verzonnen mooie dag, of haal dat er meteen weer af.
+#
+#   awb-summertime 300   vijf minuten demo
+#   awb-summertime 0     nu stoppen
+#
+# De eindtijd staat in /run, dus op een tmpfs: na een herstart van de Pi is de demo weg. Dat is met
+# opzet. Een bord dat na een stroomstoring blijft hangen in verzonnen weer, op een plek waar mensen
+# beslissen of ze springen, is precies wat niet mag gebeuren.
+MARKER=/run/awb-demo-until
+SECONDS_WANTED="${1:-300}"
+
+if [ "${SECONDS_WANTED}" -le 0 ] 2>/dev/null; then
+	rm -f "${MARKER}"
+	echo "demo gestopt; het bord staat binnen een kwartier weer op de echte gegevens"
+	exit 0
+fi
+
+UNTIL=$(( $(date +%s) + SECONDS_WANTED ))
+echo "${UNTIL}" > "${MARKER}"
+chmod 644 "${MARKER}"
+echo "demo staat aan tot $(date -d "@${UNTIL}" '+%H:%M:%S')"
+echo "het bord schakelt binnen vijftien seconden om en komt daarna vanzelf terug"

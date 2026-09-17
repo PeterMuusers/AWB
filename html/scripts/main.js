@@ -92,6 +92,26 @@ class OnlineStatus {
 	}
 }
 
+/* Het bord kan tijdelijk een verzonnen mooie dag tonen, gezet via de Discord-bot. Het bord vraagt
+   er zelf naar in plaats van dat iemand de browser omschakelt: dan is er geen zwart scherm, en komt
+   het vanzelf weer bij de werkelijkheid uit zodra de tijd om is. */
+const DEMO_POLL_MS = 15000;
+function watchDemo() {
+	var check = () => fetch('demo.php', { cache: 'no-store' })
+		.then(response => response.json())
+		.then(state => {
+			if (state.active && state.until) {
+				/* window ervoor, want main.js heeft een eigen 'location': de dropzone uit de URL.
+			   Zonder dat voorvoegsel zet je een eigenschap op die variabele en gebeurt er
+			   niets - zonder foutmelding. */
+			window.location.href = 'demo.html?until=' + state.until;
+			}
+		})
+		.catch(() => {});
+	check();
+	setInterval(check, DEMO_POLL_MS);
+}
+
 /* Het bord op het venster passen: dezelfde indeling, alleen groter of kleiner, en gecentreerd zodat
    de overgebleven rand gelijk verdeeld is. Bij precies 1920 bij 1080 is de factor 1.
 
@@ -259,6 +279,7 @@ loadConfig(location).then(response => {
 	fit();
 	window.addEventListener('resize', fit);
 	watchPointer();
+	watchDemo();
 	
 	/* Nobody is going to press a key on this screen, so the board watches itself. It hangs off the
 	   document like the modules do, so a check can be triggered by hand over a remote console. */
