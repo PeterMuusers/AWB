@@ -417,6 +417,91 @@ header,
 	top: 0;
 	left: 0;
 }
+/* De jumprun neemt de kaart even over: hij ligt erbovenop in plaats van ernaast, zodat de radar
+   eronder gewoon doorloopt en zijn tegels niet opnieuw hoeft te laden als hij weer aan de beurt is. */
+.layer-jumprun {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	/* boven de bronregels van de radar: die horen bij de kaart eronder en zouden erdoorheen komen */
+	z-index: 1100;
+	border-radius: 10px;
+	overflow: hidden;
+	background-color: var(--block-background-color);
+}
+.jumprun-map {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+}
+/* Het onderschrift ligt over de kaart, met een verloop eronder zodat de tekst leesbaar blijft
+   waar de luchtfoto toevallig licht is. */
+/* Bovenaan, niet onderaan: onderin staan de legenda van de kaart en de bronvermelding van de
+   luchtfoto, en daar is geen plaats voor een regel die je in twintig seconden moet kunnen lezen. */
+.jumprun-caption {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	z-index: 500;
+	padding: 10px 14px 26px;
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+	color: #ffffff;
+	font-size: var(--metadata-fontsize);
+	line-height: 1.45;
+	pointer-events: none;
+}
+.jumprun-caption .jumprun-headline {
+	display: block;
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--text-header-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+.jumprun-caption .jumprun-who {
+	color: rgba(255, 255, 255, 0.78);
+}
+/* de regel over de wind spreekt harder zodra het plan met deze wind niet meer uitkomt */
+.jumprun-caption .jumprun-drift {
+	display: block;
+	color: rgba(255, 255, 255, 0.82);
+}
+.jumprun-caption .jumprun-drift-alert {
+	color: var(--limit-color, var(--textcolor-alert));
+	font-weight: 600;
+}
+/* Opmaak van de jumprun-kaart, overgenomen uit jumprun.nl zodat het bord er hetzelfde uitziet als
+   het scherm waarop het plan gemaakt is. Eén verschil: --crit is hier dezelfde kleur als --good, dus
+   de lens wordt nooit rood. Dat hij gestippeld wordt en wat de legenda zegt blijft staan, want de
+   informatie moet er zijn; alleen het alarmsignaal hoort niet op een bord waar iedereen langsloopt. */
+:root {
+	--good: #0ca30c;
+	--crit: #0ca30c;
+	--alt2: #9d85e3;
+}
+.ring-label span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; padding: 1px 5px; border-radius: 5px; background: rgba(17,26,36,0.6); color: rgba(255,255,255,0.9); font-size: 10px; font-weight: 600; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
+.target-label span { position: absolute; white-space: nowrap; padding: 1px 6px; border-radius: 5px; background: rgba(17,26,36,0.6); color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.03em; }
+.target-label.off span { opacity: 0.45; }
+.jr-legend { position: absolute; left: 8px; bottom: 22px; z-index: 500; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 8px; border-radius: 8px; background: rgba(17,26,36,0.72); color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; pointer-events: none; }
+.jr-legend .ln { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid var(--c, #0ca30c); margin-right: 6px; vertical-align: middle; }
+.jr-legend .ln.dash { border-top-style: dashed; border-top-width: 2px; }
+.jr-legend .ln.thin { border-top-width: 1.5px; opacity: 0.85; }
+.glide-label span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; padding: 2px 7px; border-radius: 6px; background: rgba(17,26,36,0.78); color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
+.handle { color: #fff; filter: drop-shadow(0 0 3px rgba(0,0,0,0.9)); }
+.handle-track svg { width: 44px; height: 44px; display: block; }
+.handle-track .track-label { position: absolute; left: 60px; top: 22px; transform: translate(-50%, -50%); padding: 2px 7px; border-radius: 6px; background: rgba(17,26,36,0.78); color: #fff; font-family: var(--font-condensed, 'Barlow Condensed', system-ui, sans-serif); font-weight: 700; font-size: 17px; line-height: 1.1; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; filter: none; white-space: nowrap; pointer-events: none; }
+.handle-track .track-label::after { content: " mag"; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; opacity: 0.75; }
+.handle-green span { display: block; width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--good); background: rgba(12,163,12,0.25); box-shadow: 0 0 0 2px rgba(0,0,0,0.5); }
+.handle-exit span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fff 0 4px, transparent 4.5px); font-family: var(--font-condensed, 'Barlow Condensed', system-ui, sans-serif); font-weight: 700; font-size: 11px; color: #111; }
+.handle-exit span:not(:empty) { background: #fff; width: 18px; height: 18px; box-shadow: 0 0 0 1px rgba(0,0,0,0.6); }
+.handle-exit.miss span { background: radial-gradient(circle, var(--crit) 0 4px, transparent 4.5px); }
+.handle-exit.miss span:not(:empty) { background: var(--crit); color: #fff; }
+.handle-target span { display: block; width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid #fff; background: rgba(255,255,255,0.12); box-shadow: 0 0 0 1.5px rgba(0,0,0,0.55), inset 0 0 0 1.5px rgba(0,0,0,0.55); }
 .layer-map {
 	z-index: 10;
 	position: absolute;

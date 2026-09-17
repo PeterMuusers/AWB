@@ -196,6 +196,12 @@ class Module {
 		this.rainChart = (this.config.rainChart !== false);
 		this.satBounds = null;
 		this.forecast = this.config.forecast || {};
+		/* how often the jumprun gets the map, and for how long; without the setting it never does */
+		var jumprun = document.config.jumprun || {};
+		this.jumprunAfterRuns = jumprun.afterRuns || 0;
+		this.jumprunSeconds = jumprun.seconds || 20;
+		this.jumprunTimer = null;
+		this.runs = 0;
 
 		this.last_updated = null;
 		this.rainMeasured = [];		// [{time: Date, value: mm/h}] up to now, from luchtvaartmeteo
@@ -659,6 +665,28 @@ class Module {
 		this.satTimes = Object.keys(this.satOverlays).sort();
 	}
 
+	/* After so many complete runs of the loop, the jumprun of today takes the map over for a while.
+	   Returns whether it did, so the loop knows to wait longer before the next frame. It hides
+	   itself again on a timer of its own rather than by counting frames, because the radar keeps
+	   running underneath and should simply reappear when the time is up. */
+	jumprunTurn() {
+		var jumprun = (document.modules || {}).jumprun;
+		if (!jumprun || !jumprun.active || !this.jumprunAfterRuns) {
+			return false;
+		}
+		this.runs = (this.runs || 0) + 1;
+		if (this.runs < this.jumprunAfterRuns) {
+			return false;
+		}
+		this.runs = 0;
+		if (!jumprun.show()) {
+			return false;
+		}
+		clearTimeout(this.jumprunTimer);
+		this.jumprunTimer = setTimeout(() => jumprun.hide(), this.jumprunSeconds * 1000);
+		return true;
+	}
+
 	/* Replace the forecast overlays when the run (or the source) changes */
 	syncForecast(forecast, radarEnd) {
 		var run = forecast ? (forecast.source + ':' + forecast.run) : null;
@@ -829,7 +857,12 @@ class Module {
 		} else if (frame.kind === 'radar' && this.frames[this.index + 1].kind === 'forecast') {
 			delay = this.pauseAtNow;
 		}
+		var last = (this.index === this.frames.length - 1);
 		this.index = (this.index + 1) % this.frames.length;
+		if (last && this.jumprunTurn()) {
+			/* the jumprun takes the map over for a while; the loop picks up where it left off */
+			delay += this.jumprunSeconds * 1000;
+		}
 		this.timer = setTimeout(this.showFrame.bind(this), delay);
 	}
 }

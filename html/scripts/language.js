@@ -7,6 +7,16 @@ const LANGUAGE_SOURCE = 'Bron:';
 const LANGUAGE_VALID_UNTIL = 'geldig tot';
 const LANGUAGE_VALID_FOR = 'geldig voor';
 const LANGUAGE_GLOVES = 'handschoenen verplicht';
+const LANGUAGE_JUMPRUN = 'Jumprun';
+const LANGUAGE_JUMPRUN_BY = 'gezet door';
+const LANGUAGE_JUMPRUN_AT = 'om';
+const LANGUAGE_JUMPRUN_WITH = 'gerekend met';
+const LANGUAGE_JUMPRUN_SINCE = 'Sinds het plan:';
+const LANGUAGE_JUMPRUN_TURNED = 'gedraaid';
+const LANGUAGE_JUMPRUN_STRONGER = 'toegenomen';
+const LANGUAGE_JUMPRUN_WEAKER = 'afgenomen';
+const LANGUAGE_JUMPRUN_EXIT = 'exits';
+const LANGUAGE_JUMPRUN_AT_FT = 'op';
 const LANGUAGE_REWRITTEN = '\u00b7 automatisch herschreven';
 const LANGUAGE_NOW = 'Nu';
 const LANGUAGE_CLOUD_BASE = 'Wolkenbasis';
@@ -51,6 +61,16 @@ export {
         LANGUAGE_VALID_UNTIL,
         LANGUAGE_VALID_FOR,
         LANGUAGE_GLOVES,
+        LANGUAGE_JUMPRUN,
+        LANGUAGE_JUMPRUN_BY,
+        LANGUAGE_JUMPRUN_AT,
+        LANGUAGE_JUMPRUN_WITH,
+        LANGUAGE_JUMPRUN_SINCE,
+        LANGUAGE_JUMPRUN_TURNED,
+        LANGUAGE_JUMPRUN_STRONGER,
+        LANGUAGE_JUMPRUN_WEAKER,
+        LANGUAGE_JUMPRUN_EXIT,
+        LANGUAGE_JUMPRUN_AT_FT,
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
         LANGUAGE_NOW,

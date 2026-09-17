@@ -19,11 +19,24 @@
  * there. The plan carries a version, and a plan from a newer version is not drawn at all.
  */
 
-import { computeJumprun } from '../jumprun/jumprun.js';
-import { profileFromAloft } from '../jumprun/wind.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED } from '../language.js';
+import { computeJumprun } from '../jumprun/calc/jumprun.js';
+import { profileFromAloft } from '../jumprun/calc/wind.js';
+import { createJumprunMap } from '../jumprun/jumprun-map.js';
+import {
+	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
+	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
+	LANGUAGE_JUMPRUN_EXIT, LANGUAGE_JUMPRUN_AT_FT,
+} from '../language.js';
 
 const PROXY_URL = './jumprun-proxy.php';
+const ID_LAYER = 'layer-jumprun-id';
+const ID_MAP = 'jumprun-map-id';
+const ID_CAPTION = 'jumprun-caption-id';
+/* dezelfde luchtfoto als onder de radar, zodat het niet op een ander bord lijkt */
+const IMAGERY = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const RUN_BEFORE_M = 600;				// hoeveel lijn er vóór de eerste exit getekend wordt
+const RUN_AFTER_M = 600;				// en erachter
+const PAD_M = 300;						// ruimte rond alles wat er staat, zodat niets tegen de rand plakt
 const PLAN_VERSION = 1;					// the shape of the plan this board understands
 
 /* When a change since the plan is worth a word. A turn of twenty degrees moves the exit point
@@ -50,6 +63,102 @@ class Module {
 	/* Is there a jumprun to show at all? */
 	get active() {
 		return this.planned !== null;
+	}
+
+	/* Take the map over for a while. The radar keeps running underneath, so its tiles are still
+	   there when it gets its turn back. */
+	show() {
+		if (!this.active) {
+			return false;
+		}
+		var layer = document.getElementById(ID_LAYER);
+		if (!layer) {
+			return false;
+		}
+		layer.hidden = false;
+		this.draw();
+		return true;
+	}
+
+	hide() {
+		var layer = document.getElementById(ID_LAYER);
+		if (layer) {
+			layer.hidden = true;
+		}
+	}
+
+	/* The map of jumprun.nl itself, so the board shows the same picture as the screen the plan was
+	   made on. Made once and kept: building a Leaflet map every twenty seconds would refetch every
+	   tile. Nothing here is draggable, so the callbacks do nothing. */
+	ensureMap() {
+		if (this.jmap) {
+			return this.jmap;
+		}
+		var element = document.getElementById(ID_MAP);
+		if (!element || typeof L === 'undefined') {
+			return null;
+		}
+		var nothing = () => {};
+		this.jmap = createJumprunMap(element, { onTrack: nothing, onGreen: nothing });
+		return this.jmap;
+	}
+
+	draw() {
+		var jmap = this.ensureMap();
+		var r = this.planned;
+		if (!jmap || !r) {
+			return;
+		}
+		var plan = this.entry.plan;
+		var landing = plan.landing || plan.target;
+		/* eerst opnieuw meten: de kaart is gemaakt terwijl de laag verborgen was, dus Leaflet denkt
+		   dat hij nul bij nul is en past dan op een verkeerd uitsnede */
+		jmap.map.invalidateSize();
+		jmap.setTarget(plan.target, landing, landing, plan.extraTargets || [], true);
+		jmap.render(r);
+		jmap.fit(r);
+		this.caption();
+	}
+
+	/* What is under the picture: who put this up and when, what it was worked out with, and only
+	   when it matters what the wind has done since. */
+	caption() {
+		var element = document.getElementById(ID_CAPTION);
+		if (!element) {
+			return;
+		}
+		var r = this.planned;
+		var entry = this.entry;
+		var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' });
+		var wind = Math.round(r.windAtExit.fromDeg) + '&deg; ' + Math.round(r.windAtExit.speedKt) + ' kt';
+
+		var headline = LANGUAGE_JUMPRUN + ' ' + Math.round(r.trackMagneticDeg) + '&deg; &middot; '
+			+ entry.plan.exits + ' ' + LANGUAGE_JUMPRUN_EXIT + ' ' + LANGUAGE_JUMPRUN_AT_FT + ' '
+			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft';
+		/* de datum laten we weg: wat er staat geldt altijd vandaag */
+		var who = LANGUAGE_JUMPRUN_BY + ' ' + entry.set_by + ' ' + LANGUAGE_JUMPRUN_AT + ' '
+			+ clock(new Date(entry.set_at)) + ', ' + LANGUAGE_JUMPRUN_WITH + ' ' + wind;
+
+		var changes = this.drift();
+		var reaches = this.stillReaches();
+		var drift = '';
+		if (changes.length > 0) {
+			var words = changes.map(change => {
+				var parts = [];
+				if (Math.abs(change.turn) >= TURN_DEG) {
+					parts.push(Math.abs(change.turn) + '&deg; ' + LANGUAGE_JUMPRUN_TURNED);
+				}
+				if (Math.abs(change.speed) >= SPEED_KT) {
+					parts.push(Math.abs(change.speed) + ' kt ' + (change.speed > 0 ? LANGUAGE_JUMPRUN_STRONGER : LANGUAGE_JUMPRUN_WEAKER));
+				}
+				return LANGUAGE_JUMPRUN_AT_FT + ' ' + Number(change.where).toLocaleString(document.config.locale)
+					+ ' ft ' + parts.join(', ');
+			});
+			drift = '<span class="jumprun-drift' + (reaches === false ? ' jumprun-drift-alert' : '') + '">'
+				+ LANGUAGE_JUMPRUN_SINCE + ' ' + words.join(' &middot; ') + '</span>';
+		}
+		element.innerHTML = '<span class="jumprun-headline">' + headline + '</span>'
+			+ '<span class="jumprun-who">' + who + '</span>' + drift;
 	}
 
 	updateData() {
@@ -163,6 +272,10 @@ class Module {
 		}
 		return current.canopy.allReachTarget === true;
 	}
+}
+
+function style(name) {
+	return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
 /* Mean wind over a set of levels, as a vector: averaging degrees straight across gives nonsense
