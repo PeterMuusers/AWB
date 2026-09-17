@@ -205,12 +205,16 @@ cat > "${KIOSK}" <<EOF
 # Written by rpi/setup.sh. The board in kiosk mode.
 WAYLAND_DISPLAY="wayland-0" wlr-randr --output ${OUTPUT} --mode ${RESOLUTION} 2>/dev/null || true
 
-# A fresh profile every start: no crash bubble, no "restore pages?", no cache from last week.
-rm -rf "\${HOME}/.config/chromium"
-
-exec chromium --kiosk --password-store=basic --noerrdialogs --disable-infobars \\
-	--disable-session-crashed-bubble --disable-features=Translate \\
-	--check-for-update-interval=31536000 http://127.0.0.1/
+# Keep starting it. A browser that falls over takes the whole screen with it, and there is nobody
+# at the club to notice, let alone to start it again. A few seconds later it is simply back.
+while true; do
+	# A fresh profile every start: no crash bubble, no "restore pages?", no cache from last week.
+	rm -rf "\${HOME}/.config/chromium"
+	chromium --kiosk --password-store=basic --noerrdialogs --disable-infobars \\
+		--disable-session-crashed-bubble --disable-features=Translate \\
+		--check-for-update-interval=31536000 http://127.0.0.1/
+	sleep 3
+done
 EOF
 chmod +x "${KIOSK}"
 chown "${USER_NAME}:${USER_NAME}" "${KIOSK}"
