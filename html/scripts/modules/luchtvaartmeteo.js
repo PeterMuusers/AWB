@@ -228,7 +228,13 @@ class Module {
 	showData() {
 		/* Station and how far it is from the dropzone */
 		this.set(ID_LOCATION, document.config.luchtvaartmeteo.stationName || this.station);
-		this.set(ID_NOTE, document.config.luchtvaartmeteo.note || LANGUAGE_MEASURED_AT + ' ' + (document.config.luchtvaartmeteo.stationName || this.station));
+		/* De regel onder het blok: wat er in de instelling staat, en anders waar gemeten wordt. Staat
+		   er met opzet niets ("note": ""), dan hoort er ook niets te staan; vandaar dat een lege tekst
+		   hier iets anders betekent dan een ontbrekende. */
+		var note = document.config.luchtvaartmeteo.note;
+		this.set(ID_NOTE, (note === undefined || note === null)
+			? LANGUAGE_MEASURED_AT + ' ' + (document.config.luchtvaartmeteo.stationName || this.station)
+			: note);
 
 		/* Summary and icon */
 		var sky = this.sky();

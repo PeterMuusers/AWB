@@ -29,10 +29,13 @@ async function loadConfig(location) {
     } else {
         var url = './config-' + location + '.json';
     }
-	/* Fetch data from the API */
+	/* Fetch data from the API. Nooit uit de cache: dit bestand bevat de instellingen van dit bord, en
+	   wie er iets in verandert verwacht dat na een herstart te zien - niet pas nadat de browser zijn
+	   eigen kopie vergeten is. */
 	document.config = await fetch(
 		url,
 		{
+			cache: 'no-store',
 			headers: {
 				Accept: 'application/json',
 			},
