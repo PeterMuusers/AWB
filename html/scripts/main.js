@@ -15,6 +15,7 @@ import { Module as WeatherAndRadar } from './modules/weatherandradar.js';
 import { Module as WeerSlag } from './modules/weerslag.js';
 import { Module as Aloft } from './modules/aloft.js';
 import { Module as CloudProfile } from './modules/cloudprofile.js';
+import { Module as Jumprun } from './modules/jumprun.js';
 
 const ID_DATETIME = 'datetime-data';
 const ID_LAYER_MAP = 'layer-map-id';
@@ -237,6 +238,10 @@ loadConfig(location).then(response => {
 	document.modules.luchtvaartmeteo = new LuchtvaartMeteo(location);
 	//weerslag = new WeerSlag(ID_IMG_LAYER_MAP);
 	document.modules.aloft = new Aloft();
+	/* The jumprun somebody put on this board from jumprun.nl; without the setting nothing is asked */
+	if (document.config.jumprun) {
+		document.modules.jumprun = new Jumprun(document.config.jumprun.station || document.config.radar?.forecast?.station || 'hoogeveen');
+	}
 	if (document.config.cloudProfile) {
 		document.modules.cloudprofile = new CloudProfile('cloudprofile');
 	}

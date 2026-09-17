@@ -11,6 +11,9 @@
  *       -> run, bounds and frames (time + url of the frame through this proxy), cached 2 minutes
  *   jumprun-proxy.php?action=frame&run=YYYYMMDDHHMM&i=N
  *       -> one frame PNG, cached 1 hour
+ *   jumprun-proxy.php?action=jumprun&station=hoogeveen
+ *       -> the jumprun somebody set for this dropzone today, or nothing. Short cache: it changes
+ *          when a person decides it does, not on a schedule, so the board should see it soon.
  * JUMPRUN_URL in .env overrides the default https://weer.jumprun.nl.
  */
 
@@ -20,6 +23,7 @@ $JUMPRUN_URL = awb_env_is_set('JUMPRUN_URL') ? rtrim(awb_env('JUMPRUN_URL'), '/'
 $API_KEY = awb_env_is_set('JUMPRUN_API_KEY') ? awb_env('JUMPRUN_API_KEY') : '';
 $CACHE_DIR = sys_get_temp_dir();
 $FORECAST_TTL = 2 * 60;
+$JUMPRUN_TTL = 60;				// seconds; a jumprun is put up by hand, so the board should notice quickly
 $FRAME_TTL = 60 * 60;
 $CURL_TIMEOUT = 20;
 
@@ -98,6 +102,33 @@ function action_radar_forecast() {
 	echo($output);
 }
 
+/* The jumprun that was set for this dropzone today, plus who set it. Nothing set is not an error:
+   on most days there is no jumprun on the board and the board simply leaves the segment out. */
+function action_jumprun() {
+	global $CACHE_DIR, $JUMPRUN_TTL;
+	$station = isset($_GET['station']) ? strtolower($_GET['station']) : 'hoogeveen';
+	if (!preg_match('/^[a-z0-9_-]+$/', $station)) {
+		fail(400, 'Invalid station.');
+	}
+	$cache_file = $CACHE_DIR . '/awb-jumprun-plan-' . $station . '.json';
+	serve_cached($cache_file, $JUMPRUN_TTL, 'application/json');
+
+	list($status, $type, $body) = jumprun_get('/api/board/jumprun?station=' . rawurlencode($station));
+	if ($status != 200) {
+		fail(502, 'jumprun.nl returned HTTP ' . $status);
+	}
+	$data = json_decode($body, true);
+	if (!is_array($data) || !array_key_exists('jumprun', $data)) {
+		fail(502, 'jumprun.nl returned no answer about the jumprun');
+	}
+	$output = json_encode($data);
+	file_put_contents($cache_file, $output, LOCK_EX);
+	header('Content-Type: application/json');
+	header('Cache-Control: public, max-age=' . $JUMPRUN_TTL);
+	header('X-Cache: MISS');
+	echo($output);
+}
+
 function action_frame() {
 	global $CACHE_DIR, $FRAME_TTL;
 	$run = isset($_GET['run']) ? $_GET['run'] : '';
@@ -134,6 +165,9 @@ switch (isset($_GET['action']) ? $_GET['action'] : '') {
 		break;
 	case 'frame' :
 		action_frame();
+		break;
+	case 'jumprun' :
+		action_jumprun();
 		break;
 	default :
 		fail(400, 'Unknown action.');
