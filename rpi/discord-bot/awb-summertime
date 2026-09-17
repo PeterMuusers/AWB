@@ -11,13 +11,24 @@ MARKER=/run/awb-demo-until
 SECONDS_WANTED="${1:-300}"
 
 if [ "${SECONDS_WANTED}" -le 0 ] 2>/dev/null; then
-	rm -f "${MARKER}"
+	rm -f "${MARKER}" 2>/dev/null
+	# Controleren in plaats van aannemen. rm -f slikt een fout in, en als /run alleen-lezen is -
+	# wat het voor een dienst met ProtectSystem=strict gewoon kan zijn - lijkt het te lukken terwijl
+	# de demo doorloopt. Dan hoor je dat hier te lezen en niet pas op het scherm.
+	if [ -e "${MARKER}" ]; then
+		echo "kon de markering niet weghalen: ${MARKER} bestaat nog" >&2
+		echo "staat /run op alleen-lezen voor deze dienst? zie ReadWritePaths in awb-discord.service" >&2
+		exit 1
+	fi
 	echo "demo gestopt; het bord schakelt binnen acht seconden terug"
 	exit 0
 fi
 
 UNTIL=$(( $(date +%s) + SECONDS_WANTED ))
-echo "${UNTIL}" > "${MARKER}"
-chmod 644 "${MARKER}"
+if ! echo "${UNTIL}" > "${MARKER}" 2>/dev/null; then
+	echo "kon ${MARKER} niet schrijven; staat /run op alleen-lezen voor deze dienst?" >&2
+	exit 1
+fi
+chmod 644 "${MARKER}" 2>/dev/null || true
 echo "demo staat aan tot $(date -d "@${UNTIL}" '+%H:%M:%S')"
 echo "het bord schakelt binnen vijftien seconden om en komt daarna vanzelf terug"

@@ -187,7 +187,10 @@ NoNewPrivileges=false
 PrivateTmp=false
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/tmp
+# /run moet erbij: daar staat de markering van de mooiweerstand. Zonder deze regel is dat pad
+# alleen-lezen voor alles wat de bot start - ook voor wat hij via sudo als root draait - en dan
+# mislukt het zetten en het weghalen ervan stil, want rm -f slikt die fout in.
+ReadWritePaths=/tmp /run
 
 [Install]
 WantedBy=multi-user.target
