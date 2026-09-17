@@ -95,7 +95,8 @@ const PLACES = [
 ];
 const KNOTS_TO_MS = 0.514444;
 const METERS_PER_DEGREE = 111320;
-const CLOUDS_MARGIN = 0.25;								// extra area around the map, so shifted clouds still cover it
+const CLOUDS_MARGIN = 0.25;								// extra area around the map on every side
+const CLOUDS_SHIFT_STEP = 0.25;							// degrees; the upwind margin grows in steps this size
 /* The further the clouds are shifted ahead, the fainter they get, as a reminder that it is an
    estimate. Gently: at 0.45 the last frame came out at little over half strength, which does not
    read as a guess but as the sky clearing up, and a thinning overcast is a statement about the
@@ -346,6 +347,32 @@ class Module {
 		return { east: -speed * Math.sin(radians), north: -speed * Math.cos(radians) };
 	}
 
+	/* The area to ask the cloud images for. They are shifted along with the wind, so the side the
+	   clouds come from has to reach far enough past the map to still cover it at the end of the
+	   loop. A quarter of the map width used to be it, which a wind of twenty-five knots eats
+	   through in an hour, and from there the straight edge of the image walked into view.
+	   Only the upwind side is stretched. Making the whole square bigger would spend the same
+	   number of pixels on more sky, and the sharpness of the image is the reason to show it. The
+	   amount is rounded up to a quarter of a degree, so the images are not all fetched again every
+	   time the wind turns a little. */
+	cloudArea() {
+		var bounds = this.map.getBounds().pad(CLOUDS_MARGIN);
+		var wind = this.satelliteAdvect ? this.windAtCloudLevel(new Date()) : null;
+		if (wind === null) {
+			return bounds;
+		}
+		/* the newest image is already up to one step old, and it is shifted to the last frame */
+		var seconds = this.hoursAhead * 60 * 60 + SAT_STEP * 60;
+		var middle = (bounds.getSouth() + bounds.getNorth()) / 2;
+		var north = wind.north * seconds / METERS_PER_DEGREE;
+		var east = wind.east * seconds / (METERS_PER_DEGREE * Math.cos(middle * Math.PI / 180));
+		var step = amount => Math.ceil(Math.abs(amount) / CLOUDS_SHIFT_STEP) * CLOUDS_SHIFT_STEP;
+		return L.latLngBounds(
+			[bounds.getSouth() - (north > 0 ? step(north) : 0), bounds.getWest() - (east > 0 ? step(east) : 0)],
+			[bounds.getNorth() + (north < 0 ? step(north) : 0), bounds.getEast() + (east < 0 ? step(east) : 0)]
+		);
+	}
+
 	/* Bounds of the cloud image, shifted along with the wind for the time between image and frame */
 	cloudBounds(frameTime, imageTime) {
 		var bounds = this.satBounds;
@@ -585,15 +612,16 @@ class Module {
 
 	syncSatellite(times) {
 		var wanted = {};
-		if (this.satBounds === null && times.length > 0) {
-			/* Ask for a larger area than the map so the shifted image still covers the whole view */
-			this.satBounds = this.map.getBounds().pad(CLOUDS_MARGIN);
+		var area = (times.length > 0) ? this.cloudArea() : this.satBounds;
+		var moved = (this.satBounds === null) || (area !== null && !this.satBounds.equals(area));
+		if (moved) {
+			this.satBounds = area;
 		}
 		/* One source for the whole loop: switching from the visible image to infrared halfway
 		   through the animation gives a jump. The newest image decides, so the switch happens
 		   between two updates instead of inside one loop. */
 		var spec = (times.length > 0) ? this.cloudSpec(times[times.length - 1]) : this.satSpec;
-		if (spec !== this.satSpec) {
+		if (spec !== this.satSpec || moved) {
 			for (var old in this.satOverlays) {
 				this.satOverlays[old].remove();
 			}
