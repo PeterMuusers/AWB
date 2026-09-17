@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_NOW, LANGUAGE_CLOUD_BASE, LANGUAGE_WIND, LANGUAGE_MEASURED_LABEL, LANGUAGE_EXPECTED_LABEL } from '../language.js';
+import { LANGUAGE_NOW, LANGUAGE_CLOUD_BASE, LANGUAGE_MEASURED_LABEL, LANGUAGE_EXPECTED_LABEL } from '../language.js';
 
 /*
  * Cloud layers and wind over time: the past hours as measured at the station (ceilometer and
@@ -30,10 +30,15 @@ const ID_HEADER = 'cloudprofile-header';
    altitudeFraction), dus je ziet nog steeds dát er iets hangt. */
 const ALTITUDE_TICKS = [0, 1000, 3000, 5000, 7000, 9000, 12000, 15000];
 const LABEL_HEIGHT = 24;				// pixels at the bottom for the times
-const CHART_FONT = '11px sans-serif';	// de getallen in deze grafiek; kleiner dan dit leest niet van een meter of drie
+/* De getallen in deze grafiek staan in dezelfde letter als de tabel ernaast: het is één bord, en
+   twee lettertypes naast elkaar vallen op zonder dat ze iets zeggen. De familie komt uit het thema
+   (--font-condensed), de maten staan hier. */
+const CHART_SIZE = 12;					// px; kleiner dan dit leest niet van een meter of drie
+const CHART_WEIGHT = 500;
 /* De hoogteschaal is waar je als eerste naar kijkt - op welke hoogte hangt die wolk - dus die staat
    groter en in de kleur van de andere getallen op het bord, niet in het grijs van een asje. */
-const AXIS_FONT = '17px sans-serif';
+const AXIS_SIZE = 17;					// px, de hoogteschaal
+const AXIS_WEIGHT = 600;
 /* De tijdregel hoort op dezelfde lijn te eindigen als de grondrij van het windprofiel ernaast: twee
    blokken naast elkaar die onderin allebei over "nu" gaan. Hoeveel dat is wordt gemeten - zo blijft
    het kloppen als die tabel een regel meer of minder krijgt - en dit is wat het is zolang er geen
@@ -47,7 +52,7 @@ const TIME_TICK = 6;					// pixels, the little line above each time
 const TOP_LABEL_HEIGHT = 21;			// pixels at the top, above the chart, for 'measured | expected'
 const TOP_FONT = '500 13px "Roboto Condensed", "Roboto", sans-serif';	/* alleen als de buurman er niet is */
 const TOP_NOTE = '.upper-winds-note';	/* de ondertitel waar deze woorden zich naar voegen */
-const FREEZING_FONT = '14px sans-serif';	/* het 0 °C-niveau: een getal om te lezen, geen bijschrift */
+const FREEZING_SIZE = 14;				// px; het 0 °C-niveau is een getal om te lezen, geen bijschrift
 const TOP_BASELINE = 13;				// pixels from the top of the canvas to the foot of those words
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 /* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
@@ -201,6 +206,11 @@ class Module {
 		var now = Date.now();
 		var start = now - this.hoursBack * 3600 * 1000;
 		var end = now + this.hoursAhead * 3600 * 1000;
+		var family = window.getComputedStyle(document.documentElement)
+			.getPropertyValue('--font-condensed').trim() || '"Roboto Condensed", "Roboto", sans-serif';
+		var CHART_FONT = CHART_WEIGHT + ' ' + CHART_SIZE + 'px ' + family;
+		var AXIS_FONT = AXIS_WEIGHT + ' ' + AXIS_SIZE + 'px ' + family;
+		var FREEZING_FONT = CHART_WEIGHT + ' ' + FREEZING_SIZE + 'px ' + family;
 		context.font = AXIS_FONT;
 		var axis = Math.ceil(ALTITUDE_TICKS.reduce((widest, feet) =>
 			Math.max(widest, context.measureText(this.altitudeLabel(feet)).width), 0)) + AXIS_GAP;
@@ -242,7 +252,9 @@ class Module {
 
 		/* Expected layers: a block from base to top, the more eighths the more solid */
 		var ahead = hours.filter(hour => hour.time.getTime() >= now - 1800000 && hour.time.getTime() <= end);
+
 		var hourWidth = ((ahead.length > 1) ? Math.abs(x(ahead[1].time.getTime()) - x(ahead[0].time.getTime())) : 40) * 0.62;
+		var blocks = [];			/* waar de verwachte blokken staan, zodat de nul-gradenlijn ze kan ontwijken */
 		ahead.forEach(hour => {
 			/* a block is centred on the hour it is valid for, but it must not reach back over the
 			   line for now: that half would sit in the measured part of the chart */
@@ -257,6 +269,7 @@ class Module {
 				var height = y(layer.base) - top;
 				context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', ' + (0.15 + 0.6 * (layer.okta / 8)).toFixed(2) + ')';
 				context.fillRect(left, top, right - left, height);
+				blocks.push({ left: left, right: right, top: top, bottom: top + height });
 				/* How many eighths, in the block itself. The shade of the block says the same thing,
 				   but only next to another block: alone it is a tone without a scale to read it by.
 				   Dark ink on a solid block, light on a thin one, because the block is what it sits
@@ -293,16 +306,35 @@ class Module {
 
 		/* De nul-gradenhoogte van het model, als streepjeslijn. In dezelfde koele kleur als de regel
 		   over dat niveau in het windprofiel ernaast: het is hetzelfde gegeven, en op één bord hoort
-		   hetzelfde gegeven dezelfde kleur te hebben. */
+		   hetzelfde gegeven dezelfde kleur te hebben.
+
+		   Waar een verwacht blok op die hoogte staat houdt de lijn op. Die blokken zijn doorschijnend,
+		   dus er overheen tekenen helpt niet - dan loopt hij nog steeds dwars door het cijfer dat erin
+		   staat. Zo loopt hij er zichtbaar achterlangs. */
 		var freezing = ahead.length > 0 ? ahead[0].freezing : null;
 		if (freezing !== null && freezing < ALTITUDE_TICKS[ALTITUDE_TICKS.length - 1]) {
 			var cold = style.getPropertyValue('--cold-color').trim()
 				|| style.getPropertyValue('--wind-color').trim() || muted;
+			var level = y(freezing) + 0.5;
+			var gaps = blocks
+				.filter(block => block.top - 2 <= level && level <= block.bottom + 2)
+				.map(block => ({ from: block.left - 3, to: block.right + 3 }))
+				.sort((first, second) => first.from - second.from);
 			context.strokeStyle = cold;
 			context.setLineDash([4, 3]);
 			context.beginPath();
-			context.moveTo(axis, y(freezing) + 0.5);
-			context.lineTo(width, y(freezing) + 0.5);
+			var from = axis;
+			gaps.forEach(gap => {
+				if (gap.from > from) {
+					context.moveTo(from, level);
+					context.lineTo(Math.min(gap.from, width), level);
+				}
+				from = Math.max(from, gap.to);
+			});
+			if (from < width) {
+				context.moveTo(from, level);
+				context.lineTo(width, level);
+			}
 			context.stroke();
 			context.setLineDash([]);
 			context.fillStyle = cold;
@@ -365,6 +397,10 @@ class Module {
 			context.arc(left, top, 2.5, 0, 2 * Math.PI);
 			context.fill();
 			if (label) {
+				/* Het getal zelf in de gewone kleur van de cijfers op dit bord: de stip en de lijn
+				   zeggen al welke reeks het is, en blauw op donkerblauw leest slechter dan wit.
+				   De stoten houden hun eigen kleur, die is een signaal. */
+				context.fillStyle = (colour === gustColour) ? colour : ink;
 				context.textAlign = align || 'center';
 				var at = (align === 'left') ? Math.max(left + 4, from || 0) : left;
 				context.fillText(label, at, top + (above ? -8 : 9));
@@ -424,9 +460,10 @@ class Module {
 
 		context.fillStyle = muted;
 		context.textAlign = 'right';
-		context.fillText(Math.round(peak) + ' ' + UNIT_KNOTS, axis - 5, windTop + 4);
-		context.textAlign = 'left';
-		context.fillText(LANGUAGE_WIND.toUpperCase(), axis + 4, windTop + 4);
+		/* De hoogste waarde van dit stukje grafiek stond hier als getal langs de as. Dat zegt niets
+		   wat de getallen bij de punten zelf niet al zeggen, dus het is weg. */
+		/* Het woord "wind" stond hier langs de as. De twee lijnen met hun getallen in knopen zeggen
+		   al wat dit is, dus het woord kan weg. */
 
 		/* Hour marks and the line for now. De cijfers staan op hun eigen voet in plaats van gecentreerd
 		   in de strook, zodat hun onderkant op de grondrij van het windprofiel ernaast uitkomt, en elk
