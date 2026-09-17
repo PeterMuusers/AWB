@@ -784,7 +784,9 @@ header,
 }
 .radar-chart {
 	width: 100%;
-	height: 54px;
+	/* Hoog genoeg om er iets aan af te lezen: met 54 px bleef er na de tijdregel veertig pixels over
+	   voor de balkjes, en dan drukt een bui van 10 mm/u alles wat eronder zit plat tegen de bodem. */
+	height: 82px;
 	border-radius: 4px;
 	overflow: hidden;
 }
