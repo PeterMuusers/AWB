@@ -10,13 +10,15 @@
 #   ./rpi/card-rescue.sh show              what the card says now
 #   ./rpi/card-rescue.sh wifi "SSID"       teach it another wifi network
 #   ./rpi/card-rescue.sh tailscale         put it in your Tailscale network at the next boot
+#   ./rpi/card-rescue.sh bump              run the first-boot work again, changing nothing else
 #
 # Put the card in this Mac first. Both changes take effect at the next boot of the Pi.
 #
 # The thing that is easy to get wrong: cloud-init does its first-boot work once per instance, and
-# it decides what "once" means by the instance-id in meta-data. Add a command without touching that
-# id and nothing whatsoever happens at the next boot. So both changes bump it, which makes
-# cloud-init treat the card as a fresh instance and do the work again.
+# the id it goes by sits in two places - meta-data, and ds=nocloud;i=<id> on the kernel command line
+# in cmdline.txt. The command line wins. Change only meta-data and the next boot does nothing at
+# all, with no error and no trace, which is indistinguishable from a card that was never edited.
+# Both changes here therefore bump both.
 #
 # The Python below sits at the left margin on purpose. An indented heredoc strips every leading tab,
 # Python's own indentation included, and the result is a syntax error at the worst possible moment.
@@ -40,6 +42,43 @@ fi
 [[ -n "${BOOT}" ]] || die "No boot partition mounted. Put the card in this Mac (the Imager ejects it after writing)."
 [[ -f "${BOOT}/user-data" ]] || die "This card has no cloud-init settings on it. It was written by an Imager older than 2.0, or without customisation."
 
+# ---------------------------------------------------------------- the instance id
+
+# cloud-init does its first-boot work once per instance, and the id it goes by lives in two places.
+# meta-data is the obvious one. The other is the kernel command line, where the Imager writes
+# ds=nocloud;i=<id>, and that one wins: bump meta-data alone and the next boot silently does nothing
+# at all, which is exactly what it looks like when a card "did not work".
+bump_instance_id() {
+	python3 - "${BOOT}" <<'PYTHON'
+import pathlib, re, sys, time
+boot = pathlib.Path(sys.argv[1])
+stamp = 'awb-rescue-%d' % int(time.time())
+
+meta = boot / 'meta-data'
+if meta.exists() and re.search(r'^instance-id:', meta.read_text(), re.M):
+    meta.write_text(re.sub(r'^instance-id:.*$', 'instance-id: ' + stamp, meta.read_text(),
+                           count=1, flags=re.M))
+else:
+    meta.write_text('instance-id: %s\n' % stamp)
+
+cmdline = boot / 'cmdline.txt'
+if cmdline.exists():
+    text = cmdline.read_text()
+    # one line, always: a second line here and the Pi does not boot at all
+    fixed = re.sub(r'(ds=nocloud[^\s]*?;i=)[^\s;]+', lambda m: m.group(1) + stamp, text)
+    if fixed == text and 'ds=nocloud' in text:
+        fixed = re.sub(r'(ds=nocloud[^\s]*)', lambda m: m.group(1) + ';i=' + stamp, text, count=1)
+    if fixed != text:
+        assert fixed.strip().count('\n') == 0, 'cmdline.txt must stay a single line'
+        cmdline.write_text(fixed)
+        print('  instance-id is now %s, in meta-data and on the kernel command line' % stamp)
+    else:
+        print('  instance-id is now %s (meta-data only; no ds=nocloud on the command line)' % stamp)
+else:
+    print('  instance-id is now %s' % stamp)
+PYTHON
+}
+
 # ---------------------------------------------------------------- showing
 
 show_card() {
@@ -62,7 +101,10 @@ print('  ssh key       :', 'yes' if 'ssh_authorized_keys' in user else 'no')
 print('  ssh password  :', 'no' if re.search(r'ssh_pwauth:\s*false', user) else 'yes')
 print('  wifi          :', ', '.join(nets) if nets else 'none')
 print('  tailscale     :', 'yes, at the next boot' if 'awb-tailscale' in user else 'no')
-print('  instance-id   :', one(meta, 'instance-id'))
+cmd = (boot / 'cmdline.txt').read_text() if (boot / 'cmdline.txt').exists() else ''
+m = re.search(r'ds=nocloud[^\s]*?;i=([^\s;]+)', cmd)
+print('  instance-id   :', one(meta, 'instance-id'), '(meta-data)')
+print('                 ', m.group(1) if m else '-', '(kernel command line; this is the one that counts)')
 PYTHON
 }
 
@@ -146,17 +188,9 @@ else:
     text += '\nruncmd:\n  - [ /usr/local/sbin/awb-tailscale.sh ]\n'
 text = text.rstrip('\n') + '\n' + block
 user_data.write_text(text)
-
-# And the instance-id, or cloud-init skips the whole first-boot round and none of this happens.
-meta = boot / 'meta-data'
-stamp = 'awb-rescue-%d' % int(time.time())
-if meta.exists() and re.search(r'^instance-id:', meta.read_text(), re.M):
-    meta.write_text(re.sub(r'^instance-id:.*$', 'instance-id: ' + stamp,
-                           meta.read_text(), count=1, flags=re.M))
-else:
-    meta.write_text('instance-id: %s\n' % stamp)
-print('  Written. instance-id is now %s' % stamp)
+print('  Written.')
 PYTHON
+	bump_instance_id
 
 	say "Done"
 	note "Eject the card, put it back in the Pi and power it up."
@@ -195,13 +229,9 @@ else:
     text += ('  wifis:\n    wlan0:\n      dhcp4: true\n      optional: true\n'
              '      access-points:\n' + entry)
 net.write_text(text)
-
-# same story as with tailscale: without a new id cloud-init does nothing at the next boot
-meta = boot / 'meta-data'
-stamp = 'awb-rescue-%d' % int(time.time())
-meta.write_text('instance-id: %s\n' % stamp)
-print('  Added. instance-id is now %s' % stamp)
+print('  Added.')
 PYTHON
+	bump_instance_id
 	say "Done"
 	note "It joins whichever of its networks it finds, so this one is a fallback and not a move."
 }
@@ -210,6 +240,7 @@ PYTHON
 
 case "${1:-}" in
 	show) show_card ;;
+	bump) say "Making cloud-init run again at the next boot"; bump_instance_id ;;
 	wifi) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh wifi \"SSID\""; add_wifi "$2" ;;
 	tailscale) add_tailscale ;;
 	*) awk 'NR > 2 { if (/^#/) { sub(/^# ?/, ""); print; next } exit }' "$0"; exit 1 ;;
