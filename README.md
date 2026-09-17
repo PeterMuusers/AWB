@@ -5,6 +5,41 @@ Aviation Weather Board
 
 `curl -s https://raw.githubusercontent.com/eelcohn/AWB/main/rpi/install.sh | sudo bash`
 
+That one fetches the project from GitHub, sets up a Pi in one go and installs a nightly updater. It
+is the shortest way to the released board.
+
+`rpi/setup.sh` sits next to it for the cases it does not cover: installing from the checkout you are
+standing in rather than from GitHub, so a fork or an unpublished branch also ends up on the board;
+setting up wifi, which a board without a network cable needs before it is any use; and putting the
+credentials file in place. It asks before it changes anything, every answer has a default, and
+running it again is safe. It deliberately installs no updater: the one in `install.sh` pulls from
+the repository it was built with, so on a fork it would quietly turn your board back into somebody
+else's overnight.
+
+### Headless, over wifi, from a Mac
+
+No keyboard and no network cable, only an SD card and a laptop. In that order:
+
+1. **Raspberry Pi Imager**, with the desktop version of Raspberry Pi OS (Bookworm or Trixie). Under
+   the gear: hostname `awb`, a user, SSH on, and one wifi network with the country. That first
+   network is the only one that can be set before the card is ever booted, so make it the one your
+   laptop is on too.
+2. **Boot and find it.** `ssh <user>@awb.local` over that same network.
+3. **Copy the project across.** From your own machine, in the checkout:
+   `rsync -a --exclude .git ./ <user>@awb.local:AWB/`
+4. **Run the setup.** `sudo AWB/rpi/setup.sh`, and answer the questions. The wifi step is where the
+   other networks go in: a phone hotspot, and the one at the club. A network does not have to be in
+   range to be added, so the club's wifi can go in from your kitchen table weeks in advance.
+5. **Fill in the credentials** in `/opt/AWB/.env` and reboot.
+
+Adding a network later is one line and needs no reinstall:
+
+`sudo /opt/AWB/rpi/wifi.sh add "Clubwifi" 10`
+
+The number is a priority: higher wins when two networks are in range. Give a phone hotspot a low one
+and the club a high one, otherwise the board sits on mobile data next to a perfectly good access
+point. `wifi.sh list` shows what it knows and what it is on.
+
 ### Setting it up for your own dropzone
 
 Nothing in the code is tied to one club. Every place name in the source is a fallback for when the
