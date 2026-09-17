@@ -28,7 +28,7 @@ const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measu
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 const AXIS_WIDTH = 34;					// pixels on the left for the altitude labels
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
-const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to be drawn
+const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to sit centred on its dot
 const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
 
 class Module {
@@ -250,8 +250,10 @@ class Module {
 			context.setLineDash([]);
 		};
 
-		/* A dot on a value, with the number next to it: above the line for gusts, below it for wind */
-		var drawMarker = (point, colour, label, above, align) => {
+		/* A dot on a value, with the number next to it: above the line for gusts, below it for wind.
+		   A number placed to the right of its dot never starts before `from`, so it cannot run into
+		   the number that is already standing there. */
+		var drawMarker = (point, colour, label, above, align, from) => {
 			if (!point) {
 				return;
 			}
@@ -263,7 +265,8 @@ class Module {
 			context.fill();
 			if (label) {
 				context.textAlign = align || 'center';
-				context.fillText(label, left + (align === 'left' ? 4 : 0), top + (above ? -8 : 9));
+				var at = (align === 'left') ? Math.max(left + 4, from || 0) : left;
+				context.fillText(label, at, top + (above ? -8 : 9));
 			}
 		};
 
@@ -303,14 +306,19 @@ class Module {
 		drawMarker(firstGust, gustColour, firstGust ? 'G' + Math.round(firstGust.value) : null, true, 'left');
 		drawMarker(nowWind, windColour, nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null, false);
 		drawMarker(nowGust, gustColour, nowGust ? 'G' + Math.round(nowGust.value) : null, true);
-		/* The first expected hour can be only minutes after now, and then its number would sit on
-		   top of the measured one: draw the dot, leave the number off. */
-		var roomForLabel = point => Math.abs(x(point.time.getTime()) - x(now)) > LABEL_CLEARANCE;
+		/* The first expected hour can be only minutes after now, and a number centred on that dot
+		   would land on top of the measured one. It moves to the right of its dot instead of being
+		   left off: a dot without a number reads as a value the board failed to fetch. */
+		var placement = point => (Math.abs(x(point.time.getTime()) - x(now)) > LABEL_CLEARANCE) ? 'center' : 'left';
+		/* where a number pushed to the right has to start, clear of the one that says 'now' */
+		var clearOf = label => x(now) + (label ? context.measureText(label).width / 2 : 0) + 6;
+		var windFrom = clearOf(nowWind ? Math.round(nowWind.value) + ' ' + UNIT_KNOTS : null);
+		var gustFrom = clearOf(nowGust ? 'G' + Math.round(nowGust.value) : null);
 		visibleOnly(aheadWind).filter(point => point !== nowWind).forEach(point => {
-			drawMarker(point, windColour, roomForLabel(point) ? Math.round(point.value) + ' ' + UNIT_KNOTS : null, false);
+			drawMarker(point, windColour, Math.round(point.value) + ' ' + UNIT_KNOTS, false, placement(point), windFrom);
 		});
 		visibleOnly(aheadGust).filter(point => point !== nowGust).forEach(point => {
-			drawMarker(point, gustColour, roomForLabel(point) ? 'G' + Math.round(point.value) : null, true);
+			drawMarker(point, gustColour, 'G' + Math.round(point.value), true, placement(point), gustFrom);
 		});
 
 		context.fillStyle = muted;
