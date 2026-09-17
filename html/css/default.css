@@ -153,12 +153,15 @@ header,
 .header-name {
 	font-weight: bold;
 }
+/* De ruimte onderin hield vroeger de regel met de bron en het tijdstip vrij; die staan nu in de
+   kopbalk, dus wat eronder overbleef was lucht die nergens meer bij hoorde - onderin twee keer zoveel
+   als opzij. Bovenin blijft de ruimte staan: die scheidt de inhoud van de kop erboven. */
 .metrics-content,
 .upper-winds-content,
 .metar-content,
 .llfc-content {
 	padding-top: 9px;
-	padding-bottom: 11px;
+	padding-bottom: 0;
 }
 .llfc {
 	flex: 2 100%;
