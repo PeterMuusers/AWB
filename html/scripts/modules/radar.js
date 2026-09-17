@@ -114,15 +114,20 @@ const CHART_ALPHA_FORECAST = 0.55;						// gemeten en verwacht blijven uit elkaa
    een plensbui. De hoogte zegt hetzelfde, maar die schaalt mee met de natste bui van het moment -
    op een rustige dag is een hoog balkje 1 mm/u en op een natte dag 20. De kleur ligt vast en is
    daarmee het enige wat je er van een afstand absoluut aan kunt aflezen. */
+/* Geijkt op wat het hier werkelijk doet, niet op wat een regenmeter aankan. De eerste versie liep
+   tot 100 mm/u, en dan valt alle Nederlandse neerslag - die zich vrijwel altijd onder de 3 afspeelt -
+   in het blauwe begin van de schaal: gemeten waarden van 0,4 tot 1,6 mm/u kwamen er allemaal blauw
+   uit en dan zegt de kleur niets. 15 mm/u is al een flinke plensbui en boven de 30 is uitzonderlijk,
+   dus daar mag de schaal ophouden. */
 const CHART_RAIN_COLOURS = [
 	[0.1, 126, 203, 255],	// lichtblauw: motregen
-	[1, 60, 150, 245],		// blauw: lichte regen
-	[2.5, 40, 200, 170],	// groenblauw
-	[5, 90, 215, 80],		// groen: gewone bui
-	[10, 240, 220, 70],		// geel
-	[20, 245, 150, 50],		// oranje
-	[50, 235, 60, 60],		// rood: plensbui
-	[100, 190, 70, 200],	// paars: uitzonderlijk
+	[0.5, 60, 150, 245],	// blauw: lichte regen
+	[1, 40, 200, 170],		// groenblauw
+	[2, 90, 215, 80],		// groen: gewone bui
+	[4, 240, 220, 70],		// geel
+	[8, 245, 150, 50],		// oranje
+	[15, 235, 60, 60],		// rood: plensbui
+	[30, 190, 70, 200],		// paars: uitzonderlijk
 ];
 const CHART_SCALES = [1, 2, 5, 10, 20, 50];				// mm/h, the first one the data fits in
 const MAX_IMAGE_SIZE = 2048;							// pixels, cap for the WMS images (after scaling for the screen)
