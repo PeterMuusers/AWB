@@ -25,7 +25,7 @@ import { createJumprunMap } from '../jumprun/jumprun-map.js';
 import {
 	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
-	LANGUAGE_JUMPRUN_EXIT, LANGUAGE_JUMPRUN_AT_FT,
+	LANGUAGE_JUMPRUN_AT_FT,
 } from '../language.js';
 
 const PROXY_URL = './jumprun-proxy.php';
@@ -132,8 +132,9 @@ class Module {
 		var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' });
 		var wind = Math.round(r.windAtExit.fromDeg) + '&deg; ' + Math.round(r.windAtExit.speedKt) + ' kt';
 
+		/* het aantal exits staat op de kaart zelf, genummerd langs de lijn; in de kop zou het alleen
+		   een getal zijn dat je nog moet thuisbrengen */
 		var headline = LANGUAGE_JUMPRUN + ' ' + Math.round(r.trackMagneticDeg) + '&deg; &middot; '
-			+ entry.plan.exits + ' ' + LANGUAGE_JUMPRUN_EXIT + ' ' + LANGUAGE_JUMPRUN_AT_FT + ' '
 			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft';
 		/* de datum laten we weg: wat er staat geldt altijd vandaag */
 		var who = LANGUAGE_JUMPRUN_BY + ' ' + entry.set_by + ' ' + LANGUAGE_JUMPRUN_AT + ' '

@@ -15,7 +15,6 @@ const LANGUAGE_JUMPRUN_SINCE = 'Sinds het plan:';
 const LANGUAGE_JUMPRUN_TURNED = 'gedraaid';
 const LANGUAGE_JUMPRUN_STRONGER = 'toegenomen';
 const LANGUAGE_JUMPRUN_WEAKER = 'afgenomen';
-const LANGUAGE_JUMPRUN_EXIT = 'exits';
 const LANGUAGE_JUMPRUN_AT_FT = 'op';
 const LANGUAGE_REWRITTEN = '\u00b7 automatisch herschreven';
 const LANGUAGE_NOW = 'Nu';
@@ -69,7 +68,6 @@ export {
         LANGUAGE_JUMPRUN_TURNED,
         LANGUAGE_JUMPRUN_STRONGER,
         LANGUAGE_JUMPRUN_WEAKER,
-        LANGUAGE_JUMPRUN_EXIT,
         LANGUAGE_JUMPRUN_AT_FT,
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
