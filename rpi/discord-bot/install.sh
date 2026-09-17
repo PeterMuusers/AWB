@@ -160,17 +160,26 @@ VLAG=/var/lib/awb/jumprun-hidden
 # Het stempel zegt tegen het bord dat er iets gebeurd is; zo hoeft het scherm niet elke paar
 # seconden het hele plan op te halen om te merken dat alles bij het oude is.
 STEMPEL=/var/lib/awb/jumprun-stamp
+# Controleren in plaats van aannemen. Een omleiding naar een alleen-lezen pad mislukt stil, en dan
+# zegt de bot dat het gelukt is terwijl het bord gewoon blijft staan zoals het stond.
+klaagt() {
+        echo "$1" >&2
+        echo "staat /var/lib/awb op alleen-lezen voor deze dienst? zie ReadWritePaths in awb-discord.service" >&2
+        exit 1
+}
 case "${1:-status}" in
         verberg)
-                : > "${VLAG}"
-                : > "${STEMPEL}"
+                : > "${VLAG}" 2>/dev/null
+                : > "${STEMPEL}" 2>/dev/null
                 chmod 644 "${VLAG}" "${STEMPEL}" 2>/dev/null
+                [ -e "${VLAG}" ] || klaagt "kon ${VLAG} niet aanmaken"
                 echo "jumpruns staan niet meer op het bord (er is niets gewist)"
                 ;;
         toon)
-                rm -f "${VLAG}"
-                : > "${STEMPEL}"
+                rm -f "${VLAG}" 2>/dev/null
+                : > "${STEMPEL}" 2>/dev/null
                 chmod 644 "${STEMPEL}" 2>/dev/null
+                [ -e "${VLAG}" ] && klaagt "kon ${VLAG} niet weghalen"
                 echo "jumpruns staan weer op het bord"
                 ;;
         *)
@@ -251,10 +260,11 @@ NoNewPrivileges=false
 PrivateTmp=false
 ProtectSystem=strict
 ProtectHome=true
-# /run moet erbij: daar staat de markering van de mooiweerstand. Zonder deze regel is dat pad
-# alleen-lezen voor alles wat de bot start - ook voor wat hij via sudo als root draait - en dan
-# mislukt het zetten en het weghalen ervan stil, want rm -f slikt die fout in.
-ReadWritePaths=/tmp /run
+# /run en /var/lib/awb moeten erbij: daar staan de markeringen van de mooiweerstand en van het
+# verbergen van de jumpruns. Zonder deze regel zijn die paden alleen-lezen voor alles wat de bot
+# start - ook voor wat hij via sudo als root draait - en dan mislukt het zetten en het weghalen
+# ervan stil, want rm -f slikt die fout in en een afgekapte omleiding zegt ook niets.
+ReadWritePaths=/tmp /run /var/lib/awb
 
 [Install]
 WantedBy=multi-user.target
