@@ -7,8 +7,10 @@
 # again later and it only copies what changed and restarts the screen: that is the update path.
 #
 #   ./rpi/deploy-from-mac.sh                 find awb.local and do the whole thing
-#   ./rpi/deploy-from-mac.sh pi@192.168.1.7  when the name does not resolve
+#   ./rpi/deploy-from-mac.sh pi@192.168.1.7  when the name does not resolve, or the board is not awb.local
 #   ./rpi/deploy-from-mac.sh --update        only copy the files over and restart, ask nothing
+#
+# The address is remembered after the first successful copy, so later runs need no argument.
 #   ./rpi/deploy-from-mac.sh --check-card    look at the SD card in this Mac before you eject it
 #
 # What it does NOT do is write the SD card. Writing an image is the one step where a mistake costs
@@ -22,6 +24,10 @@ set -euo pipefail
 APP_NAME="AWB"
 REMOTE_DIR="AWB"                       # where the copy lands in the home directory on the Pi
 DEFAULT_HOST="awb.local"
+# Waar de Pi de vorige keer stond. Een bord dat anders heet dan awb.local is de regel en niet de
+# uitzondering, en een adres dat je elke keer opnieuw moet intypen vergeet je precies op het moment
+# dat je haast hebt. --update kan hierdoor ook echt zwijgen, zoals hij belooft.
+TARGET_FILE="${XDG_CONFIG_HOME:-${HOME}/.config}/awb/target"
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
@@ -38,6 +44,14 @@ confirm() {
 	local answer
 	read -r -p "$1 [y/N]: " answer </dev/tty
 	[[ "${answer}" =~ ^[jJyY] ]]
+}
+
+remembered() {
+	[[ -r "${TARGET_FILE}" ]] && head -n 1 "${TARGET_FILE}"
+}
+
+remember() {
+	mkdir -p "$(dirname "${TARGET_FILE}")" && printf '%s\n' "$1" > "${TARGET_FILE}"
 }
 
 # ------------------------------------------------------------- the SD card
@@ -104,8 +118,14 @@ command -v rsync >/dev/null || die "rsync not found."
 command -v ssh >/dev/null || die "ssh not found."
 
 say "Looking for the Pi"
+[[ -z "${TARGET}" ]] && TARGET="$(remembered || true)"
 if [[ -z "${TARGET}" ]]; then
 	TARGET="$(ask "Where is it (user@host)" "$(whoami)@${DEFAULT_HOST}")"
+elif [[ "${MODE}" != "update" ]]; then
+	# onthouden, maar niet opgelegd: een tweede bord is een kwestie van de regel overtypen
+	TARGET="$(ask "Where is it (user@host)" "${TARGET}")"
+else
+	note "${TARGET} (van de vorige keer)"
 fi
 HOST="${TARGET#*@}"
 if ! find_pi "${HOST}" >/dev/null; then
@@ -129,6 +149,8 @@ say "Copying the board across"
 # modules that nothing imports any more. .env stays put: it lives on the Pi and nowhere else.
 rsync -a --delete --exclude '.git' --exclude '.env' --exclude 'node_modules' \
 	"${SOURCE_DIR}/" "${TARGET}:${REMOTE_DIR}/"
+# pas onthouden als er echt iets overheen gegaan is: een adres dat niet werkt hoef je niet terug
+remember "${TARGET}"
 note "Done."
 
 if [[ "${MODE}" == "update" ]]; then
