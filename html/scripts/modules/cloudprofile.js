@@ -45,7 +45,8 @@ const TIME_TICK = 6;					// pixels, the little line above each time
    canvas begint daarom vlak onder de kop (geen marge) en deze strook is precies zo hoog dat de
    bovenste hoogtelijn op dezelfde plek blijft als eerst. */
 const TOP_LABEL_HEIGHT = 21;			// pixels at the top, above the chart, for 'measured | expected'
-const TOP_FONT = '600 14px "Roboto Condensed", "Roboto", sans-serif';
+const TOP_FONT = '500 13px "Roboto Condensed", "Roboto", sans-serif';	/* alleen als de buurman er niet is */
+const TOP_NOTE = '.upper-winds-note';	/* de ondertitel waar deze woorden zich naar voegen */
 const TOP_BASELINE = 13;				// pixels from the top of the canvas to the foot of those words
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
 /* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
@@ -448,12 +449,20 @@ class Module {
 		context.fillText(LANGUAGE_NOW, x(now), baseline);
 		context.textBaseline = 'middle';
 
-		/* what the line divides, said once in the strip above the chart itself */
+		/* What the line divides, said once in the strip above the chart itself. Letterlijk dezelfde
+		   letter als de ondertitel van het windprofiel ernaast: die wordt hier uitgelezen in plaats
+		   van nagemaakt, want een maatje ernaast valt juist op naast een tegel die er direct aan
+		   grenst. */
+		var note = document.querySelector(TOP_NOTE);
+		var noteStyle = note ? window.getComputedStyle(note) : null;
 		context.fillStyle = muted;
-		context.font = TOP_FONT;
+		context.font = noteStyle
+			? noteStyle.fontWeight + ' ' + noteStyle.fontSize + ' ' + noteStyle.fontFamily
+			: TOP_FONT;
 		context.textBaseline = 'alphabetic';
 		if ('letterSpacing' in context) {
-			context.letterSpacing = '0.08em';		/* zoals de ondertitel ernaast */
+			context.letterSpacing = (noteStyle && noteStyle.letterSpacing !== 'normal')
+				? noteStyle.letterSpacing : '0.08em';
 		}
 		context.textAlign = 'right';
 		context.fillText(LANGUAGE_MEASURED_LABEL.toUpperCase(), x(now) - 8, TOP_BASELINE);
