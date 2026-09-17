@@ -37,6 +37,21 @@ die() { printf '\n\033[1mStopped:\033[0m %s\n' "$*" >&2; exit 1; }
 
 command -v python3 >/dev/null || die "python3 not found; it is what edits the settings files."
 
+# Ask for a secret without it ending up anywhere it should not be: not on a command line, not in the
+# shell history, not on the screen. A terminal is the usual way, but there is not always one - run
+# from an editor or a wrapper and /dev/tty does not exist - so fall back to stdin.
+ask_secret() {
+	local prompt="$1" value=""
+	if [[ -r /dev/tty ]]; then
+		read -r -s -p "  ${prompt}: " value </dev/tty 2>/dev/null || value=""
+		echo >&2
+	fi
+	if [[ -z "${value}" ]]; then
+		read -r -s value || true
+	fi
+	printf '%s' "${value}"
+}
+
 # AWB_BOOT points somewhere other than a real card. Only needed to test this script itself, because
 # it writes to the one card you have and a mistake in it is a Pi that will not boot.
 BOOT="${AWB_BOOT:-}"
@@ -189,11 +204,10 @@ add_tailscale() {
 	note "first login and is worthless after that. Which matters, because until the Pi has booted"
 	note "once, the key sits on this card in plain text."
 	echo
+	# Never as an argument: everything on a command line is visible to every process on the machine,
+	# and lands in the shell history besides.
 	local key
-	# -s, and never as an argument: everything on a command line is visible to every process on the
-	# machine, and lands in the shell history besides.
-	read -r -s -p "  Auth key (tskey-...): " key </dev/tty
-	echo
+	key="$(ask_secret "Auth key (tskey-...)")"
 	[[ -n "${key}" ]] || die "No key given."
 	[[ "${key}" == tskey-* ]] || die "That does not look like a Tailscale auth key; they start with tskey-."
 
@@ -287,9 +301,18 @@ add_wifi() {
 	local ssid="$1"
 	[[ -f "${BOOT}/network-config" ]] || die "This card has no network-config on it."
 	say "Another wifi network: ${ssid}"
-	local password
-	read -r -s -p "  Password (empty for an open network): " password </dev/tty
-	echo
+	local password=""
+	# This Mac is often on the very network the board has to join, and then the right password is
+	# already here. Taking it from the keychain beats retyping it: a wifi password that is one
+	# character off fails in a way that looks like anything but a typo - the board associates, the
+	# handshake fails, and all you see afterwards is a device that never came online.
+	if security find-generic-password -wa "${ssid}" >/dev/null 2>&1; then
+		note "This Mac knows this network; taking the password from your keychain."
+		password="$(security find-generic-password -wa "${ssid}" 2>/dev/null)"
+	fi
+	if [[ -z "${password}" ]]; then
+		password="$(ask_secret "Password for \"${ssid}\" (empty for an open network)")"
+	fi
 
 	SSID="${ssid}" PSK="${password}" python3 - "${BOOT}" <<'PYTHON'
 import os, pathlib, re, sys
