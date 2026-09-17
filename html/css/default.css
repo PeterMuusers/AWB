@@ -381,7 +381,8 @@ header,
 .upper-winds-content .windcell-forecast {
 	opacity: 0.6;
 	padding-left: 2px;
-	padding-right: 2px;
+	/* de getallen staan rechts uitgelijnd, dus hier hoort lucht tussen het cijfer en de rand */
+	padding-right: 8px;
 	width: 1%;
 }
 /* In die smalle kolommen past een stoot niet meer naast de snelheid; hij zakt dan naar een eigen
@@ -401,9 +402,34 @@ header,
 /* the estimated hours are the narrowest columns, so speed and gust sit closer together there */
 .upper-winds-content .windcell-forecast .windcell-row {
 	gap: 2px;
+	/* tegen de rechterkant, zodat het getal en de stoot erboven op één lijn eindigen en de kolom
+	   als een kolom getallen leest in plaats van als losse cellen */
+	justify-content: flex-end;
 }
 .upper-winds-content .windcell-forecast .windgust {
 	margin-left: 0;
+	/* rechts niets ertussen, anders eindigt de stoot twee pixels eerder dan het getal eronder */
+	margin-right: 0;
+}
+/* In de smalle kolommen staat de stoot boven zijn eigen getal, net als in de kolom van nu, en niet
+   eronder: wat je leest is het getal, de stoot is het randgeval erboven. De onderste regel blijft
+   daardoor op één lijn met de knopen van nu. */
+.upper-winds-content .windcell-forecast .windgust {
+	order: -1;
+	flex-basis: 100%;
+	text-align: right;
+}
+/* De grondrij is de enige rij met stoten in die kolommen, en dit is ook de rij waar mensen op staan
+   te kijken: geen sluier eroverheen, want dat is precies wat oranje op blauw onleesbaar maakt. De
+   pijl blijft wel rustig - die zegt alleen de richting. */
+.upper-winds-content tr.ground-row .windcell-forecast {
+	opacity: 1;
+}
+.upper-winds-content tr.ground-row .windcell-forecast .windspeed {
+	color: var(--textcolor-2, var(--textcolor));
+}
+.upper-winds-content tr.ground-row .windcell-forecast .wind-arrow {
+	opacity: 0.6;
 }
 .windtemperature {
 	display: block;
