@@ -54,6 +54,11 @@ class Bot(discord.Client):
             self.tree.copy_global_to(guild=guild)
             try:
                 await self.tree.sync(guild=guild)
+                # En de algemene versies weghalen. Die kunnen van een eerdere ronde zijn, toen dit
+                # nog niet mocht; blijven ze staan, dan ziet iedereen elk commando dubbel in de
+                # lijst en is niet te zien welke van de twee je kiest.
+                self.tree.clear_commands(guild=None)
+                await self.tree.sync()
                 return
             except discord.Forbidden:
                 print(

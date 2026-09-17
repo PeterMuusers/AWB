@@ -16,6 +16,7 @@ import { Module as WeerSlag } from './modules/weerslag.js';
 import { Module as Aloft } from './modules/aloft.js';
 import { Module as CloudProfile } from './modules/cloudprofile.js';
 import { Module as Jumprun } from './modules/jumprun.js';
+import { installDemo, showDemoMap } from './demo.js';
 
 const ID_DATETIME = 'datetime-data';
 const ID_LAYER_MAP = 'layer-map-id';
@@ -96,15 +97,27 @@ class OnlineStatus {
    er zelf naar in plaats van dat iemand de browser omschakelt: dan is er geen zwart scherm, en komt
    het vanzelf weer bij de werkelijkheid uit zodra de tijd om is. */
 const DEMO_POLL_MS = 15000;
+/* Mooiweerstand: staat als eindtijd in de URL, zodat hij al werkt voordat er iets opgehaald is.
+   Een vraag aan de server zou te laat komen - de modules zijn dan al begonnen. */
+function demoUntil() {
+	var until = Number(getURLParameter('demo')) || 0;
+	return (until * 1000 > Date.now()) ? until : 0;
+}
+
 function watchDemo() {
+	/* Zitten we er al in, dan niets doen. Zonder deze regel navigeert het bord elke vijftien
+	   seconden opnieuw naar zichzelf, en dat is een pagina die zichzelf eindeloos herlaadt. */
+	if (demoUntil() > 0) {
+		return;
+	}
 	var check = () => fetch('demo.php', { cache: 'no-store' })
 		.then(response => response.json())
 		.then(state => {
 			if (state.active && state.until) {
-				/* window ervoor, want main.js heeft een eigen 'location': de dropzone uit de URL.
-			   Zonder dat voorvoegsel zet je een eigenschap op die variabele en gebeurt er
-			   niets - zonder foutmelding. */
-			window.location.href = 'demo.html?until=' + state.until;
+				/* window ervoor, want main.js heeft zelf een 'location': de dropzone uit de URL.
+				   Zonder dat voorvoegsel zet je een eigenschap op die variabele en gebeurt er
+				   niets, zonder foutmelding. */
+				window.location.href = window.location.pathname + '?demo=' + state.until;
 			}
 		})
 		.catch(() => {});
@@ -241,6 +254,11 @@ console.log = function () {
 };
 
 /* Make config available for all modules */
+/* Vóór alles wat gegevens ophaalt, want vanaf hier worden de antwoorden onderweg mooi weer. */
+if (demoUntil() > 0) {
+	installDemo(demoUntil());
+}
+
 var location = getURLParameter('location');
 document.config = {};
 loadConfig(location).then(response => {
@@ -292,7 +310,11 @@ loadConfig(location).then(response => {
 	//document.modules.knmi = new KNMI(ID_IMG_LAYER_RAIN);
 	document.modules.knmi_llfc = new KNMI_LLFC();
 	//document.modules.sat24 = new Sat24(ID_IMG_LAYER_CLOUD);
-	if (document.config.radar) {
+	/* In de mooiweerstand geen radar en geen jumpruns: op de kaart staat een luchtfoto van
+	   Palm Jumeirah, en een echte jumprun van vandaag hoort niet naast verzonnen weer. */
+	if (demoUntil() > 0) {
+		showDemoMap(ID_LAYER_MAP);
+	} else if (document.config.radar) {
 		document.modules.radar = new Radar(ID_LAYER_MAP);
 	} else {
 		document.modules.weatherandradar = new WeatherAndRadar(ID_LAYER_MAP);
@@ -302,7 +324,7 @@ loadConfig(location).then(response => {
 	//weerslag = new WeerSlag(ID_IMG_LAYER_MAP);
 	document.modules.aloft = new Aloft();
 	/* The jumprun somebody put on this board from jumprun.nl; without the setting nothing is asked */
-	if (document.config.jumprun) {
+	if (document.config.jumprun && demoUntil() === 0) {
 		var dropzones = document.config.jumprun.stations
 			|| [document.config.jumprun.station || document.config.radar?.forecast?.station || 'hoogeveen'];
 		document.modules.jumprun = new Jumprun(dropzones);
