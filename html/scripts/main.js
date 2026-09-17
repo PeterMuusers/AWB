@@ -240,7 +240,9 @@ loadConfig(location).then(response => {
 	document.modules.aloft = new Aloft();
 	/* The jumprun somebody put on this board from jumprun.nl; without the setting nothing is asked */
 	if (document.config.jumprun) {
-		document.modules.jumprun = new Jumprun(document.config.jumprun.station || document.config.radar?.forecast?.station || 'hoogeveen');
+		var dropzones = document.config.jumprun.stations
+			|| [document.config.jumprun.station || document.config.radar?.forecast?.station || 'hoogeveen'];
+		document.modules.jumprun = new Jumprun(dropzones);
 	}
 	if (document.config.cloudProfile) {
 		document.modules.cloudprofile = new CloudProfile('cloudprofile');

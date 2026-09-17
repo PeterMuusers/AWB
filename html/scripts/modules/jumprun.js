@@ -52,12 +52,16 @@ const LARGE_GROUP_EXTRA_S = 2;			// AXIS-regel: zoveel seconden extra achter een
 const CARDINALS = ['N', 'O', 'Z', 'W'];
 
 class Module {
-	constructor(station) {
-		this.station = station;
+	constructor(stations) {
+		/* Meer dan één dropzone kan: het bord bij Hoogeveen kijkt ook naar Echten, en dan krijgt elk
+		   om de beurt zijn eigen beurt in de lus. */
+		this.stations = Array.isArray(stations) ? stations : [stations];
 		this.refreshInterval = 2 * 60 * 1000;	// a jumprun is put up by hand, so notice it quickly
 
 		this.last_updated = null;
-		this.entry = null;			// what jumprun.nl handed over: plan, wind, who, when
+		this.all = {};				// station -> {entry, planned}
+		this.turn = -1;				// welke dropzone het laatst aan de beurt was
+		this.entry = null;			// wat er nu getoond wordt: plan, wind, who, when
 		this.admins = 2;			// how many people can put one up; until we know, assume more than one
 		this.planned = null;		// the jumprun as it was decided, computed with the plan's wind
 		this.error = null;
@@ -66,21 +70,29 @@ class Module {
 		this.updateData();
 	}
 
+	/* De dropzones waar vandaag iets voor opgehangen is, in de volgorde van de instelling. */
+	get waiting() {
+		return this.stations.filter(station => this.all[station] && this.all[station].planned);
+	}
+
 	/* Is there a jumprun to show at all? */
 	get active() {
-		return this.planned !== null;
+		return this.waiting.length > 0;
 	}
 
 	/* Take the map over for a while. The radar keeps running underneath, so its tiles are still
 	   there when it gets its turn back. */
 	show() {
-		if (!this.active) {
-			return false;
-		}
+		var waiting = this.waiting;
 		var layer = document.getElementById(ID_LAYER);
-		if (!layer) {
+		if (waiting.length === 0 || !layer) {
 			return false;
 		}
+		/* om de beurt: zijn er twee dropzones, dan is de ene keer Hoogeveen aan en de volgende Echten */
+		this.turn = (this.turn + 1) % waiting.length;
+		var chosen = this.all[waiting[this.turn]];
+		this.entry = chosen.entry;
+		this.planned = chosen.planned;
 		layer.hidden = false;
 		this.draw();
 		return true;
@@ -149,8 +161,13 @@ class Module {
 
 		/* Waar dit over gaat, en dat is niet vanzelfsprekend: dit bord kan bij Echten hangen en dan
 		   staat er een andere jumprun. Boven alles, want het is het eerste wat je wilt weten. */
-		var where = (document.config.location && document.config.location.name)
-			|| entry.station.charAt(0).toUpperCase() + entry.station.slice(1);
+		/* De naam van de dropzone waar dit plan voor geldt, en dat is niet altijd die van het bord:
+		   hier kunnen er twee langskomen. Het eigen veld draagt de naam uit de instelling, de rest
+		   die van het station zelf. */
+		var own = document.config.location || {};
+		var where = (this.stations[0] === entry.station && own.name)
+			? own.name
+			: entry.station.charAt(0).toUpperCase() + entry.station.slice(1);
 		/* het aantal exits staat op de kaart zelf, genummerd langs de lijn; in de kop zou het alleen
 		   een getal zijn dat je nog moet thuisbrengen */
 		var headline = LANGUAGE_JUMPRUN + ' ' + Math.round(r.trackMagneticDeg) + '&deg; &middot; '
@@ -186,7 +203,11 @@ class Module {
 	}
 
 	updateData() {
-		var url = PROXY_URL + '?action=jumprun&station=' + encodeURIComponent(this.station);
+		this.stations.forEach(station => this.fetchOne(station));
+	}
+
+	fetchOne(station) {
+		var url = PROXY_URL + '?action=jumprun&station=' + encodeURIComponent(station);
 		fetch(url, { headers: { Accept: 'application/json' } }).then(response => {
 			return response.json().then(data => {
 				if (response.ok === true) {
@@ -200,29 +221,26 @@ class Module {
 			/* hoeveel mensen hier iets kunnen ophangen; ontbreekt het, dan zetten we de naam er
 			   liever wel bij dan ten onrechte niet */
 			this.admins = (typeof data.admins === 'number') ? data.admins : 2;
-			this.adopt(data.jumprun || null);
+			this.adopt(station, data.jumprun || null);
 		}).catch(error => {
 			/* jumprun.nl out of reach is not a reason to drop a plan that is already on screen */
 			this.error = error.message;
-			console.warn('Jumprun not available: ' + error.message);
+			console.warn('Jumprun for ' + station + ' not available: ' + error.message);
 		});
 	}
 
 	/* Take over a plan and work out the line it stands for. */
-	adopt(entry) {
+	adopt(station, entry) {
 		if (entry === null) {
-			this.entry = null;
-			this.planned = null;
+			delete this.all[station];
 			return;
 		}
 		if (entry.version !== PLAN_VERSION) {
-			this.entry = null;
-			this.planned = null;
+			delete this.all[station];
 			console.warn('Jumprun plan version ' + entry.version + ' needs a newer board (this one reads ' + PLAN_VERSION + ')');
 			return;
 		}
-		this.entry = entry;
-		this.planned = this.compute(entry.plan, this.profileOf(entry.wind));
+		this.all[station] = { entry: entry, planned: this.compute(entry.plan, this.profileOf(entry.wind)) };
 	}
 
 	/* The wind as the calculation wants it. The plan carries levels; so does this board. */

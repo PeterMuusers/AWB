@@ -53,6 +53,11 @@
 		"Thermiek",
 		"Vooruitzichten"
 	],
+	"jumprun": {
+		"stations": ["hoogeveen"],
+		"afterRuns": 2,
+		"seconds": 20
+	},
 	"llfc": {
 		"mode": "raw",
 		"model": "claude-haiku-4-5"
