@@ -46,7 +46,10 @@ const LOW_WIND_LEVELS = [1000, 2000];	// feet
 class Module {
 	constructor() {
 		this.config = document.config.aloft || {};
-		this.model = this.config.model || 'icon_d2';
+		/* Het KNMI-mengsel: HARMONIE voor de korte termijn met ECMWF daarachter, en hetzelfde model
+		   waarmee jumprun.nl rekent. HARMONIE zelf kan niet: Open-Meteo geeft daarvoor geen waarden op
+		   drukniveaus terug, en zonder drukniveaus is er geen windprofiel. */
+		this.model = this.config.model || 'knmi_seamless';
 		this.hoursAhead = (this.config.hoursAhead !== undefined) ? this.config.hoursAhead : 2;
 		this.altitudes = (document.config.upperwinds || []).slice().sort((first, second) => second - first);
 		this.exitAltitude = (this.config.exitAltitude !== undefined) ? this.config.exitAltitude : EXIT_ALTITUDE;
