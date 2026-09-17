@@ -232,10 +232,16 @@ header,
    ongeveer 527 px van de 1080. In vh rekenen kan hier niet - het bord is een vlak van 1920 bij 1080
    dat als geheel geschaald wordt, dus een venster van 800 px hoog zou andere verhoudingen geven dan
    de televisie. */
-.weather,
-.cloudprofile,
 .upper-winds {
+	/* het blok dat de rij bepaalt; deze grens is alleen een noodrem, zie de opmerking hierboven */
 	max-height: 500px;
+	overflow: hidden;
+}
+/* Deze twee volgen het windprofiel: scripts/main.js zet --tile-height op de hoogte die dat blok
+   nodig heeft, en hun inhoud verdeelt zich daarbinnen. */
+.weather,
+.cloudprofile {
+	max-height: var(--tile-height, 500px);
 	overflow: hidden;
 }
 .upper-winds-note {
@@ -322,6 +328,12 @@ header,
    de stoot erboven. */
 .windcell-row:has(.windgust) {
 	align-items: last baseline;
+}
+/* De cellen van de grondrij eindigen op dezelfde lijn: de getallen van over een en twee uur staan
+   anders lager dan het getal van nu, doordat de cel uitlijnt op de eerste regel (de stoot) en die
+   in een kleinere maat staat. */
+.upper-winds-content tr.ground-row td {
+	vertical-align: bottom;
 }
 .windcell-row .windspeed {
 	min-width: 2.2ch;

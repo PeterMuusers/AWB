@@ -812,7 +812,9 @@ class Module {
 		if (width === 0 || height === 0) {
 			return;
 		}
-		if (canvas.width !== Math.round(width * ratio)) {
+		/* Ook op de hoogte letten: alleen de breedte vergelijken liet een canvas dat hoger werd zijn
+		   oude tekening uitrekken in plaats van hem opnieuw te tekenen. */
+		if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
 			canvas.width = Math.round(width * ratio);
 			canvas.height = Math.round(height * ratio);
 		}

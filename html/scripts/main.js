@@ -153,6 +153,44 @@ function watchPointer() {
 	});
 }
 
+/* Het windprofiel bepaalt hoe hoog de drie blokken naast elkaar worden.
+
+   Dat is het blok met de vaste vorm: een regel per hoogte, met hoogstens een regel erbij als het
+   0 °C-niveau er tussenin valt. De andere twee - het meetblok en de wolkenbasis - passen zich aan:
+   hun inhoud verdeelt zich over de hoogte die daaruit komt. Zonder dit zou een blok dat toevallig
+   een regel langer wordt de rij hoger maken, en dan schuift de verwachting eronder weg.
+
+   De hoogte wordt berekend uit wat er in het windprofiel staat en niet uit hoe hoog het blok nu is:
+   in een rij van gelijke hoogtes weet je anders niet meer wie wie hoog maakte. offsetHeight in
+   plaats van getBoundingClientRect, want het bord als geheel wordt geschaald en dat zou de maat
+   meeschalen. */
+function watchTiles() {
+	var wind = document.getElementById('upper-winds');
+	var column = document.querySelector('.text');
+	if (!wind || !column) {
+		return;
+	}
+	var measure = function () {
+		/* Alleen wat er ín het blok staat: max-height gaat over de inhoud, en de drie blokken hebben
+		   dezelfde rand en dezelfde padding, dus daarmee komen ze aan de buitenkant even hoog uit. */
+		var needed = 0;
+		Array.prototype.forEach.call(wind.children, function (child) {
+			needed += child.offsetHeight;
+		});
+		if (needed > 0) {
+			column.style.setProperty('--tile-height', Math.round(needed) + 'px');
+		}
+	};
+	measure();
+	if (window.ResizeObserver) {
+		var observer = new ResizeObserver(measure);
+		Array.prototype.forEach.call(wind.children, function (child) {
+			observer.observe(child);
+		});
+	}
+	window.addEventListener('resize', measure);
+}
+
 function fit() {
 	var style = getComputedStyle(document.documentElement);
 	var width = parseFloat(style.getPropertyValue('--board-width')) || 1920;
@@ -303,6 +341,7 @@ loadConfig(location).then(response => {
 	   blijft rekenen met het vlak van 1920 bij 1080 en het beeld wordt alleen visueel verkleind. */
 	fit();
 	window.addEventListener('resize', fit);
+	watchTiles();
 	watchPointer();
 	watchDemo();
 	

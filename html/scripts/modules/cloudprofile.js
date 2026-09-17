@@ -25,9 +25,15 @@ const ID_HEADER = 'cloudprofile-header';
    Nine, twelve and fifteen thousand are on the list because they are the altitudes the aircraft
    drops from, so a layer sitting at one of them lands on a line of its own instead of somewhere
    between two. */
-const ALTITUDE_TICKS = [0, 1000, 3000, 5000, 7000, 9000, 12000, 15000, 20000];
+/* Tot 15.000 ft: dat is de hoogste hoogte waar hier uit gesprongen wordt, en een wolk boven die
+   hoogte verandert niets aan de sprong. Alles daarboven wordt tegen de bovenrand getekend (zie
+   altitudeFraction), dus je ziet nog steeds dát er iets hangt. */
+const ALTITUDE_TICKS = [0, 1000, 3000, 5000, 7000, 9000, 12000, 15000];
 const LABEL_HEIGHT = 24;				// pixels at the bottom for the times
 const CHART_FONT = '11px sans-serif';	// de getallen in deze grafiek; kleiner dan dit leest niet van een meter of drie
+/* De hoogteschaal is waar je als eerste naar kijkt - op welke hoogte hangt die wolk - dus die staat
+   groter en in de kleur van de andere getallen op het bord, niet in het grijs van een asje. */
+const AXIS_FONT = '19px sans-serif';
 /* De tijdregel hoort op dezelfde lijn te eindigen als de grondrij van het windprofiel ernaast: twee
    blokken naast elkaar die onderin allebei over "nu" gaan. Hoeveel dat is wordt gemeten - zo blijft
    het kloppen als die tabel een regel meer of minder krijgt - en dit is wat het is zolang er geen
@@ -36,7 +42,7 @@ const TIME_BASELINE = 13;				// pixels above the bottom edge for the bottom of t
 const TIME_TICK = 6;					// pixels, the little line above each time
 const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measured | expected'
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
-const AXIS_WIDTH = 38;					// pixels on the left for the altitude labels
+const AXIS_WIDTH = 52;					// pixels on the left for the altitude labels
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
 const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to sit centred on its dot
 const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
@@ -166,7 +172,9 @@ class Module {
 		if (width === 0 || height === 0) {
 			return;
 		}
-		if (canvas.width !== Math.round(width * ratio)) {
+		/* Ook op de hoogte letten: alleen de breedte vergelijken liet een canvas dat hoger werd zijn
+		   oude tekening uitrekken in plaats van hem opnieuw te tekenen. */
+		if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
 			canvas.width = Math.round(width * ratio);
 			canvas.height = Math.round(height * ratio);
 		}
@@ -194,6 +202,7 @@ class Module {
 
 		/* Altitude gridlines and their labels */
 		context.textAlign = 'right';
+		var ink = style.getPropertyValue('--textcolor-2').trim() || style.getPropertyValue('--textcolor').trim() || '#ffffff';
 		ALTITUDE_TICKS.forEach(feet => {
 			var line = y(feet);
 			context.strokeStyle = border;
@@ -202,8 +211,10 @@ class Module {
 			context.moveTo(AXIS_WIDTH, line + 0.5);
 			context.lineTo(width, line + 0.5);
 			context.stroke();
-			context.fillStyle = muted;
-			context.fillText(feet >= 1000 ? (feet / 1000) + 'k' : String(feet), AXIS_WIDTH - 5, line);
+			context.font = AXIS_FONT;
+			context.fillStyle = ink;
+			context.fillText(feet >= 1000 ? (feet / 1000) + 'k' : String(feet), AXIS_WIDTH - 6, line);
+			context.font = CHART_FONT;
 		});
 
 		/* The part ahead gets a slightly lighter background */
