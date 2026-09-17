@@ -8,7 +8,8 @@ const LANGUAGE_VALID_UNTIL = 'geldig tot';
 const LANGUAGE_VALID_FOR = 'geldig voor';
 const LANGUAGE_GLOVES = 'handschoenen verplicht';
 const LANGUAGE_JUMPRUN = 'Jumprun';
-const LANGUAGE_JUMPRUN_BY = 'gezet door';
+const LANGUAGE_JUMPRUN_PLACED = 'geplaatst';
+const LANGUAGE_JUMPRUN_BY = 'door';
 const LANGUAGE_JUMPRUN_AT = 'om';
 const LANGUAGE_JUMPRUN_WITH = 'gerekend met';
 const LANGUAGE_JUMPRUN_SINCE = 'Sinds het plan:';
@@ -61,6 +62,7 @@ export {
         LANGUAGE_VALID_FOR,
         LANGUAGE_GLOVES,
         LANGUAGE_JUMPRUN,
+        LANGUAGE_JUMPRUN_PLACED,
         LANGUAGE_JUMPRUN_BY,
         LANGUAGE_JUMPRUN_AT,
         LANGUAGE_JUMPRUN_WITH,

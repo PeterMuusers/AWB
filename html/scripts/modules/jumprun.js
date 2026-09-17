@@ -23,7 +23,7 @@ import { computeJumprun } from '../jumprun/calc/jumprun.js';
 import { profileFromAloft } from '../jumprun/calc/wind.js';
 import { createJumprunMap } from '../jumprun/jumprun-map.js';
 import {
-	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
+	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT,
 } from '../language.js';
@@ -53,6 +53,7 @@ class Module {
 
 		this.last_updated = null;
 		this.entry = null;			// what jumprun.nl handed over: plan, wind, who, when
+		this.admins = 2;			// how many people can put one up; until we know, assume more than one
 		this.planned = null;		// the jumprun as it was decided, computed with the plan's wind
 		this.error = null;
 
@@ -136,8 +137,11 @@ class Module {
 		   een getal zijn dat je nog moet thuisbrengen */
 		var headline = LANGUAGE_JUMPRUN + ' ' + Math.round(r.trackMagneticDeg) + '&deg; &middot; '
 			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft';
-		/* de datum laten we weg: wat er staat geldt altijd vandaag */
-		var who = LANGUAGE_JUMPRUN_BY + ' ' + entry.set_by + ' ' + LANGUAGE_JUMPRUN_AT + ' '
+		/* De datum laten we weg: wat er staat geldt altijd vandaag. En de naam alleen als er meer
+		   mensen zijn die een jumprun kunnen ophangen; bij één iemand zegt hij niets en kost hij
+		   alleen ruimte in een regel die je in twintig seconden moet lezen. */
+		var by = (this.admins > 1 && entry.set_by) ? ' ' + LANGUAGE_JUMPRUN_BY + ' ' + entry.set_by : '';
+		var who = LANGUAGE_JUMPRUN_PLACED + by + ' ' + LANGUAGE_JUMPRUN_AT + ' '
 			+ clock(new Date(entry.set_at)) + ', ' + LANGUAGE_JUMPRUN_WITH + ' ' + wind;
 
 		var changes = this.drift();
@@ -174,6 +178,9 @@ class Module {
 		}).then(data => {
 			this.last_updated = new Date();
 			this.error = null;
+			/* hoeveel mensen hier iets kunnen ophangen; ontbreekt het, dan zetten we de naam er
+			   liever wel bij dan ten onrechte niet */
+			this.admins = (typeof data.admins === 'number') ? data.admins : 2;
 			this.adopt(data.jumprun || null);
 		}).catch(error => {
 			/* jumprun.nl out of reach is not a reason to drop a plan that is already on screen */
