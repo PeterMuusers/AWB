@@ -102,6 +102,16 @@ apt-get -qq update
 apt-get -qq -y install lighttpd php-cgi php-curl rsync chromium curl >/dev/null
 lighty-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
 
+# PHP onder lighttpd mag geen uitvoerbaar geheugen aanvragen, dus de JIT van de reguliere-
+# expressiemotor kan niet starten. Dat is onschuldig - hij valt terug op de gewone motor en de
+# proxies draaien een handvol kleine patronen - maar het levert bij elk verzoek een waarschuwing in
+# het foutlogboek op, en een logboek vol ruis is een logboek waarin je een echt probleem mist.
+for ini in /etc/php/*/cgi/conf.d; do
+	[ -d "${ini}" ] || continue
+	printf '; Geschreven door rpi/setup.sh\n; De JIT kan onder lighttpd toch niet starten; dit scheelt een waarschuwing per verzoek.\npcre.jit=0\n' > "${ini}/99-awb.ini"
+	note "PCRE JIT uit in $(basename "$(dirname "${ini}")")"
+done
+
 # ---------------------------------------------------------------- reaching it later
 
 # A board at a club hangs on somebody else's network. You do not control that router, .local names

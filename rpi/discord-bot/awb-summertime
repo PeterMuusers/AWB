@@ -12,7 +12,7 @@ SECONDS_WANTED="${1:-300}"
 
 if [ "${SECONDS_WANTED}" -le 0 ] 2>/dev/null; then
 	rm -f "${MARKER}"
-	echo "demo gestopt; het bord staat binnen een kwartier weer op de echte gegevens"
+	echo "demo gestopt; het bord schakelt binnen acht seconden terug"
 	exit 0
 fi
 

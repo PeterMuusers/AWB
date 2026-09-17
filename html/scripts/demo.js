@@ -270,9 +270,17 @@ export function installDemo(until) {
 	};
 
 
-	/* Terug naar de werkelijkheid als de tijd om is. Het bord laadt zichzelf opnieuw zonder de
-	   parameter, en alles is weer zoals het was. */
-	var left = (until * 1000) - Date.now();
-	setTimeout(() => { window.location.href = window.location.pathname; }, Math.max(1000, left));
+	/* Terug naar de werkelijkheid. Twee wegen, want allebei komen voor: de tijd loopt af, of
+	   iemand zet hem eerder uit. Zonder die tweede blijft het bord in de grap hangen tot de
+	   oorspronkelijke eindtijd, ook al is de markering al weg - en dan klopt er niets van de
+	   belofte dat je hem meteen kunt stoppen. */
+	var terug = () => { window.location.href = window.location.pathname; };
+	setTimeout(terug, Math.max(1000, (until * 1000) - Date.now()));
+	setInterval(() => {
+		fetch('demo.php', { cache: 'no-store' })
+			.then(response => response.json())
+			.then(state => { if (!state.active) { terug(); } })
+			.catch(() => {});
+	}, 8000);
 	console.log('Mooiweerstand aan tot ' + new Date(until * 1000).toLocaleTimeString());
 }

@@ -177,6 +177,17 @@ async def summertime(interaction: discord.Interaction, minuten: int = 5) -> None
     )
 
 
+@bot.tree.command(name="normaal", description="Stop de mooiweerstand en zet het echte bord terug")
+async def normaal(interaction: discord.Interaction) -> None:
+    if not allowed(interaction):
+        return await deny(interaction)
+    await interaction.response.defer(thinking=True)
+    result = run("sudo", "-n", "/usr/local/sbin/awb-summertime", "0", timeout=30)
+    await interaction.followup.send(
+        "Terug naar het echte weer. Het bord schakelt binnen een paar tellen om.\n```\n" + result[:600] + "\n```"
+    )
+
+
 @bot.tree.command(name="pi", description="De Raspberry Pi zelf")
 @app_commands.describe(wat="herstarten")
 @app_commands.choices(wat=[app_commands.Choice(name="herstart", value="herstart")])
