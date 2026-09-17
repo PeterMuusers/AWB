@@ -804,11 +804,14 @@ header,
 	margin-right: 6px;
 	vertical-align: -0.15em;
 }
+/* De wolken zoals ze boven het veld hangen: de lagen erboven klein en op volgorde, daaronder de
+   laagste als het getal waar het om gaat. Van boven naar beneden gelezen staat de lucht er dus zoals
+   hij is, en een tweede of derde laag is geen bijzin achter de kop maar een eigen regel. */
 .metrics-cloudbase {
 	display: flex;
-	align-items: baseline;
-	flex-wrap: wrap;
-	gap: 10px;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
 	margin-top: 10px;
 }
 .metrics-cloudbase-value {
@@ -826,17 +829,48 @@ header,
 	margin-left: 10px;
 	color: var(--textcolor-2, var(--textcolor));
 }
-/* De tweede en derde laag: dit is geen voetnoot maar het vervolg van de wolkenbasis erboven, dus
-   even wit als de code ernaast. Op deze maat past de gebruikelijke regel van twee lagen ruim binnen
-   de kolom; zijn het er een keer meer, dan mag hij omlopen - liever een tweede regel dan een getal
-   dat wegvalt. */
+/* De lagen bóven de laagste: een lijstje in het vlak naast het grote getal, de hoogste bovenaan.
+   Als regel tekst onder de kop viel dit weg; zo lees je in één oogopslag wat er nog meer hangt. Het
+   balkje ernaast wordt donkerder naarmate er meer bedekking is, dezelfde taal als de blokjes in de
+   wolkenbasisgrafiek ernaast. */
 .metrics-cloudbase-layers {
+	display: grid;
+	/* balkje, hoogte, bedekking: drie kolommen, zodat de getallen van twee lagen onder elkaar staan */
+	grid-template-columns: auto auto auto;
+	align-items: center;
+	gap: 4px 8px;
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: calc(var(--metadata-fontsize) * 1.35);
+	font-size: calc(var(--metadata-fontsize) * 1.3);
 	font-weight: 600;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.02em;
 	text-transform: uppercase;
 	color: var(--textcolor-2, var(--textcolor));
+}
+.metrics-layer {
+	display: contents;
+}
+/* Een laag die dicht zit weegt zwaarder dan een enkel wolkje, dus de regel groeit met de bedekking:
+   1/8 staat een maat kleiner dan de rest, 8/8 een maat groter. */
+.metrics-layer-base,
+.metrics-layer-code {
+	font-size: calc(1em * (0.85 + 0.35 * var(--okta, 0.5)));
+}
+.metrics-layer-base {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.metrics-layer-code {
+	color: color-mix(in srgb, var(--textcolor-2, #ffffff) calc(30% + var(--okta, 0.5) * 60%), var(--metadata-textcolor));
+	font-weight: 500;
+}
+/* Hoeveel bedekking, als beeld naast het getal: hoe voller het balkje, hoe meer lucht dicht zit.
+   Dezelfde taal als de blokjes in de wolkenbasisgrafiek ernaast, waar meer bedekking ook lichter is. */
+.metrics-layer-bar {
+	width: 22px;
+	height: 10px;
+	border-radius: 5px;
+	border: 1px solid var(--block-border-color);
+	background: color-mix(in srgb, var(--cloud-color, #8fb0cc) calc(var(--okta, 0) * 100%), transparent);
 }
 /* De drie blokken naast elkaar zijn even hoog - de hoogste zet de rij - en dit blok heeft de minste
    inhoud. Zonder dit bleef die ruimte onderin liggen als een lege band van zeventig pixels, terwijl

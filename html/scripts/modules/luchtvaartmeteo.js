@@ -251,9 +251,21 @@ class Module {
 			this.set(ID_CLOUDBASE, lowest.base.toLocaleString(document.config.locale)
 				+ '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span>'
 				+ '<span class="metrics-cloudbase-code">' + cloudAmountCode(lowest.okta) + ' ' + lowest.okta + '/8</span>');
-			/* the layers above it, so the headline stays about the lowest one */
-			this.set(ID_CLOUDBASE_LAYERS, layers.slice(1).map(layer => cloudAmountCode(layer.okta) + ' ' + layer.okta + '/8 '
-				+ LANGUAGE_AT + ' ' + layer.base.toLocaleString(document.config.locale) + ' ' + UNIT_FEET).join(' &middot; '));
+			/* De lagen daarboven, in het lege vlak naast het grote getal: de hoogste bovenaan, elk met
+			   een balkje dat donkerder wordt naarmate er meer bedekking is. Als regel tekst achter de
+			   kop viel dit weg; zo staat het als een lijstje dat je in één oogopslag afleest, net als
+			   op jumprun.nl. De onderste laag staat al groot, dus die hoort hier niet nog eens. */
+			this.set(ID_CLOUDBASE_LAYERS, layers.slice(1).reverse().map(layer => {
+				/* Hoe meer bedekking, hoe zwaarder de regel weegt: acht achtsten boven je hoofd is een
+				   ander bericht dan een enkel wolkje, en dat hoor je te zien zonder het getal te lezen. */
+				var share = ' style="--okta: ' + (layer.okta / 8).toFixed(3) + '"';
+				return '<span class="metrics-layer">'
+					+ '<span class="metrics-layer-bar"' + share + '></span>'
+					+ '<span class="metrics-layer-base"' + share + '>' + layer.base.toLocaleString(document.config.locale)
+						+ '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span></span>'
+					+ '<span class="metrics-layer-code"' + share + '>' + cloudAmountCode(layer.okta) + ' ' + layer.okta + '/8</span>'
+					+ '</span>';
+			}).join(''));
 		}
 
 		/* Wind, in the unit from config.json */
