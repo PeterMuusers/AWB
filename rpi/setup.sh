@@ -203,6 +203,13 @@ KIOSK="${USER_HOME}/awb-kiosk.sh"
 cat > "${KIOSK}" <<EOF
 #!/usr/bin/env bash
 # Written by rpi/setup.sh. The board in kiosk mode.
+
+# One board, one browser. More than one autostart can fire - a compositor's own and the XDG entry
+# both did on Trixie - and two browsers on one screen is two of everything: two loops, two sets of
+# requests, and a screen that flickers between them.
+exec 9>/tmp/awb-kiosk.lock
+flock -n 9 || exit 0
+
 WAYLAND_DISPLAY="wayland-0" wlr-randr --output ${OUTPUT} --mode ${RESOLUTION} 2>/dev/null || true
 
 # Keep starting it. A browser that falls over takes the whole screen with it, and there is nobody
@@ -222,6 +229,7 @@ chown "${USER_NAME}:${USER_NAME}" "${KIOSK}"
 # Which compositor starts it depends on the version: Bookworm uses wayfire, Trixie labwc. Write the
 # one that is there, and an XDG autostart entry as a third way in case a future version changes
 # again. Only one of them will actually fire.
+STARTED_BY="none"
 if command -v wayfire >/dev/null 2>&1; then
 	apt-get -qq -y install crudini >/dev/null
 	crudini --set "${USER_HOME}/.config/wayfire.ini" "autostart" "awb" "${KIOSK}"
@@ -230,6 +238,7 @@ if command -v wayfire >/dev/null 2>&1; then
 	WAYFIRE_MODE="${WAYFIRE_MODE%@*}@$(( ${WAYFIRE_MODE##*@} * 1000 ))"
 	crudini --set "${USER_HOME}/.config/wayfire.ini" "output:${OUTPUT}" "mode" "${WAYFIRE_MODE}"
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/wayfire.ini"
+	STARTED_BY="wayfire"
 	note "Started by wayfire."
 fi
 if command -v labwc >/dev/null 2>&1; then
@@ -237,8 +246,12 @@ if command -v labwc >/dev/null 2>&1; then
 	grep -qxF "${KIOSK} &" "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
 		|| echo "${KIOSK} &" >> "${USER_HOME}/.config/labwc/autostart"
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/labwc/autostart"
+	STARTED_BY="labwc"
 	note "Started by labwc."
 fi
+# Only when neither compositor took it: on Trixie labwc and this entry both fired, and the board
+# came up twice. A third way in is worth having, but not at the same time as the first.
+if [ "${STARTED_BY}" = "none" ]; then
 install -d -o "${USER_NAME}" -g "${USER_NAME}" "${USER_HOME}/.config/autostart"
 cat > "${USER_HOME}/.config/autostart/awb.desktop" <<EOF
 [Desktop Entry]
@@ -248,6 +261,10 @@ Exec=${KIOSK}
 X-GNOME-Autostart-enabled=true
 EOF
 chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/autostart/awb.desktop"
+	note "Started by an XDG autostart entry."
+else
+	rm -f "${USER_HOME}/.config/autostart/awb.desktop"
+fi
 
 # A board that goes black after ten minutes is not a board.
 if command -v raspi-config >/dev/null 2>&1; then
