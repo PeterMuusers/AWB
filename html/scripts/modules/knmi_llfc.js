@@ -367,6 +367,9 @@ class Module {
 		if (document.fonts && document.fonts.ready) {
 			document.fonts.ready.then(this.fit.bind(this));
 		}
+		/* And the cards above this one grow when their own sources come in, long after the forecast
+		   was laid out: a line about gloves under the freezing level takes room away from here. */
+		this.watchCardsAbove();
 
 		/* Initial fill of document content */
 		this.updateData();
@@ -411,6 +414,23 @@ class Module {
 			return when;
 		};
 		return { from: moment(match[1], match[2], match[3]), until: moment(match[4], match[5], match[6]) };
+	}
+
+	/* The forecast takes whatever the cards above it leave over, so it has to be laid out again
+	   when one of them changes height. Watching them is cheaper and steadier than measuring on a
+	   timer, and setting this card's own height does not resize them, so it cannot feed back. */
+	watchCardsAbove() {
+		var content = document.getElementById(ID_LLFC_CONTENT);
+		var card = content ? content.closest('.llfc') : null;
+		if (!card || !card.parentElement || typeof ResizeObserver === 'undefined') {
+			return;
+		}
+		var observer = new ResizeObserver(() => this.fit());
+		Array.prototype.forEach.call(card.parentElement.children, sibling => {
+			if (sibling !== card) {
+				observer.observe(sibling);
+			}
+		});
 	}
 
 	/* The board hangs on a 16:9 screen that nobody scrolls, so the forecast has to end above the
