@@ -22,6 +22,7 @@ const LANGUAGE_JUMPRUN_OFFSET = 'offset';
 const LANGUAGE_JUMPRUN_GREEN = 'groen licht';
 const LANGUAGE_JUMPRUN_SEPARATION = 'exitseparatie';
 const LANGUAGE_JUMPRUN_LARGE_GROUP = 'na grote groep';
+const LANGUAGE_JUMPRUN_SOURCE = 'Jumprun: jumprun.nl';
 const LANGUAGE_REWRITTEN = '\u00b7 automatisch herschreven';
 const LANGUAGE_NOW = 'Nu';
 const LANGUAGE_CLOUD_BASE = 'Wolkenbasis';
@@ -81,6 +82,7 @@ export {
         LANGUAGE_JUMPRUN_GREEN,
         LANGUAGE_JUMPRUN_SEPARATION,
         LANGUAGE_JUMPRUN_LARGE_GROUP,
+        LANGUAGE_JUMPRUN_SOURCE,
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
         LANGUAGE_NOW,

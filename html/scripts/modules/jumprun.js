@@ -28,7 +28,7 @@ import {
 	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
-	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP,
+	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE,
 } from '../language.js';
 
 const PROXY_URL = './jumprun-proxy.php';
@@ -106,6 +106,11 @@ class Module {
 		}
 		var nothing = () => {};
 		this.jmap = createJumprunMap(element, { onTrack: nothing, onGreen: nothing });
+		/* De luchtfoto noemt zichzelf al; de jumprun zelf komt van jumprun.nl en die hoort er in
+		   hetzelfde hoekje bij te staan, net als bij de radarkaart. */
+		this.jmap.map.attributionControl.addAttribution(LANGUAGE_JUMPRUN_SOURCE);
+		/* linksonder: rechtsonder staat op het bord de laatste-updateregel van de kaart eronder */
+		this.jmap.map.attributionControl.setPosition('bottomleft');
 		return this.jmap;
 	}
 
