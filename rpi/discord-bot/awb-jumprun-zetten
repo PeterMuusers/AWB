@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""De jumprun uitrekenen en desgevraagd publiceren, met alleen nette waarden erin.
+
+De bot mag dit draaien via sudo. Daarom staat hier een poortwachter tussen: het rekenscript kent
+opties die niemand vanaf Discord hoort te kunnen zetten - `--url` wijst het naar een andere server,
+en dan gaat het token van jumprun.nl daar naartoe. Hier komt alleen door wat een jumprun kan zijn:
+een dropzone uit een korte lijst, hoogtes en afstanden binnen hun grenzen, een windstreek.
+
+    awb-jumprun-zetten hoogeveen                        uitrekenen en opschrijven
+    awb-jumprun-zetten hoogeveen --exit 5000            de lage run
+    awb-jumprun-zetten hoogeveen --koers 270 --offset 0.6 --richting Z --groen 0.8
+    awb-jumprun-zetten hoogeveen --post                 en op het bord zetten
+
+Alles wat niet klopt levert een weigering op en niets anders; het rekenscript ziet die waarde dan
+nooit.
+"""
+import re
+import subprocess
+import sys
+
+SCRIPT = "/opt/AWB/rpi/jumprun-auto.mjs"
+DROPZONES = ("hoogeveen", "echten")          # de velden waar dit bord over gaat
+EXIT_FT = (2000, 15000)
+OFFSET_NM = (0.0, 3.0)
+GREEN_NM = (-3.0, 3.0)
+DIRECTIONS = ("N", "O", "Z", "W", "E", "S")   # windstreken; bij de polaire notatie mag het ook in graden
+
+
+def fail(message: str) -> None:
+    print(message)
+    raise SystemExit(2)
+
+
+def number(value: str, low: float, high: float, what: str) -> str:
+    try:
+        number_ = float(value)
+    except ValueError:
+        fail(f"{what} moet een getal zijn, niet {value!r}")
+    if not low <= number_ <= high:
+        fail(f"{what} moet tussen {low} en {high} liggen, niet {number_}")
+    return repr(number_)
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] not in DROPZONES:
+        fail(f"kies een dropzone: {', '.join(DROPZONES)}")
+    out = [SCRIPT, "--station", argv[0]]
+
+    i = 1
+    while i < len(argv):
+        flag = argv[i]
+        value = argv[i + 1] if i + 1 < len(argv) else ""
+        if flag == "--post":
+            out.append("--post")
+            i += 1
+            continue
+        if flag == "--exit":
+            out += ["--exit", number(value, *EXIT_FT, "de exithoogte")]
+        elif flag == "--uur":
+            if not re.fullmatch(r"[0-2][0-9]:[0-5][0-9]", value):
+                fail(f"het uur moet er uitzien als 14:00, niet {value!r}")
+            out += ["--uur", value]
+        elif flag == "--koers":
+            out += ["--koers", number(value, 0, 360, "de koers")]
+        elif flag == "--offset":
+            out += ["--offset", number(value, *OFFSET_NM, "de offset")]
+        elif flag == "--richting":
+            if value.upper() not in DIRECTIONS and not re.fullmatch(r"\d{1,3}", value):
+                fail(f"de richting moet een windstreek zijn of graden, niet {value!r}")
+            out += ["--richting", value.upper()]
+        elif flag == "--groen":
+            out += ["--groen", number(value, *GREEN_NM, "het groene licht")]
+        else:
+            fail(f"dat kan hier niet: {flag!r}")
+        i += 2
+
+    finished = subprocess.run(out, capture_output=True, text=True, timeout=90)
+    sys.stdout.write(finished.stdout)
+    sys.stdout.write(finished.stderr)
+    return finished.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

@@ -15,6 +15,7 @@ is on purpose: rebooting the board is not something the whole club should be abl
 """
 import asyncio
 import os
+import re
 import subprocess
 import discord
 from discord import app_commands
@@ -27,13 +28,29 @@ BOARD = os.environ.get("AWB_BOARD_NAME", "het bord")
 
 def run(*args: str, timeout: int = 60) -> str:
     """One of the permitted scripts. Never a shell, and never anything built from user input."""
+    return outcome(*args, timeout=timeout)[1]
+
+
+def outcome(*args: str, timeout: int = 60) -> tuple[bool, str]:
+    """The same, but saying whether it worked.
+
+    A command that fails - a sudo rule that is missing, a script that is not there - still prints
+    something, and a message that reports success anyway is worse than no message at all: you walk
+    away believing the board has changed. So whoever changes something asks for this instead.
+    """
     try:
         out = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
-        return (out.stdout or out.stderr or "").strip()
+        return out.returncode == 0, (out.stdout or out.stderr or "").strip()
     except subprocess.TimeoutExpired:
-        return "duurde te lang"
+        return False, "duurde te lang"
     except OSError as error:
-        return f"lukte niet: {error}"
+        return False, f"lukte niet: {error}"
+
+
+async def report(interaction: discord.Interaction, ok: bool, result: str, note: str, limit: int = 1500) -> None:
+    """Melden wat er gebeurd is - en niet iets anders als het niet gebeurd is."""
+    kop = note if ok else "Er is niets veranderd; het bord staat nog zoals het stond."
+    await interaction.followup.send(f"{kop}\n```\n{result[:limit]}\n```")
 
 
 class Bot(discord.Client):
@@ -114,13 +131,13 @@ async def kiosk(interaction: discord.Interaction, wat: app_commands.Choice[str])
         return await deny(interaction)
     await interaction.response.defer(thinking=True)
     if wat.value == "cache":
-        result = run("sudo", "-n", "/usr/local/sbin/awb-cache-clear", timeout=90)
+        ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-cache-clear", timeout=90)
         note = ("Cache leeg en browser herstart. Een wijziging die je net hebt geplaatst is nu "
                 "zeker zichtbaar; zonder dit serveert Chromium soms nog het oude bestand.")
     else:
-        result = run("sudo", "-n", "/usr/local/sbin/awb-kiosk-restart", timeout=60)
+        ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-kiosk-restart", timeout=60)
         note = "Browser herstart. Een paar tellen zwart, dan staat het bord er weer."
-    await interaction.followup.send(f"{note}\n```\n{result[:1500]}\n```")
+    await report(interaction, ok, result, note)
 
 
 @bot.tree.command(name="weer", description="Wat het station nu meet")
@@ -145,16 +162,175 @@ async def jumprun(interaction: discord.Interaction, wat: app_commands.Choice[str
     keuze = wat.value if wat else "toon"
     if keuze in ("verberg", "terug"):
         # Niets wordt gewist: het plan blijft bij jumprun.nl staan, het bord laat het alleen even weg.
-        result = run("sudo", "-n", "/usr/local/sbin/awb-jumprun-tonen",
-                     "verberg" if keuze == "verberg" else "toon", timeout=30)
+        ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-jumprun-tonen",
+                             "verberg" if keuze == "verberg" else "toon", timeout=30)
         note = ("Van het bord af. Bij jumprun.nl staat hij er gewoon nog; met \u201cweer op het bord "
                 "zetten\u201d komt hij binnen een minuut terug."
                 if keuze == "verberg" else
                 "Weer op het bord. Binnen een minuut staat hij er.")
-        return await interaction.followup.send(f"{note}\n```\n{result[:1500]}\n```")
+        return await report(interaction, ok, result, note)
     staat = run("sudo", "-n", "/usr/local/sbin/awb-jumprun-tonen", "status", timeout=30).strip()
     kop = f"(op dit moment {staat} op het bord)\n" if staat.startswith("verborgen") else ""
     await interaction.followup.send(kop + "```\n" + run("sudo", "-n", "/usr/local/sbin/awb-jumprun", timeout=60)[:1800] + "\n```")
+
+
+# ----------------------------------------------------------------- een jumprun opbouwen
+
+DROPZONES = (("Hoogeveen", "hoogeveen"), ("Echten", "echten"))
+EXIT_ALTS = ((12000, "hoge run"), (5000, "lage run"))
+OFFSET_NM = [round(0.1 * i, 1) for i in range(0, 16)]          # 0,0 tot 1,5 NM
+GREEN_NM = [round(0.1 * i, 1) for i in range(-8, 16)]          # −0,8 tot +1,5 NM
+COMPASS = (("noord", "N"), ("oost", "O"), ("zuid", "Z"), ("west", "W"))
+TRACK_SPREAD = range(-40, 50, 10)                              # koersen rond het advies, in stappen van tien
+
+
+def nl(value: float) -> str:
+    """Een getal zoals het hier uitgesproken wordt: 0,6 en niet 0.6."""
+    return f"{value:.1f}".replace(".", ",")
+
+
+class JumprunView(discord.ui.View):
+    """Een jumprun uit lijstjes opbouwen, met het advies van jumprun.nl er al in.
+
+    Het advies staat er meteen, dus wie het daarmee eens is drukt alleen op publiceren. Wie iets
+    anders wil kiest het uit een lijst; er valt niets te typen, dus er valt ook niets te vertypen.
+    Elke keuze laat het opnieuw uitrekenen: wat je niet zelf zet blijft het beste dat erbij past.
+    """
+
+    def __init__(self, user_id: int, station: str, exit_alt: int) -> None:
+        super().__init__(timeout=600)
+        self.user_id = user_id
+        self.station = station
+        self.exit_alt = exit_alt
+        self.track: int | None = None      # graden magnetisch
+        self.offset: float | None = None
+        self.direction: str | None = None
+        self.green: float | None = None
+        self.text = "even rekenen..."
+        self.advised_track: int | None = None
+
+    # -- de som --------------------------------------------------------
+    def command(self, post: bool = False) -> list[str]:
+        args = ["sudo", "-n", "/usr/local/sbin/awb-jumprun-zetten", self.station, "--exit", str(self.exit_alt)]
+        if self.track is not None:
+            args += ["--koers", str(self.track)]
+        if self.offset is not None:
+            args += ["--offset", str(self.offset), "--richting", self.direction or "N"]
+        if self.green is not None:
+            args += ["--groen", str(self.green)]
+        return args + (["--post"] if post else [])
+
+    async def recompute(self) -> bool:
+        ok, text = await asyncio.to_thread(outcome, *self.command(), timeout=90)
+        self.text = text
+        if ok and self.advised_track is None:
+            # de koers uit het advies, om de lijst met koersen omheen te leggen
+            match = re.search(r"koers (\d{3})°", text)
+            if match:
+                self.advised_track = int(match.group(1))
+                self.build()
+        return ok
+
+    def message(self) -> str:
+        eigen = [w for w, v in (("koers", self.track), ("offset", self.offset), ("groen licht", self.green)) if v is not None]
+        staart = ("\nAlles volgt het advies." if not eigen else
+                  "\nZelf gezet: " + ", ".join(eigen) + ". De rest is daar omheen gerekend.")
+        return f"```\n{self.text[:1500]}\n```{staart}"
+
+    # -- de knoppen en lijstjes ----------------------------------------
+    def build(self) -> None:
+        self.clear_items()
+        base = self.advised_track if self.advised_track is not None else 0
+        tracks = [(base + step) % 360 for step in TRACK_SPREAD]
+        self.add_item(Choose(self, "track", "koers (magnetisch)",
+                             [(f"{t:03d}°" + (" · advies" if t == base else ""), str(t)) for t in tracks]))
+        self.add_item(Choose(self, "offset", "offset in NM",
+                             [(f"{nl(v)} NM" if v else "geen offset", str(v)) for v in OFFSET_NM]))
+        self.add_item(Choose(self, "direction", "kant van de bak",
+                             [(naam, kort) for naam, kort in COMPASS]))
+        self.add_item(Choose(self, "green", "groen licht in NM",
+                             [(("+" if v >= 0 else "\u2212") + nl(abs(v)) + " NM", str(v)) for v in GREEN_NM]))
+        self.add_item(Publish(self))
+        self.add_item(Reset(self))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Dit lijstje is van iemand anders.", ephemeral=True)
+            return False
+        return allowed(interaction)
+
+
+class Choose(discord.ui.Select):
+    def __init__(self, view: JumprunView, field: str, label: str, options: list[tuple[str, str]]) -> None:
+        super().__init__(placeholder=label, min_values=1, max_values=1,
+                         options=[discord.SelectOption(label=naam, value=waarde) for naam, waarde in options[:25]])
+        self.jumprun = view
+        self.field = field
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        waarde = self.values[0]
+        if self.field == "track":
+            self.jumprun.track = int(waarde)
+        elif self.field == "offset":
+            self.jumprun.offset = float(waarde)
+            if self.jumprun.direction is None:
+                self.jumprun.direction = "N"
+        elif self.field == "direction":
+            self.jumprun.direction = waarde
+            if self.jumprun.offset is None:
+                self.jumprun.offset = 0.0
+        else:
+            self.jumprun.green = float(waarde)
+        await interaction.response.defer()
+        await self.jumprun.recompute()
+        await interaction.edit_original_response(content=self.jumprun.message(), view=self.jumprun)
+
+
+class Reset(discord.ui.Button):
+    def __init__(self, view: JumprunView) -> None:
+        super().__init__(label="terug naar het advies", style=discord.ButtonStyle.secondary, row=4)
+        self.jumprun = view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        self.jumprun.track = self.jumprun.offset = self.jumprun.direction = self.jumprun.green = None
+        await interaction.response.defer()
+        await self.jumprun.recompute()
+        await interaction.edit_original_response(content=self.jumprun.message(), view=self.jumprun)
+
+
+class Publish(discord.ui.Button):
+    def __init__(self, view: JumprunView) -> None:
+        super().__init__(label="op het bord zetten", style=discord.ButtonStyle.primary, row=4)
+        self.jumprun = view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        ok, text = await asyncio.to_thread(outcome, *self.jumprun.command(post=True), timeout=120)
+        # Per exithoogte één run: deze vervangt alleen wat er voor dezelfde hoogte stond, de andere
+        # run van deze dropzone blijft staan.
+        kop = (f"Op het bord gezet. Wat er voor {self.jumprun.exit_alt:,} ft stond is vervangen; een "
+               "run op een andere hoogte blijft staan.".replace(",", ".")
+               if ok else "Niet gelukt; er staat nog wat er stond.")
+        self.jumprun.clear_items()
+        await interaction.edit_original_response(content=f"{kop}\n```\n{text[:1500]}\n```", view=self.jumprun)
+        self.jumprun.stop()
+
+
+@bot.tree.command(name="jumprun-zetten", description="Een jumprun uitrekenen en op het bord zetten")
+@app_commands.describe(dropzone="welk veld", hoogte="hoge of lage run")
+@app_commands.choices(
+    dropzone=[app_commands.Choice(name=naam, value=id_) for naam, id_ in DROPZONES],
+    hoogte=[app_commands.Choice(name=f"{ft:,}".replace(",", ".") + f" ft ({wat})", value=ft) for ft, wat in EXIT_ALTS],
+)
+async def jumprun_zetten(interaction: discord.Interaction, dropzone: app_commands.Choice[str],
+                         hoogte: app_commands.Choice[int] | None = None) -> None:
+    if not allowed(interaction):
+        return await deny(interaction)
+    await interaction.response.defer(thinking=True, ephemeral=True)
+    view = JumprunView(interaction.user.id, dropzone.value, hoogte.value if hoogte else EXIT_ALTS[0][0])
+    view.build()
+    await view.recompute()
+    await interaction.followup.send(view.message(), view=view, ephemeral=True)
 
 
 @bot.tree.command(name="log", description="De laatste foutmeldingen")
@@ -170,11 +346,10 @@ async def update(interaction: discord.Interaction) -> None:
     if not allowed(interaction):
         return await deny(interaction)
     await interaction.response.defer(thinking=True)
-    result = run("sudo", "-n", "/usr/local/sbin/awb-update", timeout=240)
-    await interaction.followup.send(
-        "Bijgewerkt en opnieuw gestart. De instellingen en de inloggegevens van dit bord blijven staan.\n"
-        "```\n" + result[:1700] + "\n```"
-    )
+    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-update", timeout=240)
+    await report(interaction, ok, result,
+                 "Bijgewerkt en opnieuw gestart. De instellingen en de inloggegevens van dit bord "
+                 "blijven staan.", limit=1700)
 
 
 @bot.tree.command(name="summertime", description="Laat het bord even een perfecte springdag zien")
@@ -184,15 +359,12 @@ async def summertime(interaction: discord.Interaction, minuten: int = 5) -> None
         return await deny(interaction)
     minuten = max(0, min(30, minuten))
     await interaction.response.defer(thinking=True)
-    result = run("sudo", "-n", "/usr/local/sbin/awb-summertime", str(minuten * 60), timeout=30)
+    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-summertime", str(minuten * 60), timeout=30)
     if minuten == 0:
-        return await interaction.followup.send("Demo gestopt.\n```\n" + result[:800] + "\n```")
-    await interaction.followup.send(
-        f"Onbewolkt, 26 graden, 4 knopen en een palmeiland op de kaart. {minuten} minuten lang.\n"
-        "Er staat een balk boven het scherm dat het niet echt is: dat bord hangt op een plek waar "
-        "mensen beslissen of ze springen, en verzonnen weer mag daar nooit voor echt doorgaan.\n"
-        "```\n" + result[:800] + "\n```"
-    )
+        return await report(interaction, ok, result, "Demo gestopt.", limit=800)
+    await report(interaction, ok, result,
+                 f"Onbewolkt, 26 graden, 4 knopen en een palmeiland op de kaart. {minuten} minuten "
+                 "lang. Met /normaal staat het echte weer er meteen weer.", limit=800)
 
 
 @bot.tree.command(name="normaal", description="Stop de mooiweerstand en zet het echte bord terug")
@@ -200,10 +372,9 @@ async def normaal(interaction: discord.Interaction) -> None:
     if not allowed(interaction):
         return await deny(interaction)
     await interaction.response.defer(thinking=True)
-    result = run("sudo", "-n", "/usr/local/sbin/awb-summertime", "0", timeout=30)
-    await interaction.followup.send(
-        "Terug naar het echte weer. Het bord schakelt binnen een paar tellen om.\n```\n" + result[:600] + "\n```"
-    )
+    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-summertime", "0", timeout=30)
+    await report(interaction, ok, result,
+                 "Terug naar het echte weer. Het bord schakelt binnen een paar tellen om.", limit=600)
 
 
 @bot.tree.command(name="pi", description="De Raspberry Pi zelf")

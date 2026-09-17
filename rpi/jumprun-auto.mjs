@@ -17,6 +17,12 @@
  *   rpi/jumprun-auto.mjs --post                   en zet hem op het bord
  *   rpi/jumprun-auto.mjs --json                   de uitkomst als JSON (voor de bot)
  *
+ * Wat je zelf invult wint van het advies; de rest wordt eromheen uitgerekend:
+ *
+ *   --koers 270        koers in graden magnetisch, zoals de piloot hem invoert
+ *   --offset 0.6 --richting Z     de offset; bij de polaire notatie mag richting ook in graden
+ *   --groen 0.8        groen licht in NM ten opzichte van de bak (− = ervoor)
+ *
  * Publiceren vraagt een token van jumprun.nl in .env (JUMPRUN_TOKEN); dat wordt aangemaakt op de
  * server met `cloudbase --token <naam>`. De naam van het token komt bij de jumprun op het bord te
  * staan: wie hem ophing hoort zichtbaar te zijn.
@@ -72,6 +78,10 @@ function args(argv) {
 		else if (arg === '--uur' || arg === '--hour') out.hour = String(argv[++i] || '');
 		else if (arg === '--dag' || arg === '--date') out.date = String(argv[++i] || '');
 		else if (arg === '--url') out.url = String(argv[++i] || '');
+		else if (arg === '--koers' || arg === '--track') out.trackMagneticDeg = Number(argv[++i]);
+		else if (arg === '--offset') out.offsetNm = Number(argv[++i]);
+		else if (arg === '--richting' || arg === '--dir') out.offsetDir = String(argv[++i] || '').toUpperCase();
+		else if (arg === '--groen' || arg === '--green') out.greenLightNm = Number(argv[++i]);
 		else throw new Error(`onbekende optie: ${arg}`);
 	}
 	return out;
@@ -174,12 +184,25 @@ async function main() {
 		highExitAltFt: exitAltOf(dz),
 		lowRunRule: true,
 	};
-	const at = (target) => computeAuto(planInput(dz, { ...base, target }), auto);
+	/* Een ingevulde koers of groen licht gaat als invoer mee: dan valt er voor de berekening niets
+	   meer te kiezen en rekent zij de rest eromheen uit. */
+	const byHand = {};
+	if (Number.isFinite(options.trackMagneticDeg)) {
+		byHand.trackDeg = (((options.trackMagneticDeg + declinationOf(dz)) % 360) + 360) % 360;
+	}
+	if (Number.isFinite(options.greenLightNm)) {
+		byHand.greenLightNm = options.greenLightNm;
+	}
+	const at = (target) => computeAuto({ ...planInput(dz, { ...base, target }), ...byHand }, auto);
 
 	/* Eerst de run over de bak zelf: die geeft het offsetadvies. Daarna de lijn op de plek waar
 	   hij komt te liggen, want daar hangt het groene licht van af. */
 	const overTheTarget = at(landing);
-	const off = computeAutoOffset(overTheTarget, { landing, notation: notationOf(dz), compute: at });
+	const advised = computeAutoOffset(overTheTarget, { landing, notation: notationOf(dz), compute: at });
+	const own = Number.isFinite(options.offsetNm);
+	const off = own
+		? { nm: options.offsetNm, dir: /^-?\d+$/.test(options.offsetDir || '') ? Number(options.offsetDir) : (options.offsetDir || advised.dir) }
+		: advised;
 	const result = off.nm > 0 ? at(destination(landing, dirDeg(off.dir), off.nm * NM)) : overTheTarget;
 
 	const payload = {
@@ -205,6 +228,17 @@ async function main() {
 	const name = dz.name || dz.id;
 	console.log(`${name} · exit ${Math.round(exitAltFt).toLocaleString('nl-NL')} ft · wind van ${hour.label}`);
 	console.log(`  ${spot(result, off, dz)}`);
+	const handmatig = [
+		Number.isFinite(options.trackMagneticDeg) ? 'koers' : null,
+		own ? 'offset' : null,
+		Number.isFinite(options.greenLightNm) ? 'groen licht' : null,
+	].filter(Boolean);
+	if (handmatig.length) {
+		const opsomming = handmatig.length > 1
+			? `${handmatig.slice(0, -1).join(', ')} en ${handmatig[handmatig.length - 1]}`
+			: handmatig[0];
+		console.log(`  ${opsomming} met de hand gezet, de rest eromheen gerekend`);
+	}
 	console.log(`  ${result.exits.length} exits, ${Math.round(result.separation.seconds)} s ertussen`);
 	console.log(`  wind op exit ${Math.round(result.windAtExit.speedKt)} kt uit ${pad3(result.windAtExit.fromDeg)}°`
 		+ (ground && ground.kt != null ? `, grond ${Math.round(ground.kt)} kt uit ${pad3(ground.dir)}°` : ''));

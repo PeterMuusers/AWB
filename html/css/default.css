@@ -497,13 +497,14 @@ header,
 	text-transform: uppercase;
 	line-height: 1.05;
 }
-.jumprun-caption .jumprun-headline {
-	display: block;
-	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
-	font-size: calc(var(--text-header-fontsize) * var(--jr-scale));
+/* De exithoogte staat achter de naam van het veld: twee runs van dezelfde dropzone verschillen
+   daarin, en daarmee lees je in één regel voor welke van de twee dit is. Iets kleiner dan de naam,
+   zodat de volgorde van lezen klopt. */
+.jumprun-caption .jumprun-alt {
+	font-size: 80%;
 	font-weight: 600;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: rgba(255, 255, 255, 0.85);
 }
 .jumprun-caption .jumprun-who {
 	color: rgba(255, 255, 255, 0.78);

@@ -31,7 +31,7 @@ import { bearing, distance } from '../jumprun/calc/geo.js';
 import { NM } from '../jumprun/calc/units.js';
 import { createJumprunMap } from '../jumprun/jumprun-map.js';
 import {
-	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
+	LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
 	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE, LANGUAGE_SOURCE,
@@ -72,7 +72,7 @@ class Module {
 		this.refreshInterval = 2 * 60 * 1000;	// a jumprun is put up by hand, so notice it quickly
 
 		this.last_updated = null;
-		this.all = {};				// station -> {entry, planned}
+		this.all = {};				// station -> {notation, runs: [{entry, planned}]}
 		this.turn = -1;				// welke dropzone het laatst aan de beurt was
 		this.entry = null;			// wat er nu getoond wordt: plan, wind, who, when
 		this.notation = 'offset';	// hoe deze dropzone de spot uitspreekt: 'offset' of 'polar'
@@ -84,9 +84,20 @@ class Module {
 		this.updateData();
 	}
 
-	/* De dropzones waar vandaag iets voor opgehangen is, in de volgorde van de instelling. */
+	/* Alles wat vandaag opgehangen is, in de volgorde van de instelling: per dropzone eerst de hoge
+	   run en dan de lage. Elke run krijgt zijn eigen beurt, want het zijn eigen getallen en een eigen
+	   lijn op de kaart; de exithoogte staat in de kop, dus je ziet meteen welke van de twee je hebt. */
 	get waiting() {
-		return this.stations.filter(station => this.all[station] && this.all[station].planned);
+		var out = [];
+		this.stations.forEach(station => {
+			var held = this.all[station];
+			(held && held.runs ? held.runs : []).forEach((run, index) => {
+				if (run.planned) {
+					out.push({ station: station, index: index });
+				}
+			});
+		});
+		return out;
 	}
 
 	/* Is there a jumprun to show at all? */
@@ -104,10 +115,12 @@ class Module {
 		}
 		/* om de beurt: zijn er twee dropzones, dan is de ene keer Hoogeveen aan en de volgende Echten */
 		this.turn = (this.turn + 1) % waiting.length;
-		var chosen = this.all[waiting[this.turn]];
+		var next = waiting[this.turn];
+		var held = this.all[next.station];
+		var chosen = held.runs[next.index];
 		this.entry = chosen.entry;
 		this.planned = chosen.planned;
-		this.notation = chosen.notation;
+		this.notation = held.notation;
 		layer.hidden = false;
 		this.draw();
 		return true;
@@ -198,10 +211,12 @@ class Module {
 		var where = (this.stations[0] === entry.station && own.name)
 			? own.name
 			: entry.station.charAt(0).toUpperCase() + entry.station.slice(1);
-		/* het aantal exits staat op de kaart zelf, genummerd langs de lijn; in de kop zou het alleen
-		   een getal zijn dat je nog moet thuisbrengen */
-		var headline = LANGUAGE_JUMPRUN + ' ' + degrees(r.trackMagneticDeg) + ' &middot; '
-			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft';
+		/* De exithoogte hoort bij de naam: er kunnen twee runs van dezelfde dropzone langskomen en
+		   dan is dit het enige wat ze uit elkaar houdt. Iets kleiner dan de naam, zodat je eerst het
+		   veld leest en dan de hoogte. De koers en de rest staan groot onder de kop, dus een
+		   ondertitel die dat herhaalt kan weg; het aantal exits staat genummerd op de lijn zelf. */
+		where += ' <span class="jumprun-alt">'
+			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft</span>';
 		/* De datum laten we weg: wat er staat geldt altijd vandaag. En de naam alleen als er meer
 		   mensen zijn die een jumprun kunnen ophangen; bij één iemand zegt hij niets en kost hij
 		   alleen ruimte in een regel die je in twintig seconden moet lezen. */
@@ -228,7 +243,6 @@ class Module {
 				+ LANGUAGE_JUMPRUN_SINCE + ' ' + words.join(' &middot; ') + '</span>';
 		}
 		element.innerHTML = '<span class="jumprun-where">' + where + '</span>'
-			+ '<span class="jumprun-headline">' + headline + '</span>'
 			+ '<span class="jumprun-who">' + who + '</span>' + drift + this.numbers();
 	}
 
@@ -251,7 +265,9 @@ class Module {
 			/* hoeveel mensen hier iets kunnen ophangen; ontbreekt het, dan zetten we de naam er
 			   liever wel bij dan ten onrechte niet */
 			this.admins = (typeof data.admins === 'number') ? data.admins : 2;
-			this.adopt(station, data.jumprun || null, data.notation);
+			/* jumpruns: één per exithoogte, hoog eerst. Een ouder jumprun.nl stuurt alleen `jumprun`. */
+			var runs = Array.isArray(data.jumpruns) ? data.jumpruns : (data.jumprun ? [data.jumprun] : []);
+			this.adopt(station, runs, data.notation);
 		}).catch(error => {
 			/* jumprun.nl out of reach is not a reason to drop a plan that is already on screen */
 			this.error = error.message;
@@ -259,23 +275,28 @@ class Module {
 		});
 	}
 
-	/* Take over a plan and work out the line it stands for. */
-	adopt(station, entry, notation) {
-		if (entry === null) {
+	/* Take over the plans of a dropzone and work out the line each of them stands for. */
+	adopt(station, entries, notation) {
+		var usable = (entries || []).filter(entry => {
+			if (entry && entry.version === PLAN_VERSION) {
+				return true;
+			}
+			console.warn('Jumprun plan version ' + (entry && entry.version)
+				+ ' needs a newer board (this one reads ' + PLAN_VERSION + ')');
+			return false;
+		});
+		if (usable.length === 0) {
 			delete this.all[station];
-			return;
-		}
-		if (entry.version !== PLAN_VERSION) {
-			delete this.all[station];
-			console.warn('Jumprun plan version ' + entry.version + ' needs a newer board (this one reads ' + PLAN_VERSION + ')');
 			return;
 		}
 		this.all[station] = {
-			entry: entry,
-			planned: this.compute(entry.plan, this.profileOf(entry.wind)),
 			/* de notatie is die van de dropzone, niet die van wie het plan ophing: het bord hangt op
 			   het veld en hoort de taal van dat veld te spreken */
 			notation: (notation === 'polar') ? 'polar' : 'offset',
+			runs: usable.map(entry => ({
+				entry: entry,
+				planned: this.compute(entry.plan, this.profileOf(entry.wind)),
+			})),
 		};
 	}
 
