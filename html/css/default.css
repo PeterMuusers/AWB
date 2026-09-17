@@ -299,6 +299,12 @@ header,
 	gap: 3px;
 	min-width: 0;
 }
+/* Staat er een stoot bij, dan is de rechterkant van de cel twee regels hoog (stoot boven graden) en
+   hangt de rest op de bovenste regel als hij op de onderlijn wordt uitgelijnd. De pijl en de knopen
+   horen dan in het midden van die twee regels te staan, want ze gaan over allebei. */
+.windcell-row:has(.windgust) {
+	align-items: center;
+}
 .windcell-row .windspeed {
 	min-width: 2.2ch;
 	text-align: right;
