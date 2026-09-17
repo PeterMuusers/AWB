@@ -439,6 +439,7 @@ class Module {
 		this.satTimes = [];
 		this.forecastOverlays = {};
 		this.forecastSource = null;
+		this.satFailed = {};	// beelden die EUMETSAT wel aankondigde maar niet leverde
 	}
 
 	/* Times of the last hoursBack hours of radar images */
@@ -650,9 +651,25 @@ class Module {
 					zIndex: Z_SATELLITE,
 					pane: this.satelliteBlend ? CLOUDS_PANE : 'overlayPane',
 				}).addTo(this.map);
+				/* EUMETSAT noemt een tijd in zijn GetCapabilities een paar minuten voordat het beeld
+				   er echt is; die levert dan een 502. Dat ene lege frame is tot daaraan toe, maar de
+				   vooruitzichten worden allemáál uit het nieuwste beeld gemaakt, dus dan is de hele
+				   tweede helft van de lus wolkenloos. Onthouden dus, zodat er teruggevallen wordt. */
+				overlay.on('error', () => {
+					if (this.satFailed[key]) {
+						return;
+					}
+					this.satFailed[key] = true;
+					console.warn('Cloud image ' + key + ' did not load; using the one before it');
+					/* en weg ermee, zodat de volgende ronde het opnieuw probeert: over vijf minuten is
+					   het beeld er wel, en dan hoort het gewoon in beeld te komen */
+					overlay.remove();
+					delete this.satOverlays[key];
+				});
 				if (this.satelliteBlend && overlay.getElement()) {
 					overlay.getElement().style.filter = this.cloudFilter(spec, time);
 				}
+				delete this.satFailed[key];
 				this.satOverlays[key] = overlay;
 			}
 		});
@@ -804,15 +821,27 @@ class Module {
 	}
 
 	/* Satellite image closest before (or at) the given time */
+	/* Het nieuwste beeld op of vóór dit moment dat ook werkelijk geladen is. Een aangekondigd
+	   maar onleverbaar beeld overslaan is het verschil tussen één leeg frame en een lus die
+	   vanaf 'nu' geen wolken meer laat zien. */
 	satelliteFor(time) {
 		var key = isoMinutes(time);
 		var best = null;
 		for (var i = 0; i < this.satTimes.length; i++) {
-			if (this.satTimes[i] <= key) {
+			if (this.satTimes[i] <= key && !this.satFailed[this.satTimes[i]]) {
 				best = this.satTimes[i];
 			}
 		}
-		return best === null && this.satTimes.length > 0 ? this.satTimes[0] : best;
+		if (best !== null) {
+			return best;
+		}
+		/* niets bruikbaars ervoor: dan maar het eerste dat wél geladen is */
+		for (var j = 0; j < this.satTimes.length; j++) {
+			if (!this.satFailed[this.satTimes[j]]) {
+				return this.satTimes[j];
+			}
+		}
+		return null;
 	}
 
 	showFrame() {
