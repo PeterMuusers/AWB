@@ -337,14 +337,21 @@ class Module {
 
 		/* One row per altitude, highest first, with the freezing level drawn in between */
 		var freezing = columns[0].freezing;
+		/* Ligt het vriesniveau boven de hoogste regel van de tabel, dan zegt die regel niets meer over
+		   deze sprong: alles wat je hier leest is dan warmer dan nul, en de kou begint boven het beeld.
+		   Hij blijft wel staan zolang hij tussen de hoogtes valt, ook boven de exithoogte - daar is hij
+		   alleen niet meer de kleur van "hier heb je handschoenen nodig". */
+		var top = this.altitudes.length ? Math.max.apply(null, this.altitudes) : null;
+		/* alleen voor deze tabel; het meetblok links blijft de hoogte gewoon noemen */
+		var inTable = (freezing !== null && (top === null || freezing <= top)) ? freezing : null;
 		var rows = '';
 		var freezingDrawn = false;
 		this.altitudes.forEach(feet => {
-			if (freezing !== null && !freezingDrawn && feet < freezing) {
+			if (inTable !== null && !freezingDrawn && feet < inTable) {
 				/* marked the same way as in the metrics panel when it is low enough to climb through */
-				var cold = (freezing <= this.exitAltitude) ? ' freezing-row-cold' : '';
+				var cold = (inTable <= this.exitAltitude) ? ' freezing-row-cold' : '';
 				rows += '<tr class="freezing-row' + cold + '"><td colspan="' + (columns.length + 1) + '">'
-					+ LANGUAGE_FREEZING_LEVEL_AT + ' ' + freezing.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + '</td></tr>';
+					+ LANGUAGE_FREEZING_LEVEL_AT + ' ' + inTable.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + '</td></tr>';
 				freezingDrawn = true;
 			}
 			var temperature = (columns[0].levels[feet] && columns[0].levels[feet].temp !== null)
