@@ -49,7 +49,11 @@ const SAT_GEOCOLOUR = {
 };
 const SAT_INFRARED = {
 	layer: 'mtg_fd:ir105_hrfi', style: 'mtg_fd_ir105_hrfi_grayscale', format: 'image/png', transparent: 'true',
-	maxSize: 1024, brightness: 1.65, contrast: 4.0, grayscale: false,
+	/* brightness and contrast together decide which greys survive: everything under about 63 goes
+	   to black and everything over about 141 to pure white. The pair that was here before left a
+	   window of 58 to 97, and the image measures 89 to 117 in its brightest tenth, so nearly every
+	   cloud came out as flat white with no structure left in it. */
+	maxSize: 1024, brightness: 1.25, contrast: 2.6, grayscale: false,
 };
 const SAT_LAYERS = {
 	clouds: null,				// null = adaptive: visible by day, geocolour at dusk and at night
@@ -92,7 +96,11 @@ const PLACES = [
 const KNOTS_TO_MS = 0.514444;
 const METERS_PER_DEGREE = 111320;
 const CLOUDS_MARGIN = 0.25;								// extra area around the map, so shifted clouds still cover it
-const CLOUDS_FADE = 0.45;								// the further the clouds are shifted ahead, the fainter they get
+/* The further the clouds are shifted ahead, the fainter they get, as a reminder that it is an
+   estimate. Gently: at 0.45 the last frame came out at little over half strength, which does not
+   read as a guess but as the sky clearing up, and a thinning overcast is a statement about the
+   weather that nobody made. */
+const CLOUDS_FADE = 0.15;
 
 /* Precipitation chart under the map: measured at the station (luchtvaartmeteo) up to now,
    forecast from the KNMI radar forecast at the dropzone (jumprun.nl) after that. The cursor
