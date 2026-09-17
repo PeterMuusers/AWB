@@ -804,10 +804,23 @@ header,
 	text-transform: uppercase;
 	color: var(--textcolor-2, var(--textcolor));
 }
+/* De drie blokken naast elkaar zijn even hoog - de hoogste zet de rij - en dit blok heeft de minste
+   inhoud. Zonder dit bleef die ruimte onderin liggen als een lege band van zeventig pixels, terwijl
+   het er opzij vijftien zijn. De rijen van het raster verdelen hem nu onder elkaar. */
+.weather {
+	display: flex;
+	flex-direction: column;
+}
+.weather .metrics-content {
+	flex: 1 1 auto;
+	display: flex;
+}
 .metrics-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
 	gap: 10px 14px;
+	flex: 1 1 auto;
+	align-content: space-between;
 }
 .metrics-cell {
 	display: flex;
