@@ -339,6 +339,14 @@ header,
 .upper-winds-content tr.ground-row td.windtext {
 	vertical-align: middle;
 }
+/* Onderaan uitlijnen laat alle speling bóven de getallen vallen, en dan hangt dat blok van twee
+   regels net onder het midden van de rij - te laag naast het woord "Grond", dat wel gecentreerd is.
+   Drie pixels omhoog is de helft van die speling; daarmee staat het blok gecentreerd (nagemeten: een
+   halve pixel van het midden) en blijven de getallen onderling op één lijn staan. */
+.upper-winds-content tr.ground-row .windcell .windcell-row {
+	position: relative;
+	top: -3px;
+}
 /* De stoot staat in de kolom van nu in het blokje boven de graden en in de uren vooruit op een eigen
    regel van de rij zelf; die twee constructies leveren niet dezelfde regelhoogte op, waardoor die
    stoten een halve regel uit elkaar stonden. Nagemeten en rechtgezet: bij 0,45 em zit er nog een
