@@ -239,13 +239,18 @@ class Module {
 		/* Summary and icon */
 		var sky = this.sky();
 		document.getElementById(ID_ICON).setAttribute('data-icon', sky.icon);
-		this.set(ID_SUMMARY, LANGUAGE_SKY[sky.key] || '');
+		var summary = LANGUAGE_SKY[sky.key] || '';
 
 		/* Cloud base: the lowest layer as the big number, the rest behind it */
 		var layers = this.layers();
 		if (layers.length === 0) {
 			this.set(ID_CLOUDBASE, LANGUAGE_NO_CLOUDS);
 			this.set(ID_CLOUDBASE_LAYERS, '');
+			/* Zonder wolken zegt het grote veld al "onbewolkt"; twee keer hetzelfde woord onder
+			   elkaar leest als een fout. De samenvatting valt dan weg, het icoontje blijft. */
+			if (summary === LANGUAGE_NO_CLOUDS) {
+				summary = '';
+			}
 		} else {
 			var lowest = layers[0];
 			this.set(ID_CLOUDBASE, lowest.base.toLocaleString(document.config.locale)
@@ -267,6 +272,10 @@ class Module {
 					+ '</span>';
 			}).join(''));
 		}
+
+		/* Zonder tekst ook geen icoontje: een wolkje op een lege regel is een halve zin. */
+		this.set(ID_SUMMARY, summary);
+		document.getElementById(ID_ICON).style.display = summary === '' ? 'none' : '';
 
 		/* Wind, in the unit from config.json */
 		var wind = this.value('wind_kt');

@@ -887,6 +887,9 @@ header,
 .weather .metrics-content {
 	flex: 1 1 auto;
 	display: flex;
+	/* op een kolom, anders komt de regel onder het raster ernaast te staan in plaats van eronder -
+	   en dan heeft het raster nog maar de helft van de breedte en valt het terug op één kolom */
+	flex-direction: column;
 }
 .metrics-grid {
 	display: grid;

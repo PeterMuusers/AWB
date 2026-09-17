@@ -253,8 +253,11 @@ export function installDemo(until) {
 						data.location.name = PALM.place;
 					}
 					if (data && data.luchtvaartmeteo) {
+						/* Alleen de naam van de plek; geen regel die zegt dat het verzonnen is. Dat is
+						   het hele punt van deze stand: iedereen die een palmeiland op de radar ziet
+						   weet dat het een grap is. */
 						data.luchtvaartmeteo.stationName = PALM.place;
-						data.luchtvaartmeteo.note = 'Verzonnen weer, voor als het buiten giet';
+						data.luchtvaartmeteo.note = '';
 					}
 					return data;
 				});
