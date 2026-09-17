@@ -112,6 +112,24 @@ for ini in /etc/php/*/cgi/conf.d; do
 	note "PCRE JIT uit in $(basename "$(dirname "${ini}")")"
 done
 
+# Een logboek dat een herstart overleeft. Zonder dit staat het journaal in RAM, en dan is na een
+# onverwachte herstart precies het stuk weg dat je nodig hebt: wat er vlak daarvoor gebeurde. Met
+# grenzen erbij, want dit is een SD-kaart: tweehonderd megabyte in totaal, bestanden van hoogstens
+# twintig, en niets ouder dan een maand.
+install -d -m 2755 -o root -g systemd-journal /var/log/journal 2>/dev/null || mkdir -p /var/log/journal
+install -d /etc/systemd/journald.conf.d
+cat > /etc/systemd/journald.conf.d/99-awb.conf <<'EOF'
+# Geschreven door rpi/setup.sh
+[Journal]
+Storage=persistent
+SystemMaxUse=200M
+SystemMaxFileSize=20M
+MaxRetentionSec=1month
+EOF
+systemd-tmpfiles --create --prefix /var/log/journal >/dev/null 2>&1 || true
+systemctl restart systemd-journald >/dev/null 2>&1 || true
+note "Logboek blijft nu bewaard over herstarts heen (max 200 MB, een maand)"
+
 # ---------------------------------------------------------------- reaching it later
 
 # A board at a club hangs on somebody else's network. You do not control that router, .local names

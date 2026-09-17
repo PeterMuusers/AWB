@@ -60,6 +60,20 @@ cat > /usr/local/sbin/awb-status <<EOF
 #!/bin/bash
 HOME_DIR="\$(getent passwd ${KIOSK_USER} | cut -d: -f6)"
 echo "bord      : \$(hostname)  \$(uptime -p)"
+# Waarom hij voor het laatst opnieuw opgekomen is. Staat er in het vorige logboek een afsluiting,
+# dan is hij netjes neergelegd; staat die er niet, dan viel de stroom weg of liep hij vast - en dat
+# is precies het verschil dat je wilt weten.
+VORIGE="\$(journalctl -b -1 -n 40 --no-pager 2>/dev/null)"
+if [ -z "\${VORIGE}" ]; then
+        WAAROM="geen ouder logboek bewaard"
+elif echo "\${VORIGE}" | grep -qi "Reached target.*\\(Power-Off\\|Reboot\\|Shutdown\\)\\|systemd-shutdown"; then
+        WAAROM="netjes afgesloten"
+elif echo "\${VORIGE}" | grep -qi "under-voltage"; then
+        WAAROM="onderspanning"
+else
+        WAAROM="geen afsluitmelding: stroom weg of vastgelopen"
+fi
+echo "gestart   : \$(uptime -s)  (\${WAAROM})"
 echo "wifi      : \$(nmcli -t -f ACTIVE,SSID device wifi list --rescan no 2>/dev/null | grep '^yes' | cut -d: -f2)"
 echo "adressen  : \$(hostname -I)"
 echo "browser   : \$(pgrep -c chromium 2>/dev/null || echo 0) processen"
