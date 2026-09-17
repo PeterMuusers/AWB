@@ -528,6 +528,8 @@ header,
 /* De legenda van de kaart hoort hier niet. Op jumprun.nl staat ze er voor wie het plan maakt; op
    een bord waar iedereen langsloopt leidt ze af, en wie het aangaat weet wat de lens betekent. */
 .layer-jumprun .jr-legend { display: none; }
+/* de windanimatie: een canvas over de kaart, tussen de tegels en de lijnen door */
+.wind-particles { position: absolute; inset: 0; z-index: 450; pointer-events: none; }
 .jr-legend { position: absolute; left: 8px; bottom: 22px; z-index: 500; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 4px 8px; border-radius: 8px; background: rgba(17,26,36,0.72); color: #fff; font-size: 11px; font-weight: 600; letter-spacing: 0.03em; pointer-events: none; }
 .jr-legend .ln { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid var(--c, #0ca30c); margin-right: 6px; vertical-align: middle; }
 .jr-legend .ln.dash { border-top-style: dashed; border-top-width: 2px; }

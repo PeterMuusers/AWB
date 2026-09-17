@@ -20,7 +20,7 @@
  */
 
 import { computeJumprun } from '../jumprun/calc/jumprun.js';
-import { profileFromAloft } from '../jumprun/calc/wind.js';
+import { profileFromAloft, windVectorAt } from '../jumprun/calc/wind.js';
 import { bearing, distance } from '../jumprun/calc/geo.js';
 import { NM } from '../jumprun/calc/units.js';
 import { createJumprunMap } from '../jumprun/jumprun-map.js';
@@ -103,6 +103,10 @@ class Module {
 		if (layer) {
 			layer.hidden = true;
 		}
+		/* de animatie stilzetten zolang er niemand kijkt: dit draait op een Raspberry Pi */
+		if (this.jmap && this.jmap.wind) {
+			this.jmap.wind.setEnabled(false);
+		}
 	}
 
 	/* The map of jumprun.nl itself, so the board shows the same picture as the screen the plan was
@@ -140,10 +144,20 @@ class Module {
 		/* Het bereik dat op de kaart hoort te staan is dat van nu, niet dat van het moment waarop
 		   het plan gemaakt is: wie ernaar kijkt wil weten waar hij vandaag kan komen. De lijn, de
 		   exits en het groene licht zijn wél die van het plan, want dat is wat er gevlogen wordt. */
-		var shown = this.resulting() || r;
+		var current = this.resulting();
+		var shown = current || r;
 		jmap.setTarget(plan.target, landing, landing, plan.extraTargets || [], true);
 		jmap.render(shown);
 		jmap.fit(shown);
+		/* De driftbanen onder de koepel, van de grond tot de openingshoogte: dat stuk vliegt een
+		   springer zelf en daar wil je de wind zien staan. Met hetzelfde profiel als waarmee de lens
+		   getekend is, anders wijst het ene het ene op en het andere iets anders. */
+		var wind = current ? this.currentWind() : this.entry.wind;
+		var profile = this.profileOf(wind);
+		if (jmap.wind && profile) {
+			jmap.wind.setWind(metres => windVectorAt(profile, metres), 0, plan.openAltFt * 0.3048);
+			jmap.wind.setEnabled(true);
+		}
 		this.caption();
 	}
 
