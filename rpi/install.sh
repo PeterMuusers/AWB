@@ -2,7 +2,22 @@
 
 APP_NAME="AWB"
 APP_FULLNAME="Aviation Weather Board"
-APP_SOURCE="https://github.com/eelcohn/${APP_NAME}"
+# Waar het bord vandaan komt. Te overschrijven zodat je vanaf een fork kunt installeren:
+#   curl -s .../install.sh | sudo APP_SOURCE=https://github.com/jouwnaam/AWB bash
+# Draai je dit vanuit een bestaande checkout, dan wordt die herkomst genomen. De nachtelijke updater
+# leest later dezelfde herkomst uit de gekloonde map, dus wie vanaf een fork installeert blijft die
+# fork volgen in plaats van een nacht later bij upstream uit te komen.
+APP_SOURCE="${APP_SOURCE:-}"
+APP_BRANCH="${APP_BRANCH:-}"
+if [[ -z "${APP_SOURCE}" ]]; then
+	SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo "")"
+	# alleen als dit echt een checkout van dit project is, anders pakt hij zomaar de repository
+	# waar je toevallig in staat
+	if [[ -n "${SELF_DIR}" && -f "${SELF_DIR}/../html/index.html" ]]; then
+		APP_SOURCE="$(git -C "${SELF_DIR}" remote get-url origin 2>/dev/null || echo "")"
+	fi
+fi
+APP_SOURCE="${APP_SOURCE:-https://github.com/eelcohn/${APP_NAME}}"
 GPIO_SHUTDOWN_PIN="17"
 # LOCALE="nl_NL.UTF-8"
 LOG_FILE="/var/log/${APP_NAME}/install.log"
@@ -148,7 +163,8 @@ install_webserver_and_php() {
 install_application() {
 	echo "$(date +%c) Installing ${APP_NAME}" >> "${LOG_FILE}" 2>&1
 
-	git clone ${APP_SOURCE} "/opt/${APP_NAME}" >> "${LOG_FILE}" 2>&1
+	echo "$(date +%c) Source: ${APP_SOURCE}${APP_BRANCH:+ (branch ${APP_BRANCH})}" >> "${LOG_FILE}" 2>&1
+	git clone ${APP_SOURCE} ${APP_BRANCH:+--branch "${APP_BRANCH}"} "/opt/${APP_NAME}" >> "${LOG_FILE}" 2>&1
 	chmod +x /opt/${APP_NAME}/rpi/*.sh >> "${LOG_FILE}" 2>&1
 	mv -f "/var/www/html" "/var/www/html.old" >> "${LOG_FILE}" 2>&1
 	mv -f "/opt/${APP_NAME}/html" "/var/www/" >> "${LOG_FILE}" 2>&1

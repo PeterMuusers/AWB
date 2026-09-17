@@ -2,11 +2,18 @@
 
 APP_MAINTAINER="eelcohn"
 APP_NAME="AWB"
-APP_SOURCE="https://github.com/${APP_MAINTAINER}/${APP_NAME}"
 LOG_FILE="/var/log/${APP_NAME}/update.log"
 LAST_RUN_FILE="/var/log/${APP_NAME}/update.last_run"
 VERSION_FILE="/opt/${APP_NAME}/VERSION"
-BRANCH="$(git --git-dir=/opt/${APP_NAME}/.git rev-parse --abbrev-ref HEAD)"
+GIT_DIR="/opt/${APP_NAME}/.git"
+BRANCH="$(git --git-dir=${GIT_DIR} rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+
+# Bijwerken vanaf de plek waar deze installatie vandaan komt, en niet vanaf een adres dat hier
+# hardcoded staat. Wie vanaf een fork installeert wil de fork blijven volgen; anders verandert zijn
+# bord na één nacht in dat van iemand anders.
+APP_SOURCE="$(git --git-dir=${GIT_DIR} remote get-url origin 2>/dev/null || echo "https://github.com/${APP_MAINTAINER}/${APP_NAME}")"
+# eigenaar/repo uit de herkomst halen, voor het VERSION-bestand dat we rauw opvragen
+APP_SLUG="$(echo "${APP_SOURCE}" | sed -E 's#^(https?://[^/]+/|git@[^:]+:)##; s#\.git$##')"
 
 echo "" >> "${LOG_FILE}" 2>&1
 echo "$(date +%c) ---------- Updating and rebooting system ----------" >> "${LOG_FILE}" 2>&1
@@ -57,8 +64,18 @@ apt-get -qq -y autoremove >> "${LOG_FILE}" 2>&1
 # Update application
 # ------------------
 LOCAL_VERSION="`cat ${VERSION_FILE}`"
-#EXT_VERSION="`curl -s https://api.github.com/repos/eelcohn/${APP_NAME}/releases/latest | jq -r \".assets[] | select(.name) | .browser_download_url\"`"
-EXT_VERSION="`curl -s https://raw.githubusercontent.com/eelcohn/${APP_NAME}/main/VERSION`"
+# Het VERSION-bestand van de tak waar deze installatie op staat, bij de eigenaar waar hij vandaan
+# komt. Zit de herkomst niet op GitHub, dan kunnen we het zo niet opvragen en slaan we over in
+# plaats van te gokken: een verkeerde bron binnenhalen is erger dan een nacht niet bijwerken.
+case "${APP_SOURCE}" in
+	*github.com*)
+		EXT_VERSION="$(curl -s "https://raw.githubusercontent.com/${APP_SLUG}/${BRANCH}/VERSION")"
+		;;
+	*)
+		echo "$(date +%c) ${APP_SOURCE} is not on GitHub, so the version cannot be checked; skipping" >> "${LOG_FILE}" 2>&1
+		EXT_VERSION="${LOCAL_VERSION}"
+		;;
+esac
 if [ "${LOCAL_VERSION}" != "${EXT_VERSION}" ]
 then
 	echo "`date +%c` New ${APP_NAME} version found: ${EXT_VERSION} (Local version: ${LOCAL_VERSION})" >> "${LOG_FILE}" 2>&1

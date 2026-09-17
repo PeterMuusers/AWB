@@ -8,6 +8,14 @@ Aviation Weather Board
 That one fetches the project from GitHub, sets up a Pi in one go and installs a nightly updater. It
 is the shortest way to the released board.
 
+The updater follows wherever the installation came from, so a board installed from a fork keeps
+following that fork. To install from one, point the installer at it:
+
+`curl -s https://raw.githubusercontent.com/<you>/AWB/main/rpi/install.sh | sudo APP_SOURCE=https://github.com/<you>/AWB bash`
+
+`APP_BRANCH` picks a branch. Run from a checkout instead of through curl and it takes the origin of
+that checkout without being told.
+
 `rpi/setup.sh` sits next to it for the cases it does not cover: installing from the checkout you are
 standing in rather than from GitHub, so a fork or an unpublished branch also ends up on the board;
 setting up wifi, which a board without a network cable needs before it is any use; and putting the
