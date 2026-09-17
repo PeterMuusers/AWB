@@ -162,12 +162,20 @@ chown -R root:www-data "${APP_DIR}/html"
 chmod -R a+rX "${APP_DIR}/html"
 
 # lighttpd serves the checkout directly, so updating the board is copying files and nothing else.
-cat > /etc/lighttpd/conf-available/50-awb.conf <<EOF
-# Written by rpi/setup.sh
-server.document-root = "${APP_DIR}/html"
-index-file.names = ( "index.html" )
-EOF
-ln -sf ../conf-available/50-awb.conf /etc/lighttpd/conf-enabled/50-awb.conf
+# The document root is changed in lighttpd.conf itself rather than added in a file of our own:
+# lighttpd.conf already sets it, and lighttpd refuses a second assignment of the same setting
+# outright - "Duplicate config variable in conditional 0 global" - and then does not start at all.
+rm -f /etc/lighttpd/conf-enabled/50-awb.conf /etc/lighttpd/conf-available/50-awb.conf
+if grep -q '^server.document-root' /etc/lighttpd/lighttpd.conf; then
+	sed -i "s|^server.document-root.*|server.document-root        = \"${APP_DIR}/html\"|" /etc/lighttpd/lighttpd.conf
+else
+	echo "server.document-root        = \"${APP_DIR}/html\"" >> /etc/lighttpd/lighttpd.conf
+fi
+# Say what is wrong while the reason is still on the screen, instead of failing three steps later.
+if ! lighttpd -tt -f /etc/lighttpd/lighttpd.conf >/dev/null 2>&1; then
+	note "The lighttpd configuration does not pass its own check:"
+	lighttpd -tt -f /etc/lighttpd/lighttpd.conf 2>&1 | grep -viE 'locale|perl:|LANG|LC_' | tail -5
+fi
 systemctl restart lighttpd
 
 # ---------------------------------------------------------------- credentials
@@ -245,12 +253,19 @@ fi
 # ---------------------------------------------------------------- check
 
 say "Checking"
+# A moment for lighttpd to finish coming up. Asking the instant after a restart gets a refused
+# connection and prints a worrying message about a board that is in fact perfectly fine.
+for _ in 1 2 3 4 5; do
+	curl -fsS -o /dev/null http://127.0.0.1/ 2>/dev/null && break
+	sleep 1
+done
 if curl -fsS -o /dev/null http://127.0.0.1/; then
 	note "The web server answers on http://127.0.0.1/"
 else
 	note "The web server does not answer yet. Look at: journalctl -u lighttpd -n 40"
 fi
-if curl -fsS "http://127.0.0.1/luchtvaartmeteo-proxy.php?action=status" 2>/dev/null | grep -q '"configured":true'; then
+# The proxy talks to luchtvaartmeteo.nl, so give it longer than a local page would need.
+if curl -fsS --max-time 25 "http://127.0.0.1/luchtvaartmeteo-proxy.php?action=status" 2>/dev/null | grep -q '"configured":true'; then
 	note "luchtvaartmeteo.nl credentials are in place."
 else
 	note "No luchtvaartmeteo.nl credentials yet, so the measurements stay empty. See ${APP_DIR}/.env"
