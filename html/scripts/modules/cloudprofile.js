@@ -30,6 +30,9 @@ const AXIS_WIDTH = 34;					// pixels on the left for the altitude labels
 const CLOUD_COLOUR = '143, 176, 204';	// the cloud colour of the theme, as rgb parts
 const LABEL_CLEARANCE = 26;			// pixels a number needs from the line for now to sit centred on its dot
 const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
+const OKTA_OF = '/8';					// how the eighths are written on an expected layer
+const OKTA_LABEL_MIN_HEIGHT = 13;		// pixels; under this a block has no room for its number
+const OKTA_LABEL_TOP = 10;				// pixels from the top of the block to the baseline of the number
 
 class Module {
 	constructor(container_id) {
@@ -146,6 +149,8 @@ class Module {
 		var border = style.getPropertyValue('--block-border-color').trim() || 'rgba(127,127,127,0.2)';
 		var windColour = style.getPropertyValue('--wind-color').trim() || '#2a78d6';
 		var gustColour = style.getPropertyValue('--gust-color').trim() || '#eb6834';
+		var background = style.getPropertyValue('--block-background-color').trim() || '#151d27';
+		var cloudInk = 'rgba(' + CLOUD_COLOUR + ', 0.95)';
 
 		context.font = '9px sans-serif';
 		context.textBaseline = 'middle';
@@ -182,8 +187,19 @@ class Module {
 			}
 			hour.layers.forEach(layer => {
 				var top = y(Math.max(layer.top, layer.base + 200));
+				var height = y(layer.base) - top;
 				context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', ' + (0.15 + 0.6 * (layer.okta / 8)).toFixed(2) + ')';
-				context.fillRect(left, top, right - left, y(layer.base) - top);
+				context.fillRect(left, top, right - left, height);
+				/* How many eighths, in the block itself. The shade of the block says the same thing,
+				   but only next to another block: alone it is a tone without a scale to read it by.
+				   Dark ink on a solid block, light on a thin one, because the block is what it sits
+				   on. A block too small for the number keeps its shade and nothing else. */
+				var label = layer.okta + OKTA_OF;
+				if (height >= OKTA_LABEL_MIN_HEIGHT && (right - left) >= context.measureText(label).width + 4) {
+					context.fillStyle = (layer.okta >= 5) ? background : cloudInk;
+					context.textAlign = 'center';
+					context.fillText(label, (left + right) / 2, top + OKTA_LABEL_TOP);
+				}
 			});
 		});
 
