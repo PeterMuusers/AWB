@@ -17,6 +17,11 @@ const LANGUAGE_JUMPRUN_TURNED = 'gedraaid';
 const LANGUAGE_JUMPRUN_STRONGER = 'toegenomen';
 const LANGUAGE_JUMPRUN_WEAKER = 'afgenomen';
 const LANGUAGE_JUMPRUN_AT_FT = 'op';
+const LANGUAGE_JUMPRUN_TRACK = 'koers';
+const LANGUAGE_JUMPRUN_OFFSET = 'offset';
+const LANGUAGE_JUMPRUN_GREEN = 'groen licht';
+const LANGUAGE_JUMPRUN_SEPARATION = 'exitseparatie';
+const LANGUAGE_JUMPRUN_LARGE_GROUP = 'na grote groep';
 const LANGUAGE_REWRITTEN = '\u00b7 automatisch herschreven';
 const LANGUAGE_NOW = 'Nu';
 const LANGUAGE_CLOUD_BASE = 'Wolkenbasis';
@@ -71,6 +76,11 @@ export {
         LANGUAGE_JUMPRUN_STRONGER,
         LANGUAGE_JUMPRUN_WEAKER,
         LANGUAGE_JUMPRUN_AT_FT,
+        LANGUAGE_JUMPRUN_TRACK,
+        LANGUAGE_JUMPRUN_OFFSET,
+        LANGUAGE_JUMPRUN_GREEN,
+        LANGUAGE_JUMPRUN_SEPARATION,
+        LANGUAGE_JUMPRUN_LARGE_GROUP,
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
         LANGUAGE_NOW,

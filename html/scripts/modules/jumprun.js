@@ -21,11 +21,14 @@
 
 import { computeJumprun } from '../jumprun/calc/jumprun.js';
 import { profileFromAloft } from '../jumprun/calc/wind.js';
+import { bearing, distance } from '../jumprun/calc/geo.js';
+import { NM } from '../jumprun/calc/units.js';
 import { createJumprunMap } from '../jumprun/jumprun-map.js';
 import {
 	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
-	LANGUAGE_JUMPRUN_AT_FT,
+	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
+	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP,
 } from '../language.js';
 
 const PROXY_URL = './jumprun-proxy.php';
@@ -45,6 +48,8 @@ const PLAN_VERSION = 1;					// the shape of the plan this board understands
 const TURN_DEG = 20;
 const SPEED_KT = 5;
 const LOW_FT = 3000;					// "below this" is the canopy ride and the circuit
+const LARGE_GROUP_EXTRA_S = 2;			// AXIS-regel: zoveel seconden extra achter een grote groep
+const CARDINALS = ['N', 'O', 'Z', 'W'];
 
 class Module {
 	constructor(station) {
@@ -133,6 +138,10 @@ class Module {
 		var clock = when => when.toLocaleTimeString(document.config.locale, { hour: '2-digit', minute: '2-digit' });
 		var wind = Math.round(r.windAtExit.fromDeg) + '&deg; ' + Math.round(r.windAtExit.speedKt) + ' kt';
 
+		/* Waar dit over gaat, en dat is niet vanzelfsprekend: dit bord kan bij Echten hangen en dan
+		   staat er een andere jumprun. Boven alles, want het is het eerste wat je wilt weten. */
+		var where = (document.config.location && document.config.location.name)
+			|| entry.station.charAt(0).toUpperCase() + entry.station.slice(1);
 		/* het aantal exits staat op de kaart zelf, genummerd langs de lijn; in de kop zou het alleen
 		   een getal zijn dat je nog moet thuisbrengen */
 		var headline = LANGUAGE_JUMPRUN + ' ' + Math.round(r.trackMagneticDeg) + '&deg; &middot; '
@@ -162,8 +171,9 @@ class Module {
 			drift = '<span class="jumprun-drift' + (reaches === false ? ' jumprun-drift-alert' : '') + '">'
 				+ LANGUAGE_JUMPRUN_SINCE + ' ' + words.join(' &middot; ') + '</span>';
 		}
-		element.innerHTML = '<span class="jumprun-headline">' + headline + '</span>'
-			+ '<span class="jumprun-who">' + who + '</span>' + drift;
+		element.innerHTML = '<span class="jumprun-where">' + where + '</span>'
+			+ '<span class="jumprun-headline">' + headline + '</span>'
+			+ '<span class="jumprun-who">' + who + '</span>' + drift + this.numbers();
 	}
 
 	updateData() {
@@ -239,6 +249,37 @@ class Module {
 			console.warn('Jumprun cannot be computed: ' + error.message);
 			return null;
 		}
+	}
+
+	/* De twee dingen waar een springer op het bord naar zoekt: hoe de spot hier uitgesproken wordt,
+	   en hoeveel tijd er tussen de exits zit. Groter dan de rest, want dit is wat je onthoudt.
+	   De spot in de notatie van deze dropzone: koers, offset en groen licht. De offset staat niet
+	   als getal in het plan maar volgt uit waar het aanvliegpunt ligt ten opzichte van de bak. */
+	numbers() {
+		var r = this.planned;
+		var plan = this.entry.plan;
+		var landing = plan.landing || plan.target;
+		var offsetM = distance(landing, plan.target);
+		/* zonder NM erachter: onder dit getal staat het woord offset en die wordt nergens anders in
+		   uitgedrukt, dus de eenheid voegt alleen ruis toe */
+		var offset = (offsetM / NM).toFixed(1);
+		if (offsetM > 0.05 * NM) {
+			offset += ' ' + CARDINALS[Math.round(bearing(landing, plan.target) / 90) % 4];
+		}
+		var green = (r.greenLight.nm >= 0 ? '+' : '\u2212') + Math.abs(r.greenLight.nm).toFixed(1) + ' NM';
+
+		var normal = Math.round(r.separation.seconds);
+		var extra = (plan.largeGroupExtraS !== undefined) ? plan.largeGroupExtraS : LARGE_GROUP_EXTRA_S;
+
+		var cell = (value, label) => '<span class="jumprun-cell"><b>' + value + '</b>'
+			+ '<span class="jumprun-cell-label">' + label + '</span></span>';
+		return '<span class="jumprun-numbers">'
+			+ cell(Math.round(r.trackMagneticDeg) + '&deg;', LANGUAGE_JUMPRUN_TRACK)
+			+ cell(offset, LANGUAGE_JUMPRUN_OFFSET)
+			+ cell(green, LANGUAGE_JUMPRUN_GREEN)
+			+ cell(normal + ' s', LANGUAGE_JUMPRUN_SEPARATION)
+			+ (extra > 0 ? cell((normal + extra) + ' s', LANGUAGE_JUMPRUN_LARGE_GROUP) : '')
+			+ '</span>';
 	}
 
 	/* What the wind did since the plan was made, per group of levels that mean different things.

@@ -455,6 +455,15 @@ header,
 	line-height: 1.45;
 	pointer-events: none;
 }
+.jumprun-caption .jumprun-where {
+	display: block;
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--location-fontsize, 19pt);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	line-height: 1.05;
+}
 .jumprun-caption .jumprun-headline {
 	display: block;
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
@@ -470,6 +479,35 @@ header,
 .jumprun-caption .jumprun-drift {
 	display: block;
 	color: rgba(255, 255, 255, 0.82);
+}
+/* De spot en de separatie: groter dan de rest, want dit is wat iemand meeneemt naar het vliegtuig.
+   Elk getal met zijn woord eronder, zoals op jumprun.nl, zodat "270" en "0.9 NM Z" niet als één
+   reeks gaan lezen. */
+.jumprun-caption .jumprun-numbers {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 22px;
+	margin-top: 8px;
+}
+.jumprun-caption .jumprun-cell {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.15;
+}
+.jumprun-caption .jumprun-cell b {
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: var(--value-fontsize, 16pt);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	font-variant-numeric: tabular-nums;
+}
+.jumprun-caption .jumprun-cell-label {
+	font-size: var(--metadata-fontsize);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.7);
 }
 .jumprun-caption .jumprun-drift-alert {
 	color: var(--limit-color, var(--textcolor-alert));
