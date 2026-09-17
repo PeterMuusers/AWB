@@ -49,11 +49,13 @@ const SAT_GEOCOLOUR = {
 };
 const SAT_INFRARED = {
 	layer: 'mtg_fd:ir105_hrfi', style: 'mtg_fd_ir105_hrfi_grayscale', format: 'image/png', transparent: 'true',
-	/* brightness and contrast together decide which greys survive: everything under about 63 goes
-	   to black and everything over about 141 to pure white. The pair that was here before left a
-	   window of 58 to 97, and the image measures 89 to 117 in its brightest tenth, so nearly every
-	   cloud came out as flat white with no structure left in it. */
-	maxSize: 1024, brightness: 1.25, contrast: 2.6, grayscale: false,
+	/* brightness and contrast together decide which greys survive. Gemeten aan een echt beeld van
+	   een frontale zone bij nacht (17 sep 2026, 22:00): het beeld zit voor 99% onder 0,59 en heeft
+	   zijn wolken tussen 0,40 en 0,59. Met 1,25 en 2,6 klapte bijna vijf procent van het beeld dicht
+	   op wit - precies de koudste toppen, dus juist waar het over gaat - en werd de rest van de
+	   wolk één vlak. Met 1,10 en 2,1 klapt er niets meer dicht, blijft de heldere hemel even zwart
+	   (29% van het beeld, was 31%) en houden de wolken hun tekening. */
+	maxSize: 1024, brightness: 1.10, contrast: 2.1, grayscale: false,
 };
 const SAT_LAYERS = {
 	clouds: null,				// null = adaptive: visible by day, geocolour at dusk and at night
