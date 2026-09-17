@@ -21,9 +21,9 @@
 
 import { computeJumprun } from '../jumprun/calc/jumprun.js';
 import { profileFromAloft } from '../jumprun/calc/wind.js';
-import { bearing, distance } from '../jumprun/calc/geo.js';
+import { bearing, distance, offset as offsetPoint, vectorBetween } from '../jumprun/calc/geo.js';
 import { NM } from '../jumprun/calc/units.js';
-import { createJumprunMap } from '../jumprun/jumprun-map.js';
+import { createJumprunMap, commonReachPolygon } from '../jumprun/jumprun-map.js';
 import {
 	LANGUAGE_JUMPRUN, LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
@@ -122,7 +122,12 @@ class Module {
 		jmap.map.invalidateSize();
 		jmap.setTarget(plan.target, landing, landing, plan.extraTargets || [], true);
 		jmap.render(r);
+		var extra = this.drawNow(jmap, landing);
 		jmap.fit(r);
+		if (extra) {
+			/* de tweede lens ligt per definitie ergens anders; zonder dit valt hij half buiten beeld */
+			jmap.map.fitBounds(jmap.map.getBounds().extend(extra), { animate: false });
+		}
 		this.caption();
 	}
 
@@ -249,6 +254,42 @@ class Module {
 			console.warn('Jumprun cannot be computed: ' + error.message);
 			return null;
 		}
+	}
+
+	/* Het bereik zoals het met de wind van nu zou uitpakken, naast dat van het plan. Alleen als er
+	   werkelijk iets veranderd is, anders zou er op een rustige dag een tweede vorm bijkomen die
+	   niets toevoegt.
+
+	   In hetzelfde groen als het plan en gestippeld, zonder bijschrift. Het is geen waarschuwing maar
+	   gewoon de uitkomst met deze wind; dat hij ergens anders ligt dan de doorgetrokken lens zegt
+	   genoeg tegen wie erover gaat. Met een donkere rand eronder, zoals de kaartmodule dat zelf ook
+	   doet, want een dunne lijn verdwijnt op een licht weiland. */
+	drawNow(jmap, landing) {
+		if (this.nowLayer) {
+			this.nowLayer.remove();
+			this.nowLayer = null;
+		}
+		if (this.drift().length === 0) {
+			return null;
+		}
+		var wind = this.currentWind();
+		var current = wind ? this.compute(this.entry.plan, this.profileOf(wind)) : null;
+		if (current === null || !current.exits || current.exits.length === 0) {
+			return null;
+		}
+		var first = current.exits[0].canopy;
+		var last = current.exits[current.exits.length - 1].canopy;
+		var polygon = commonReachPolygon(vectorBetween(landing, first.center), vectorBetween(landing, last.center), first.radiusM);
+		if (!polygon) {
+			return null;
+		}
+		var points = polygon.map(vector => offsetPoint(landing, vector));
+		var green = style('--good') || '#0ca30c';
+		this.nowLayer = L.layerGroup([
+			L.polygon(points, { color: '#000000', weight: 5, opacity: 0.4, fill: false, interactive: false }),
+			L.polygon(points, { color: green, weight: 2.5, opacity: 1, dashArray: '7 6', fill: false, interactive: false }),
+		]).addTo(jmap.map);
+		return L.latLngBounds(points.map(point => [point.lat, point.lng]));
 	}
 
 	/* De twee dingen waar een springer op het bord naar zoekt: hoe de spot hier uitgesproken wordt,

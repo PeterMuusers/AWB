@@ -67,7 +67,8 @@ const exitIcon = (size = 1, miss = false) =>
  * tussen de eerste en de laatste cirkel. Geeft een lijst {east, north} (m) of null
  * als er geen gemeenschappelijk gebied is.
  */
-function commonReachPolygon(a, b, r, steps = 36) {
+// Ook los bruikbaar: het weerbord tekent er een tweede lens mee, die van de wind van nu.
+export function commonReachPolygon(a, b, r, steps = 36) {
   const dx = b.east - a.east, dy = b.north - a.north;
   const d = Math.hypot(dx, dy);
   const pts = [];
