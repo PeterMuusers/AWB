@@ -100,8 +100,6 @@ class Module {
 		this.units = null;
 
 		this.unit = (document.config.luchtvaartmeteo.windUnit === 'kt') ? UNIT_KNOTS : UNIT_METERS_PER_SECOND;
-		this.jumpLimit = document.config.luchtvaartmeteo.jumpLimit;
-		this.jumpLimitText = document.config.luchtvaartmeteo.jumpLimitText || '';
 
 		/* Set language specific stuff */
 		document.getElementById(ID_METRICS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
@@ -266,16 +264,6 @@ class Module {
 		this.set('wind-direction-arrow', direction === null ? ''
 			: '<span class="wind-arrow" style="transform: rotate(' + ((Math.round(direction) + 180) % 360) + 'deg)">'
 				+ '<span class="iconify" data-icon="mdi-arrow-up"></span></span>');
-
-		/* Jump limit warning, when configured */
-		var limitElement = document.getElementById('wind-jumplimit');
-		var strongest = (gust !== null) ? gust : wind;
-		if (this.jumpLimit && strongest !== null && Number(toUnit(strongest)) >= this.jumpLimit) {
-			limitElement.innerHTML = this.jumpLimitText;
-			limitElement.style.display = 'block';
-		} else {
-			limitElement.style.display = 'none';
-		}
 
 		/* Visibility: the sensor caps out, show that as a plus */
 		var visibility = this.value('vis_m');

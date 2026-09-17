@@ -66,9 +66,7 @@
 		"station": "hoogeveen",
 		"stationName": "Hoogeveen",
 		"note": "Ceilometer en wind gemeten op Hoogeveen, 4 km van de dropzone",
-		"windUnit": "kt",
-		"jumpLimit": 21,
-		"jumpLimitText": "Alleen ervaren springers"
+		"windUnit": "kt"
 	},
 	"openweathermap": {
 		"appid": "00000000000000000000000000000000"
