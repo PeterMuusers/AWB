@@ -813,6 +813,11 @@ header,
 	align-items: flex-start;
 	gap: 6px;
 	margin-top: 10px;
+	/* Lucht eronder en een haarlijn: de wolkenbasis is één ding en de metingen eronder een ander,
+	   en zonder die scheiding lopen ze in elkaar over als één lange lijst getallen. */
+	padding-bottom: 14px;
+	border-bottom: 1px solid var(--block-border-color);
+	width: 100%;
 }
 .metrics-cloudbase-value {
 	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
