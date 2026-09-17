@@ -257,6 +257,7 @@ class Module {
 		this.satSpec = null;		// the cloud image in use, one for the whole loop
 		this.forecastOverlays = {};	// key -> L.ImageOverlay
 		this.forecastSource = null;
+		this.satFailed = {};		// beelden die EUMETSAT aankondigde maar niet leverde
 		this.visible = [];			// overlays shown for the current frame
 
 		/* Set language specific stuff */
