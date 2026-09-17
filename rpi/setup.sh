@@ -282,8 +282,28 @@ if command -v wayfire >/dev/null 2>&1; then
 	STARTED_BY="wayfire"
 	note "Started by wayfire."
 fi
+# Het scherm vastzetten op de maat waarop dit bord gemaakt is. Het kioskscript zet die maat al bij
+# het starten, maar dat is één keer: gaat de televisie uit en weer aan, dan onderhandelt hij opnieuw
+# en kiest hij zijn eigen voorkeur - een 4K-scherm kiest 4K, en dan wordt dit bord van 1920 bij 1080
+# omhoog geschaald. Zwaarder voor de Pi, en de twee grafieken worden er onscherp van, want die
+# tekenen op canvas. kanshi kijkt mee en zet hem terug zodra het scherm zich opnieuw meldt.
+if command -v labwc >/dev/null 2>&1 || command -v wayfire >/dev/null 2>&1; then
+	apt-get -qq -y install kanshi >/dev/null 2>&1 || true
+	install -d -o "${USER_NAME}" -g "${USER_NAME}" "${USER_HOME}/.config/kanshi"
+	cat > "${USER_HOME}/.config/kanshi/config" <<EOF
+# Geschreven door rpi/setup.sh; zet het scherm terug op de maat van dit bord.
+profile {
+	output ${OUTPUT} enable mode ${RESOLUTION} position 0,0 scale 1
+}
+EOF
+	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/kanshi/config"
+fi
+
 if command -v labwc >/dev/null 2>&1; then
 	install -d -o "${USER_NAME}" -g "${USER_NAME}" "${USER_HOME}/.config/labwc"
+	grep -qxF "kanshi &" "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
+		|| sed -i '1i kanshi &' "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
+		|| echo "kanshi &" > "${USER_HOME}/.config/labwc/autostart"
 	grep -qxF "${KIOSK} &" "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
 		|| echo "${KIOSK} &" >> "${USER_HOME}/.config/labwc/autostart"
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/labwc/autostart"
