@@ -38,10 +38,12 @@ const MAX_LAYERS = 3;
    on the way out, which is where the club rule about gloves comes from, so the board marks it. */
 const EXIT_ALTITUDE = 12000;			// feet
 const SIGNIFICANT_SHIFT = 30;			// degrees; a turn of this much gets a colour of its own
-/* The wind just above the circuit decides how far out the spot has to be and whether a canopy can
-   still make it back. Above this it is marked, on the levels a jumper actually flies through. */
+/* De wind onderin bepaalt hoe ver de spot eruit moet en of een koepel nog terugkomt. Boven deze
+   grens wordt hij gemarkeerd, op elke hoogte tot en met vijfduizend voet. De grondrij blijft
+   ongemoeid: die draagt al de kleur van de stoten en zou anders twee signalen tegelijk dragen. */
 const LOW_WIND_LIMIT = 25;				// knots
-const LOW_WIND_LEVELS = [1000, 2000];	// feet
+const LOW_WIND_BELOW = 5000;			// feet; hieronder telt de grens, want dat is de hoogte waar je
+										// nog iets aan je plek kunt doen en waar de koepelrit begint
 
 class Module {
 	constructor() {
@@ -55,7 +57,7 @@ class Module {
 		this.exitAltitude = (this.config.exitAltitude !== undefined) ? this.config.exitAltitude : EXIT_ALTITUDE;
 		this.coldText = (this.config.coldText !== undefined) ? this.config.coldText : LANGUAGE_GLOVES;
 		this.windLimit = (this.config.windLimit !== undefined) ? this.config.windLimit : LOW_WIND_LIMIT;
-		this.windLimitLevels = this.config.windLimitLevels || LOW_WIND_LEVELS;
+		this.windLimitBelow = (this.config.windLimitBelow !== undefined) ? this.config.windLimitBelow : LOW_WIND_BELOW;
 		this.refreshInterval = 15 * 60 * 1000; // Refresh interval is 15 minutes
 
 		this.last_updated = null;
@@ -342,7 +344,7 @@ class Module {
 			}
 			var temperature = (columns[0].levels[feet] && columns[0].levels[feet].temp !== null)
 				? '<span class="windtemperature">' + columns[0].levels[feet].temp + '&nbsp;&deg;C</span>' : '';
-			var watched = this.windLimitLevels.indexOf(feet) !== -1;
+			var watched = feet <= this.windLimitBelow;
 			rows += '<tr><td class="windtext">' + feet.toLocaleString(document.config.locale) + temperature + '</td>'
 				+ columns.map((hour, index) => this.cell(hour.levels[feet], '', index > 0,
 					columns[0].levels[feet] ? columns[0].levels[feet].dir : null,
