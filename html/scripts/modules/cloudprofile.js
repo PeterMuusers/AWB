@@ -118,6 +118,12 @@ class Module {
 	}
 
 	updateData() {
+		/* The cloud colour lifted towards white with how much sky is covered. Squared, so only the
+		   last eighths really lighten: a layer of two eighths is cloud, eight eighths is a ceiling. */
+		var towardsWhite = okta => {
+			var share = Math.pow(Math.min(Math.max(okta, 0), 8) / 8, 2);
+			return CLOUD_COLOUR.split(',').map(part => Math.round(Number(part) + (255 - Number(part)) * share)).join(', ');
+		};
 		var canvas = document.getElementById(ID_CANVAS);
 		var aloft = (document.modules || {}).aloft;
 		var hours = (aloft && aloft.hours) ? aloft.hours : [];
@@ -206,11 +212,14 @@ class Module {
 			});
 		});
 
-		/* Measured layers: a short bar at the base, the more eighths the brighter */
+		/* Measured layers: a short bar at the base, the more eighths the brighter. A thin layer keeps
+		   the blue-grey of cloud; a closed sky runs all the way to white, so the difference between
+		   nearly and completely covered is one you can see from across the hangar rather than a
+		   shade you have to compare with the bar next to it. */
 		var step = (layers.length > 1) ? Math.abs(x(layers[1].time.getTime()) - x(layers[0].time.getTime())) : 6;
 		layers.forEach(moment => {
 			moment.layers.forEach(layer => {
-				context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', ' + (0.45 + 0.55 * (layer.okta / 8)).toFixed(2) + ')';
+				context.fillStyle = 'rgba(' + towardsWhite(layer.okta) + ', ' + (0.45 + 0.55 * (layer.okta / 8)).toFixed(2) + ')';
 				context.fillRect(x(moment.time.getTime()) - step / 2, y(layer.base) - MEASURED_BAR / 2, Math.max(3, step - 1), MEASURED_BAR);
 			});
 		});
