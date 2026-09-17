@@ -19,10 +19,13 @@ const ID_HEADER = 'cloudprofile-header';
 /* Gridlines of the altitude axis, evenly spaced on screen so the low altitudes get the room */
 /* The altitude axis is deliberately not linear: the first few thousand feet decide whether jumping
    is possible, so they get more room than their share. Every step between two of these gets the
-   same height on the chart, which makes the list itself the scale. The ground to five thousand now
-   takes three of the eight steps rather than four of seven: it was more than half the chart, which
-   squeezed everything above it into a strip and left the tops of a shower with nowhere to go. */
-const ALTITUDE_TICKS = [0, 1000, 3000, 5000, 8000, 11000, 14000, 17000, 20000];
+   same height on the chart, which makes the list itself the scale. The ground to five thousand takes
+   three of the eight steps: more than its share, but not the more than half it used to take, which
+   squeezed everything above it into a strip and left the tops of a shower with nowhere to go.
+   Nine, twelve and fifteen thousand are on the list because they are the altitudes the aircraft
+   drops from, so a layer sitting at one of them lands on a line of its own instead of somewhere
+   between two. */
+const ALTITUDE_TICKS = [0, 1000, 3000, 5000, 7000, 9000, 12000, 15000, 20000];
 const LABEL_HEIGHT = 14;				// pixels at the bottom for the times
 const TOP_LABEL_HEIGHT = 15;			// pixels at the top, above the chart, for 'measured | expected'
 const WIND_HEIGHT = 58;					// pixels at the bottom for the wind lines
