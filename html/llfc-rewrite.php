@@ -27,9 +27,16 @@ $CACHE_DIR = sys_get_temp_dir();
 $CURL_TIMEOUT = 60;
 $MIN_BULLETIN = 200;			// characters; anything shorter is not a bulletin
 $MAX_BULLETIN = 20000;
-/* Woorden die in het weerbulletin van het KNMI staan. Staat er geen enkele in, dan is dit niet het
-   bulletin waar dit eindpunt voor is - en dan hoeft de sleutel er ook niet aan op te gaan. */
-$BULLETIN_MARKERS = array('GELDIG', 'WEERBULLETIN', 'SIGNIFICANT', 'BEWOLKING', 'ZICHT', 'WIND');
+/* Waaraan je het weerbulletin van het KNMI herkent. Het komt uit de telexopmaak en begint met ZCZC;
+   dat is ook waar het bord de tekst afsnijdt, dus dat staat er altijd in. Komt de tekst ergens
+   anders vandaan, dan mag hij ook door als hij genoeg van de vaste kopjes heeft.
+
+   Dit is geen slot: wie weet wat hier staat komt erdoor. Het houdt tegen wat je ermee kunt tegen-
+   houden - een script dat willekeurige tekst langs elk eindpunt duwt - en het plafond per uur
+   hieronder is wat er overblijft als iemand wél weet waar hij mee bezig is. */
+$BULLETIN_START = 'ZCZC';
+$BULLETIN_MARKERS = array('GELDIG', 'WEERBULLETIN', 'SIGNIFICANT', 'BEWOLKING', 'ZICHT', 'WIND', 'THERMIEK', 'VOORUITZICHTEN');
+$BULLETIN_MIN_MARKERS = 4;
 $MAX_PER_HOUR = 12;				// het bord vraagt er een handvol per dag; dit is ruim en toch een plafond
 
 /* What the model is asked to do. Kept here rather than in the browser so it cannot be edited
@@ -182,14 +189,13 @@ if (strlen($bulletin) < $MIN_BULLETIN || strlen($bulletin) > $MAX_BULLETIN) {
    board can reach it. Two cheap guards, both of which the board itself never notices: the text has
    to look like the bulletin it is meant for, and there is a ceiling on how often anyone can ask.
    The board asks about four times a day, because the answer is cached under the bulletin itself. */
-$looks_like_bulletin = false;
+$markers = 0;
 foreach ($BULLETIN_MARKERS as $marker) {
 	if (stripos($bulletin, $marker) !== false) {
-		$looks_like_bulletin = true;
-		break;
+		$markers++;
 	}
 }
-if (!$looks_like_bulletin) {
+if (stripos($bulletin, $BULLETIN_START) === false && $markers < $BULLETIN_MIN_MARKERS) {
 	fail(400, 'That is not the bulletin this endpoint rewrites.');
 }
 $window = $CACHE_DIR . '/awb-llfc-rate-' . gmdate('YmdH') . '.count';

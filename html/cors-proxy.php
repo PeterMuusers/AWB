@@ -74,8 +74,22 @@ $headers[] = isset($_SERVER['HTTP_PRAGMA']) ? 'Pragma: ' . $_SERVER['HTTP_PRAGMA
 if (isset($_SERVER['HTTP_X_USER_AGENT'])) {
 	$headers[] = 'User-Agent: ' . $_SERVER['HTTP_X_USER_AGENT'];
 }
+/* Vragen of er iets veranderd is in plaats van het hele stuk opnieuw ophalen. Het weerbulletin van
+   het KNMI stuurt een etag mee; komt die onveranderd terug, dan antwoordt de bron met 304 en nul
+   bytes. Dan kan het bord vaker kijken en kost het minder dan nu. */
+if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
+	$headers[] = 'If-None-Match: ' . $_SERVER['HTTP_IF_NONE_MATCH'];
+}
+if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
+	$headers[] = 'If-Modified-Since: ' . $_SERVER['HTTP_IF_MODIFIED_SINCE'];
+}
 
+$response_headers = array();
 $ch = curl_init();
+curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($ch, $line) use (&$response_headers) {
+	$response_headers[] = $line;
+	return strlen($line);
+});
 curl_setopt($ch, CURLOPT_URL, $url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -96,6 +110,13 @@ http_response_code(curl_getinfo($ch, CURLINFO_HTTP_CODE));
 if (curl_getinfo($ch, CURLINFO_CONTENT_TYPE) !== null) {
 	header('Content-Type: ' . curl_getinfo($ch, CURLINFO_CONTENT_TYPE));
 }
+/* De etag terug naar het bord, anders kan het de volgende keer niet vragen of er iets veranderd is */
+foreach ($response_headers as $line) {
+	if (preg_match('/^(ETag|Last-Modified):\s*(.+?)\s*$/i', $line, $m)) {
+		header($m[1] . ': ' . $m[2]);
+	}
+}
+header('Access-Control-Expose-Headers: ETag, Last-Modified');
 header('X-CORSProxy-Total-Time: ' . curl_getinfo($ch, CURLINFO_TOTAL_TIME));
 echo($data);
 curl_close($ch);

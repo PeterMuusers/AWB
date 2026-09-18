@@ -342,7 +342,11 @@ class Module {
 		this.url = 'https://www.knmi.nl/nederland-nu/luchtvaart/weerbulletin-kleine-luchtvaart';
 		this.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:136.0) Gecko/20100101 Firefox/136.0';
 		this.cors_proxy_url = 'cors-proxy.php';
-		this.refreshInterval = 10 * 60 * 1000; // Refresh interval is 10 minutes
+		/* Vaker kijken kost niets meer sinds de vraag voorwaardelijk is: onveranderd is 304 en nul
+		   bytes. Het KNMI zet er zelf twee minuten cache op, dus vijf minuten is netjes en betekent
+		   dat een nieuw bulletin binnen vijf minuten op het bord staat. */
+		this.refreshInterval = 5 * 60 * 1000;
+		this.etag = null;
 
 		this.llfc = null;
 		this.llfc_items = {};
@@ -552,26 +556,39 @@ class Module {
 		/* Enable spinner icon */
 		document.getElementById(ID_LLFC_LAST_UPDATED_SPINNER).style.display = 'block';
 
-		/* Update KNMI LLFC data */
+		/* Update KNMI LLFC data. Met de etag van de vorige keer erbij: is het bulletin niet
+		   veranderd, dan antwoordt het KNMI met 304 en nul bytes, en dat kost bijna niets. Zo kan
+		   het bord vaker kijken zonder de bron vaker lastig te vallen. */
+		var conditional = { 'X-Request-Url': this.url, 'X-User-Agent': this.user_agent };
+		if (this.etag) {
+			conditional['If-None-Match'] = this.etag;
+		}
 		fetch(
 			this.cors_proxy_url,
 			{
-				headers: {
-					'X-Request-Url': this.url,
-                    'X-User-Agent': this.user_agent,
-				},
+				headers: conditional,
 				keepalive: true,
 				method: 'GET',
 				referrerPolicy: 'no-referrer',
 			}
 		).then(response => {
-			if (response.status == 200) {
-				return response.text();
-			} else {
-				console.warn('Returned HTTP error ' + response.status + ' (' + response.statusText + ')');
-				return null;
+			if (response.status == 304) {
+				/* niets veranderd sinds de vorige keer: het bulletin op het scherm klopt nog */
+				this.last_updated = new Date();
+				return undefined;
 			}
+			if (response.status == 200) {
+				this.etag = response.headers.get('ETag') || null;
+				return response.text();
+			}
+			console.warn('Returned HTTP error ' + response.status + ' (' + response.statusText + ')');
+			return null;
 		}).then(data => {
+			if (data === undefined) {
+				document.getElementById(ID_LLFC_LAST_UPDATED_SPINNER).style.display = 'none';
+				this.showData();
+				return;
+			}
 			/* Disable spinner icon */
 			document.getElementById(ID_LLFC_LAST_UPDATED_SPINNER).style.display = 'none';
 
