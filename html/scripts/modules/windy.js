@@ -143,45 +143,10 @@ class Module {
 		return this.waiting.length > 0;
 	}
 
-	/* Het drukniveau van Windy dat het dichtst bij deze hoogte ligt */
-	level(feet) {
-		if (feet <= 0) {
-			return 'surface';
-		}
-		return LEVELS.reduce((best, one) =>
-			(Math.abs(one.feet - feet) < Math.abs(best.feet - feet)) ? one : best, LEVELS[0]).level;
-	}
 
-	/* Het adres van de ingesloten kaart. De onderdelen van Windy zelf blijven uit: geen menu, geen
-	   kalender, geen boodschappen, en ook de speld niet. Die opent namelijk een ballonnetje met
-	   Windy's eigen windwaarde erin, en die wijkt af van het getal in de kop: Windy rekent met een
-	   ander model en op het dichtstbijzijnde drukniveau, dus op 9.000 ft stond er 22 kt naast onze
-	   26. Twee getallen die elkaar tegenspreken op hetzelfde scherm is erger dan geen speld. Waar de
-	   dropzone ligt wijst het bord zelf aan: de kaart is erop gecentreerd en er wordt aan alle
-	   kanten evenveel afgesneden, dus dat is het midden van het venster. */
+	/* Het adres van de ingesloten kaart voor deze hoogte */
 	source(feet) {
-		var parameters = {
-			lat: this.location.lattitude,
-			lon: this.location.longitude,
-			detailLat: this.location.lattitude,
-			detailLon: this.location.longitude,
-			zoom: this.zoom,
-			level: this.level(feet),
-			overlay: 'wind',
-			product: this.product,
-			menu: '',
-			message: '',
-			marker: 'false',
-			calendar: '',
-			pressure: '',
-			type: 'map',
-			detail: '',
-			metricWind: 'kt',
-			metricTemp: 'default',
-			radarRange: -1,
-		};
-		return EMBED_URL + '?' + Object.keys(parameters)
-			.map(key => key + '=' + encodeURIComponent(parameters[key])).join('&');
+		return windyUrl({ feet: feet, zoom: this.zoom, product: this.product });
 	}
 
 	/* Alle hoogtes die het aangaat achter elkaar, elk een eigen beurt. Geeft terug hoeveel beelden
@@ -261,4 +226,47 @@ class Module {
 	}
 }
 
-export { Module };
+/* Het drukniveau van Windy dat het dichtst bij deze hoogte ligt */
+function levelFor(feet) {
+	if (feet <= 0) {
+		return 'surface';
+	}
+	return LEVELS.reduce((best, one) =>
+		(Math.abs(one.feet - feet) < Math.abs(best.feet - feet)) ? one : best, LEVELS[0]).level;
+}
+
+/* Het adres van een ingesloten Windy-kaart. De onderdelen van Windy zelf blijven uit: geen menu,
+   geen kalender, geen boodschappen, en ook de speld niet. Die opent namelijk een ballonnetje met
+   Windy's eigen windwaarde erin, en die wijkt af van het getal dat het bord ernaast zet: Windy
+   rekent met een ander model en op het dichtstbijzijnde drukniveau. Twee getallen die elkaar
+   tegenspreken op hetzelfde scherm is erger dan geen speld.
+
+   `hoursAhead` zet de kaart zoveel uur vooruit; zonder staat hij op nu. Daarmee kan het vooruitzicht
+   de kaart van morgen tonen naast de tabel van morgen. */
+function windyUrl(options) {
+	var location = document.config.location || {};
+	var parameters = {
+		lat: location.lattitude,
+		lon: location.longitude,
+		detailLat: location.lattitude,
+		detailLon: location.longitude,
+		zoom: options.zoom || 7,
+		level: levelFor(options.feet),
+		overlay: 'wind',
+		product: options.product || 'ecmwf',
+		menu: '',
+		message: '',
+		marker: 'false',
+		calendar: options.hoursAhead ? String(Math.round(options.hoursAhead)) : '',
+		pressure: '',
+		type: 'map',
+		detail: '',
+		metricWind: 'kt',
+		metricTemp: 'default',
+		radarRange: -1,
+	};
+	return EMBED_URL + '?' + Object.keys(parameters)
+		.map(key => key + '=' + encodeURIComponent(parameters[key])).join('&');
+}
+
+export { Module, windyUrl, levelFor };

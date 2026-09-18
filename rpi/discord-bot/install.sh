@@ -84,6 +84,13 @@ echo "cache     : \${CACHE:-leeg}"
 # Wat er tijdelijk anders staat dan normaal. Alleen noemen als het zo is: een regel die altijd
 # "niets bijzonders" zegt lees je na twee keer niet meer, en dan mis je hem juist als het ertoe doet.
 [ -e /var/lib/awb/jumprun-hidden ] && echo "tijdelijk : jumpruns van het bord sinds \$(date -r /var/lib/awb/jumprun-hidden '+%d-%m %H:%M')"
+if [ -e /run/awb-outlook-until ]; then
+        EIND="\$(cat /run/awb-outlook-until 2>/dev/null)"
+        NU="\$(date +%s)"
+        if [ -n "\${EIND}" ] && [ "\${EIND}" -gt "\${NU}" ] 2>/dev/null; then
+                echo "tijdelijk : vooruitzicht voor morgen nog \$(( EIND - NU )) s"
+        fi
+fi
 if [ -e /run/awb-demo-scene ]; then
         EIND="\$(cut -d' ' -f1 /run/awb-demo-scene 2>/dev/null)"
         WAT="\$(cut -d' ' -f2 /run/awb-demo-scene 2>/dev/null)"
@@ -117,6 +124,7 @@ install -o root -g root -m 750 "$(dirname "$0")/awb-jumprun" /usr/local/sbin/awb
 install -o root -g root -m 750 "$(dirname "$0")/awb-jumprun-zetten" /usr/local/sbin/awb-jumprun-zetten
 install -o root -g root -m 750 "$(dirname "$0")/awb-summertime" /usr/local/sbin/awb-summertime
 install -o root -g root -m 750 "$(dirname "$0")/awb-demo" /usr/local/sbin/awb-demo
+install -o root -g root -m 750 "$(dirname "$0")/awb-vooruitzicht" /usr/local/sbin/awb-vooruitzicht
 
 cat > /usr/local/sbin/awb-log <<'EOF'
 #!/bin/bash
@@ -224,7 +232,8 @@ chmod 750 /usr/local/sbin/awb-kiosk-restart /usr/local/sbin/awb-cache-clear \
         /usr/local/sbin/awb-screenshot /usr/local/sbin/awb-status /usr/local/sbin/awb-reboot \
         /usr/local/sbin/awb-jumprun-tonen \
         /usr/local/sbin/awb-weer /usr/local/sbin/awb-jumprun /usr/local/sbin/awb-log \
-        /usr/local/sbin/awb-update /usr/local/sbin/awb-summertime /usr/local/sbin/awb-demo
+        /usr/local/sbin/awb-update /usr/local/sbin/awb-summertime /usr/local/sbin/awb-demo \
+        /usr/local/sbin/awb-vooruitzicht
 note "status, scherm, kiosk-herstart, cache leegmaken, weer, jumprun (tonen/verbergen/zetten), log, update, herstart"
 
 say "The bot's own user"
@@ -234,7 +243,7 @@ install -o root -g root -m 644 "$(dirname "$0")/bot.py" "${BOT_DIR}/bot.py"
 
 # Exactly these five, nothing else, and without a password because a service cannot type one.
 cat > /etc/sudoers.d/awb-discord <<EOF
-${BOT_USER} ALL=(root) NOPASSWD: /usr/local/sbin/awb-kiosk-restart, /usr/local/sbin/awb-cache-clear, /usr/local/sbin/awb-screenshot, /usr/local/sbin/awb-status, /usr/local/sbin/awb-reboot, /usr/local/sbin/awb-weer, /usr/local/sbin/awb-jumprun, /usr/local/sbin/awb-jumprun-tonen, /usr/local/sbin/awb-jumprun-zetten, /usr/local/sbin/awb-log, /usr/local/sbin/awb-update, /usr/local/sbin/awb-summertime, /usr/local/sbin/awb-demo
+${BOT_USER} ALL=(root) NOPASSWD: /usr/local/sbin/awb-kiosk-restart, /usr/local/sbin/awb-cache-clear, /usr/local/sbin/awb-screenshot, /usr/local/sbin/awb-status, /usr/local/sbin/awb-reboot, /usr/local/sbin/awb-weer, /usr/local/sbin/awb-jumprun, /usr/local/sbin/awb-jumprun-tonen, /usr/local/sbin/awb-jumprun-zetten, /usr/local/sbin/awb-log, /usr/local/sbin/awb-update, /usr/local/sbin/awb-summertime, /usr/local/sbin/awb-demo, /usr/local/sbin/awb-vooruitzicht
 EOF
 chmod 440 /etc/sudoers.d/awb-discord
 visudo -c -f /etc/sudoers.d/awb-discord >/dev/null && note "sudo-regels nagekeken en in orde"

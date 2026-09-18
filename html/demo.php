@@ -9,9 +9,11 @@
  *
  *   awb-demo-until   de mooiweerstand: het bord laadt zichzelf opnieuw met ?demo=<tijd> (demo.js)
  *   awb-demo-scene   een vast tafereel van een halve minuut, zonder herladen (demo-scenes.js)
+ *   awb-outlook-until  het vooruitzicht voor morgen op de plek van het bulletin (outlook.js)
  */
 $until_file = '/run/awb-demo-until';
 $scene_file = '/run/awb-demo-scene';
+$outlook_file = '/run/awb-outlook-until';
 
 $until = is_readable($until_file) ? (int) trim(file_get_contents($until_file)) : 0;
 $active = ($until > time());
@@ -25,10 +27,14 @@ if (is_readable($scene_file)) {
 	}
 }
 
+/* Het vooruitzicht voor morgen: alleen een eindtijd, want er valt niets te kiezen. */
+$outlook = is_readable($outlook_file) ? (int) trim(file_get_contents($outlook_file)) : 0;
+
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
 echo(json_encode(array(
 	'active' => $active,
 	'until' => $active ? $until : null,
 	'scene' => $scene,
+	'outlook' => ($outlook > time()) ? array('until' => $outlook) : null,
 )));

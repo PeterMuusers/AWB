@@ -367,6 +367,23 @@ async def summertime(interaction: discord.Interaction, minuten: int = 5) -> None
                  "lang. Met /normaal staat het echte weer er meteen weer.", limit=800)
 
 
+@bot.tree.command(name="vooruitzicht", description="Het weer van morgen op de plek van het bulletin")
+@app_commands.describe(seconden="hoe lang, standaard zestig; 0 stopt hem meteen")
+async def vooruitzicht(interaction: discord.Interaction, seconden: int = 60) -> None:
+    if not allowed(interaction):
+        return await deny(interaction)
+    seconden = max(0, min(600, seconden))
+    await interaction.response.defer(thinking=True)
+    if seconden == 0:
+        ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-vooruitzicht", "stop", timeout=30)
+        return await report(interaction, ok, result, "Het bulletin staat er weer.", limit=800)
+    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-vooruitzicht", str(seconden), timeout=30)
+    await report(interaction, ok, result,
+                 f"De wind van morgen op 10, 12, 14 en 16 uur, op dezelfde hoogtes als de tabel "
+                 f"ernaast, met de bewolking eronder. {seconden} seconden, dan is het bulletin er weer.",
+                 limit=800)
+
+
 @bot.tree.command(name="demo", description="Zet een half minuutje een vast tafereel op het bord")
 @app_commands.describe(wat="welk tafereel", seconden="hoe lang, standaard dertig")
 @app_commands.choices(wat=[

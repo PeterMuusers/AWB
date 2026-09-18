@@ -82,7 +82,7 @@ class Module {
 		this.updateData();
 	}
 
-	apiUrl() {
+	apiUrl(range) {
 		var fields = ['freezing_level_height', 'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m'];
 		WIND_LEVELS.forEach(level => {
 			fields.push('wind_speed_' + level + 'hPa', 'wind_direction_' + level + 'hPa', 'geopotential_height_' + level + 'hPa', 'temperature_' + level + 'hPa');
@@ -99,10 +99,18 @@ class Module {
 			hourly: fields.join(','),
 			models: this.model,
 			wind_speed_unit: 'kn',
-			past_hours: 1,
-			forecast_hours: this.hoursAhead + 2,
 			timezone: 'UTC',
 		};
+		/* Standaard het uur van nu en de paar uur erna. Met een datum erbij een hele dag, zodat het
+		   vooruitzicht (outlook.js) dezelfde velden, hetzelfde model en dezelfde interpolatie krijgt
+		   als de tabel op het bord - anders vergelijk je twee dingen die net anders gerekend zijn. */
+		if (range && range.start_date) {
+			query.start_date = range.start_date;
+			query.end_date = range.end_date || range.start_date;
+		} else {
+			query.past_hours = 1;
+			query.forecast_hours = this.hoursAhead + 2;
+		}
 		return API_URL + '?' + Object.keys(query).map(key => encodeURIComponent(key) + '=' + encodeURIComponent(query[key])).join('&');
 	}
 

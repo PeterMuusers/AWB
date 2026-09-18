@@ -18,6 +18,7 @@ import { Module as CloudProfile } from './modules/cloudprofile.js';
 import { Module as Jumprun } from './modules/jumprun.js';
 import { Module as Windy } from './modules/windy.js';
 import { Module as DemoScenes } from './modules/demo-scenes.js';
+import { Module as Outlook } from './modules/outlook.js';
 import { installDemo, showDemoMap } from './demo.js';
 
 const ID_DATETIME = 'datetime-data';
@@ -392,6 +393,8 @@ loadConfig(location).then(response => {
 	/* De vaste demo's uit Discord. Die overschrijven de modules hierboven, dus ze komen erna. */
 	if (demoUntil() === 0) {
 		document.modules.demoScenes = new DemoScenes();
+		/* Het vooruitzicht neemt de plek van het bulletin over, dus na de module die dat vult. */
+		document.modules.outlook = new Outlook();
 	}
 	if (document.config.cloudProfile) {
 		document.modules.cloudprofile = new CloudProfile('cloudprofile');

@@ -165,13 +165,20 @@ header,
 }
 .llfc {
 	flex: 2 100%;
+	display: flex;
+	flex-direction: column;
 	position: relative;
 	/* filled to the bottom of the screen by knmi_llfc.js, which also scales the text to fit it */
 	box-sizing: border-box;
 	overflow: hidden;
 }
+/* De kop telt mee: met height:100% op de inhoud wordt die net zo hoog als de hele tegel en valt de
+   onderste regel erbuiten (de tegel snijdt af). Als kolom met een groeiende inhoud krijgt die precies
+   de ruimte die overblijft - wat het bulletin niet merkt, en het vooruitzicht wel, want daar staat
+   een grafiek met een tijdbalk onderaan. */
 .llfc-content {
-	height: 100%;
+	flex: 1;
+	min-height: 0;
 }
 .llfc-validity {
 	margin-left: 10px;
@@ -537,6 +544,82 @@ header,
 /* Waar de cijfers vandaan komen en hoe oud ze zijn, in de kopbalk in plaats van onder elke tegel.
    Vijf keer hetzelfde soort regeltje onderin het beeld leest niemand; op één plek bij elkaar is het
    één regel die je kunt overslaan tot je hem nodig hebt. */
+/* Het vooruitzicht voor morgen, op de plek van het bulletin. De tabel leent de opmaak van het
+   windprofiel ernaast - dezelfde klassen, dus dezelfde cijfers en dezelfde signaalkleur - en krijgt
+   hier alleen de ruimte die deze bredere tegel biedt. */
+.outlook {
+	/* deze tegel laat zijn onderwerpen in kolommen lopen; het vooruitzicht is één geheel en neemt
+	   de volle breedte */
+	column-span: all;
+	display: grid;
+	/* de tabel is het zwaarste deel en krijgt de meeste ruimte */
+	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	gap: 16px;
+	height: 100%;
+}
+.outlook-left {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	min-width: 0;
+}
+.outlook-right {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+/* Het verloop van de dag, in dezelfde vormentaal als de wolkenbasistegel. */
+.outlook-chart {
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+}
+/* De tabel staat hier in een halve tegel met vier kolommen, terwijl het windprofiel er drie in een
+   hele heeft. Dezelfde opmaak op een maat kleiner: de variabelen waar die opmaak uit leest worden
+   hier overschreven, zodat er geen tweede set regels naast komt te staan. */
+.outlook-left {
+	--value-fontsize: 13pt;
+	--metadata-fontsize: 7.5pt;
+	--text-contents-fontsize: 11.5pt;
+}
+.outlook-table {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+.outlook-table th,
+.outlook-table td {
+	text-align: left;
+	padding: 2px 8px 2px 0;
+}
+.outlook-table td.windtext {
+	width: 21%;
+}
+/* De waarden staan rechts in hun kolom, en de kop erboven dus ook: anders staat "12:00" links van
+   de getallen waar hij bij hoort. */
+.outlook-left .windcell-row {
+	justify-content: flex-end;
+}
+.outlook-table thead th + th {
+	text-align: right;
+}
+/* de wolkenbasis is een getal met duizendtallen en heeft meer ruimte nodig dan een windsnelheid */
+.outlook-clouds .windspeed {
+	min-width: 3.6ch;
+}
+.outlook-clouds td {
+	padding-bottom: 6px;
+}
+/* de streep tussen de bewolking en de wind */
+.outlook-divider td {
+	padding: 0;
+	border-bottom: 1px solid var(--block-border-color, rgba(127, 127, 127, 0.25));
+}
+.outlook-table tbody tr:first-child td {
+	padding-top: 2px;
+}
+
 /* Het merkje dat er een demo loopt. Klein, maar in de kleur die verder nergens op het bord zit, want
    het hoort op te vallen zodra je ernaar kijkt en verder niets in de weg te zitten. */
 /* Let op de volgorde: het hidden-attribuut zet display op none via een regel van de browser zelf, en
