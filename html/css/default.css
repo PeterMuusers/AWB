@@ -638,6 +638,82 @@ header,
    luchtfoto, en daar is geen plaats voor een regel die je in twintig seconden moet kunnen lezen. */
 /* Het blok staat op een kaart die twintig seconden in beeld is, en wordt van een meter of vier
    gelezen. Eén knop om het geheel groter of kleiner te zetten: alles hieronder rekent ermee. */
+/* De windkaart van Windy in de kaarttegel. De iframe is groter dan het venster dat je ziet en ligt
+   er iets buiten: zo vallen Windy's eigen logo bovenaan, de legenda en de tijdbalk onderaan en de
+   knoppen rechts buiten beeld, zonder dat de kaart zelf verschuift - er wordt aan alle kanten
+   evenveel afgesneden, dus het midden blijft het midden. Meer of minder afsnijden doe je hier. */
+.layer-windy {
+	--windy-crop-y: 9%;
+	--windy-crop-x: 5%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 1100;
+	border-radius: 10px;
+	overflow: hidden;
+	background-color: var(--block-background-color);
+}
+.windy-frame-clip {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	overflow: hidden;
+}
+.windy-frame {
+	position: absolute;
+	top: calc(-1 * var(--windy-crop-y));
+	left: calc(-1 * var(--windy-crop-x));
+	width: calc(100% + 2 * var(--windy-crop-x));
+	height: calc(100% + 2 * var(--windy-crop-y));
+	border: 0;
+}
+/* De dropzone op Windy's kaart, in onze eigen stijl: Windy's eigen speld blijft uit, want die komt
+   met een ballonnetje waar Windy's windwaarde in staat, en die wijkt af van het getal in de kop. */
+.windy-here {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 14px;
+	height: 14px;
+	margin: -7px 0 0 -7px;
+	z-index: 400;
+	border: 2px solid #ffffff;
+	border-radius: 50%;
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+	pointer-events: none;
+}
+/* Dezelfde kop als bij de jumprun: het getal groot, de hoogte erachter waar het bij hoort. */
+.windy-caption {
+	--jr-scale: 1.5;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	z-index: 500;
+	padding: calc(10px * var(--jr-scale)) calc(14px * var(--jr-scale)) calc(26px * var(--jr-scale));
+	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0));
+	color: #ffffff;
+	pointer-events: none;
+}
+.windy-caption .windy-what {
+	display: block;
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-size: calc(var(--location-fontsize, 19pt) * var(--jr-scale));
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	line-height: 1.05;
+}
+.windy-caption .windy-alt {
+	font-size: 80%;
+	font-weight: 600;
+	opacity: 0.85;
+	margin-left: 0.4em;
+}
 .jumprun-caption {
 	--jr-scale: 1.5;
 	position: absolute;

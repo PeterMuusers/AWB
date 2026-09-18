@@ -16,6 +16,7 @@ import { Module as WeerSlag } from './modules/weerslag.js';
 import { Module as Aloft } from './modules/aloft.js';
 import { Module as CloudProfile } from './modules/cloudprofile.js';
 import { Module as Jumprun } from './modules/jumprun.js';
+import { Module as Windy } from './modules/windy.js';
 import { installDemo, showDemoMap } from './demo.js';
 
 const ID_DATETIME = 'datetime-data';
@@ -374,6 +375,10 @@ loadConfig(location).then(response => {
 		var dropzones = document.config.jumprun.stations
 			|| [document.config.jumprun.station || document.config.radar?.forecast?.station || 'hoogeveen'];
 		document.modules.jumprun = new Jumprun(dropzones);
+	}
+	/* De windkaart hoort achter de hoogtewinden aan: die bepalen of er iets te tonen is. */
+	if (document.config.windy && demoUntil() === 0) {
+		document.modules.windy = new Windy();
 	}
 	if (document.config.cloudProfile) {
 		document.modules.cloudprofile = new CloudProfile('cloudprofile');

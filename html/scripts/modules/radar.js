@@ -245,6 +245,11 @@ class Module {
 		this.jumprunAfterRuns = jumprun.afterRuns || 0;
 		this.jumprunSeconds = jumprun.seconds || 20;
 		this.jumprunTimer = null;
+		/* en hoe vaak de windkaart dat doet, als er harde wind op hoogte staat */
+		var windy = document.config.windy || {};
+		this.windAfterRuns = (windy.afterRuns !== undefined) ? windy.afterRuns : 1;
+		this.windSeconds = windy.seconds || this.jumprunSeconds;
+		this.windRuns = 0;
 		this.runs = 0;
 
 		this.last_updated = null;
@@ -767,6 +772,25 @@ class Module {
 		return jumprun.sequence(this.jumprunSeconds);
 	}
 
+	/* Achter de jumpruns aan, en alleen als de hoogtewinden over hun grens gaan: de windkaart van
+	   Windy, elk gemarkeerd niveau een eigen beeld. Ze delen dezelfde tegel als de jumprun, dus dit
+	   begint pas als die klaar is - vandaar dat het aantal milliseconden tot dat moment meekomt.
+	   Geeft terug hoeveel beelden het zijn, zodat de lus weet hoe lang hij nog moet wachten. */
+	windTurn(after) {
+		var windy = (document.modules || {}).windy;
+		if (!windy || !windy.active || !this.windAfterRuns) {
+			return 0;
+		}
+		this.windRuns = (this.windRuns || 0) + 1;
+		if (this.windRuns < this.windAfterRuns) {
+			return 0;
+		}
+		this.windRuns = 0;
+		var count = windy.waiting.length;
+		setTimeout(() => windy.sequence(this.windSeconds), after);
+		return count;
+	}
+
 	/* Replace the forecast overlays when the run (or the source) changes */
 	syncForecast(forecast, radarEnd) {
 		var run = forecast ? (forecast.source + ':' + forecast.run) : null;
@@ -955,7 +979,10 @@ class Module {
 		this.index = (this.index + 1) % this.frames.length;
 		if (last) {
 			/* the jumpruns take the map over for a while; the loop picks up where it left off */
-			delay += this.jumprunTurn() * this.jumprunSeconds * 1000;
+			var jumpruns = this.jumprunTurn() * this.jumprunSeconds * 1000;
+			delay += jumpruns;
+			/* en daarachteraan, bij harde wind op hoogte, de windkaart */
+			delay += this.windTurn(jumpruns) * this.windSeconds * 1000;
 		}
 		this.timer = setTimeout(this.showFrame.bind(this), delay);
 	}
