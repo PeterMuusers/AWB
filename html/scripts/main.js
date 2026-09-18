@@ -319,6 +319,16 @@ document.config = {};
 loadConfig(location).then(response => {
     /* Check if a custom location is given */
 
+	/* Het bord zoals het was, voor wie de nieuwe indeling niet wil: classic.html is een letterlijke
+	   kopie van de pagina, de opmaak en het startscript van eelcohn/AWB. Dat is een andere pagina en
+	   geen schakelaar in deze, want de twee delen geen enkele regel opmaak - en een halve overgang
+	   ziet er slechter uit dan allebei de uitersten. */
+	if (document.config && document.config.layout === 'classic') {
+		var keep = window.location.search;
+		window.location.replace('classic.html' + keep);
+		return;
+	}
+
 	/* The palette comes first, so the board never paints itself twice */
 	applyTheme(document.config ? document.config.theme : undefined);
 

@@ -137,6 +137,13 @@ https://opensky-network.org/aircraft-profile
 https://openweathermap.org/
 #### Sat24
 https://www.sat24.com/
+#### The board as it was
+`"layout": "classic"` in config.json sends the board to `classic.html`, which is the page, the stylesheet and the start script of eelcohn/AWB copied over verbatim (`classic.html`, `css/classic.css`, `scripts/classic.js`). It is a separate page rather than a switch in this one, because the two share no line of styling and half a transition looks worse than either end of it. Those three files are not maintained here: to update them, copy them across from that repository again.
+
+The five original themes (`blue-blue`, `dark-blue`, `dark-grey`, `light-blue`, `light-grey`) work there and are selectable again through `theme`; they were unreachable for a while because `applyTheme` prefixed every name with `jumprun-`. The three that belong to the tile layout are `navy`, `dark` and `light`.
+
+The modules are shared, so the classic page gets the fixes too — the bulletin tile filled, the User-Agent the KNMI insists on, and the rewritten forecast when a key is set.
+
 #### Measurements: luchtvaartmeteo, or Weerlive
 The metrics panel is filled by `luchtvaartmeteo.js` from the API behind luchtvaartmeteo.nl, which needs an account (`LVM_EMAIL`/`LVM_PASSWORD` in `.env`) and is configured with the `luchtvaartmeteo` block. Leave that block out and the same panel falls back to Weerlive, the source this board used before — no account, a key in `weerlive.key`, and less: no gusts, no precipitation in mm/h and no cloud base, because that comes from a ceilometer. The cloud base block and the cloud chart hide themselves when there is nothing to put in them, and precipitation shows a dash rather than "dry": not measured is not the same as nothing falling.
 
