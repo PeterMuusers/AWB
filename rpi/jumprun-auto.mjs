@@ -23,9 +23,14 @@
  *   --offset 0.6 --richting Z     de offset; bij de polaire notatie mag richting ook in graden
  *   --groen 0.8        groen licht in NM ten opzichte van de bak (− = ervoor)
  *
- * Publiceren vraagt een token van jumprun.nl in .env (JUMPRUN_TOKEN); dat wordt aangemaakt op de
- * server met `cloudbase --token <naam>`. De naam van het token komt bij de jumprun op het bord te
- * staan: wie hem ophing hoort zichtbaar te zijn.
+ * Publiceren vraagt een token van jumprun.nl; dat wordt aangemaakt op de server met
+ * `cloudbase --token <naam>`. De naam van het token komt bij de jumprun op het bord te staan: wie
+ * hem ophing hoort zichtbaar te zijn.
+ *
+ * Dat token staat in /etc/awb/jumprun-token, alleen leesbaar voor root, en niet in .env: dat bestand
+ * wordt ook door de webserver gelezen (voor de sleutels van de weerbronnen), en met dit token kan
+ * iemand een jumprun op het bord zetten. Staat het er niet, dan wordt .env alsnog gelezen - dan
+ * werkt een oudere installatie gewoon door.
  */
 
 import { readFileSync } from 'node:fs';
@@ -43,6 +48,7 @@ import { NM } from '../html/scripts/jumprun/calc/units.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const DEFAULT_URL = 'https://weer.jumprun.nl';
+const TOKEN_FILE = '/etc/awb/jumprun-token';
 const TRACK_STEP_DEG = 10;          // zoals de piloot hem invoert; dezelfde standaard als op het scherm
 const TIMEOUT_MS = 25000;
 
@@ -65,6 +71,19 @@ function readEnv() {
 		env[match[1]] = match[2].trim().replace(/^["'](.*)["']$/, '$1');
 	}
 	return env;
+}
+
+/** Het token om te publiceren: eerst het bestand dat alleen root kan lezen, anders .env. */
+function readToken(env) {
+	try {
+		const token = readFileSync(TOKEN_FILE, 'utf8').trim();
+		if (token) {
+			return token;
+		}
+	} catch {
+		/* niet aanwezig of niet leesbaar: dan .env */
+	}
+	return (env.JUMPRUN_TOKEN || '').trim();
 }
 
 function args(argv) {
@@ -251,9 +270,10 @@ async function main() {
 		return;
 	}
 
-	const token = env.JUMPRUN_TOKEN || '';
+	const token = readToken(env);
 	if (!token) {
-		throw new Error('geen JUMPRUN_TOKEN in .env; maak er een op de server met `cloudbase --token <naam>`');
+		throw new Error('geen token gevonden in /etc/awb/jumprun-token of .env;'
+			+ ' maak er een op de server met `cloudbase --token <naam>`');
 	}
 	const response = await fetch(`${url}/api/board/jumprun`, {
 		method: 'POST',

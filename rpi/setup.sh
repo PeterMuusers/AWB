@@ -112,6 +112,18 @@ for ini in /etc/php/*/cgi/conf.d; do
 	note "PCRE JIT uit in $(basename "$(dirname "${ini}")")"
 done
 
+# Het token waarmee dit bord een jumprun op jumprun.nl mag zetten hoort niet in .env: dat bestand
+# wordt ook door de webserver gelezen, voor de sleutels van de weerbronnen. Met dit token kan iemand
+# een jumprun publiceren, dus het staat apart en alleen root komt erbij. Stond het al in .env van een
+# eerdere installatie, dan verhuist het hier.
+install -d -m 700 /etc/awb
+if [ ! -s /etc/awb/jumprun-token ] && grep -q '^JUMPRUN_TOKEN=' "${APP_DIR}/.env" 2>/dev/null; then
+	awk -F= '/^JUMPRUN_TOKEN=/{print $2}' "${APP_DIR}/.env" > /etc/awb/jumprun-token
+	chmod 600 /etc/awb/jumprun-token
+	sed -i '/^JUMPRUN_TOKEN=/d' "${APP_DIR}/.env"
+	note "Het jumprun-token staat nu in /etc/awb/jumprun-token, alleen leesbaar voor root"
+fi
+
 # Een logboek dat een herstart overleeft. Zonder dit staat het journaal in RAM, en dan is na een
 # onverwachte herstart precies het stuk weg dat je nodig hebt: wat er vlak daarvoor gebeurde. Met
 # grenzen erbij, want dit is een SD-kaart: tweehonderd megabyte in totaal, bestanden van hoogstens

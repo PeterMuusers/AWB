@@ -27,6 +27,10 @@ $CACHE_DIR = sys_get_temp_dir();
 $CURL_TIMEOUT = 60;
 $MIN_BULLETIN = 200;			// characters; anything shorter is not a bulletin
 $MAX_BULLETIN = 20000;
+/* Woorden die in het weerbulletin van het KNMI staan. Staat er geen enkele in, dan is dit niet het
+   bulletin waar dit eindpunt voor is - en dan hoeft de sleutel er ook niet aan op te gaan. */
+$BULLETIN_MARKERS = array('GELDIG', 'WEERBULLETIN', 'SIGNIFICANT', 'BEWOLKING', 'ZICHT', 'WIND');
+$MAX_PER_HOUR = 12;				// het bord vraagt er een handvol per dag; dit is ruim en toch een plafond
 
 /* What the model is asked to do. Kept here rather than in the browser so it cannot be edited
    from the outside, and so every screen gets the same wording. */
@@ -174,6 +178,26 @@ $bulletin = trim(file_get_contents('php://input'));
 if (strlen($bulletin) < $MIN_BULLETIN || strlen($bulletin) > $MAX_BULLETIN) {
 	fail(400, 'No usable bulletin received.');
 }
+/* This endpoint spends the key in .env, and the board hangs on a network where more people than the
+   board can reach it. Two cheap guards, both of which the board itself never notices: the text has
+   to look like the bulletin it is meant for, and there is a ceiling on how often anyone can ask.
+   The board asks about four times a day, because the answer is cached under the bulletin itself. */
+$looks_like_bulletin = false;
+foreach ($BULLETIN_MARKERS as $marker) {
+	if (stripos($bulletin, $marker) !== false) {
+		$looks_like_bulletin = true;
+		break;
+	}
+}
+if (!$looks_like_bulletin) {
+	fail(400, 'That is not the bulletin this endpoint rewrites.');
+}
+$window = $CACHE_DIR . '/awb-llfc-rate-' . gmdate('YmdH') . '.count';
+$asked = is_readable($window) ? (int)file_get_contents($window) : 0;
+if ($asked >= $MAX_PER_HOUR) {
+	fail(429, 'Too many rewrites this hour.');
+}
+@file_put_contents($window, (string)($asked + 1), LOCK_EX);
 
 $model = configured_model();
 /* the instruction is part of the key: change the wording and the next answer is asked again
