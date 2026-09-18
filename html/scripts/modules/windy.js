@@ -83,7 +83,11 @@ class Module {
 	   lagen die nauwelijks schelen zeggen hetzelfde, en dan is de hardste degene die je wil zien. */
 	get waiting() {
 		var aloft = (document.modules || {}).aloft;
-		var now = (aloft && aloft.hours && aloft.hours.length) ? aloft.hours[0] : null;
+		/* Het uur dat in de kolom NU staat, niet het eerste uur dat het model teruggaf: die reeks
+		   begint eerder op de dag, en dan zou de kaart over een ander uur gaan dan de tabel ernaast.
+		   Gemeten op 18 sep 2026: hours[0] was 06:00 UTC met 26 kt terwijl NU 08:00 UTC en 22 kt was. */
+		var columns = (aloft && typeof aloft.columns === 'function') ? aloft.columns() : [];
+		var now = columns.length ? columns[0] : null;
 		if (!now || this.config.enabled === false) {
 			return [];
 		}
