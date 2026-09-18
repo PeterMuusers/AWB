@@ -9,9 +9,17 @@
  * over - net als een jumprun - zodat je in één oogopslag ziet waar het vandaan komt en hoe breed
  * het zit.
  *
- * Welke hoogte er getoond wordt bepaalt de module met de hoogtewinden (aloft.alerts()): hooguit
- * twee, een uit de lage reeks en een uit de hoge. Dit beeld voegt daar niets aan toe en trekt geen
- * conclusies; het toont hetzelfde getal dat in de tabel staat, op de kaart.
+ * Dit beeld heeft zijn eigen grenzen, en die liggen hoger dan waar de windtabel zijn cellen kleurt.
+ * Dat is met opzet: een gekleurde cel betekent "hier moet je even naar kijken", en dat is niet elke
+ * keer een half scherm waard. Er komt pas een kaart bij:
+ *
+ *     - meer dan 30 kt op 1.000, 2.000 of 3.000 ft   -> de hardste van die drie
+ *     - meer dan 40 kt tussen 9.000 en 12.000 ft     -> de hardste van die twee
+ *     - meer dan 20 kt aan de grond                  -> de gemeten wind
+ *
+ * Ze kunnen alle drie tegelijk gelden, en dan komen ze ook alle drie langs, van de grond omhoog.
+ * Dit beeld voegt niets toe en trekt geen conclusies; het toont hetzelfde getal dat elders op het
+ * bord staat, op de kaart.
  *
  * De iframe krijgt zijn adres pas als het beeld aan de beurt is en raakt het daarna weer kwijt.
  * Windy tekent met WebGL en blijft doorrekenen zolang hij geladen is; op een Raspberry Pi is dat
@@ -19,7 +27,7 @@
  */
 
 import { UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_WIND, LANGUAGE_JUMPRUN_AT_FT } from '../language.js';
+import { LANGUAGE_WIND, LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_AT_GROUND } from '../language.js';
 
 const ID_LAYER = 'layer-windy-id';
 const ID_FRAME = 'windy-frame-id';
@@ -30,6 +38,15 @@ const EMBED_URL = 'https://embed.windy.com/embed2.html';
    Van de hoogte in de tabel wordt het dichtstbijzijnde niveau gekozen - tussenliggende niveaus
    bestaan daar niet, dus 9.000 ft wordt 700 hPa en dat is 9.900 ft. Het getal in de kop blijft de
    hoogte uit de tabel, want dat is waar de waarde bij hoort. */
+/* Wanneer een hoogte een kaart waard is. Onderin gaat het om de koepelrit en om wat de wind met een
+   landing doet; daarboven om de uitloop van de jumprun en de afstand tussen de groepen. De grond
+   staat er apart in, want die wordt gemeten en niet gerekend. */
+const LOW_BAND = [1000, 3000];			// feet, van en tot
+const LOW_LIMIT = 30;					// knots, meer dan
+const HIGH_BAND = [9000, 12000];
+const HIGH_LIMIT = 40;
+const GROUND_LIMIT = 20;
+
 const LEVELS = [
 	{ level: 'surface', feet: 0 },
 	{ level: '100m', feet: 330 },
@@ -52,18 +69,70 @@ class Module {
 		   over Nederland, maar lopen niet altijd even ver door. */
 		this.product = this.config.product || 'ecmwf';
 		this.zoom = this.config.zoom || 7;
+		this.lowBand = this.config.lowBand || LOW_BAND;
+		this.lowLimit = (this.config.lowLimit !== undefined) ? this.config.lowLimit : LOW_LIMIT;
+		this.highBand = this.config.highBand || HIGH_BAND;
+		this.highLimit = (this.config.highLimit !== undefined) ? this.config.highLimit : HIGH_LIMIT;
+		this.groundLimit = (this.config.groundLimit !== undefined) ? this.config.groundLimit : GROUND_LIMIT;
 		this.turn = -1;
 		this.sequenceTimer = null;
 		this.shown = null;
 	}
 
-	/* De hoogtes die op dit moment een beeld waard zijn; de hoogtewinden bepalen dat. */
+	/* Wat er op dit moment een kaart waard is, van de grond omhoog. Per band de hardste laag: twee
+	   lagen die nauwelijks schelen zeggen hetzelfde, en dan is de hardste degene die je wil zien. */
 	get waiting() {
 		var aloft = (document.modules || {}).aloft;
-		if (!aloft || typeof aloft.alerts !== 'function' || this.config.enabled === false) {
+		var now = (aloft && aloft.hours && aloft.hours.length) ? aloft.hours[0] : null;
+		if (!now || this.config.enabled === false) {
 			return [];
 		}
-		return aloft.alerts();
+		var out = [];
+		var ground = this.ground(now);
+		if (ground !== null && ground.kt > this.groundLimit) {
+			out.push({ feet: 0, kt: ground.kt, dir: ground.dir, range: 'ground' });
+		}
+		var low = this.hardest(now, this.lowBand, this.lowLimit, 'low');
+		if (low !== null) {
+			out.push(low);
+		}
+		var high = this.hardest(now, this.highBand, this.highLimit, 'high');
+		if (high !== null) {
+			out.push(high);
+		}
+		return out;
+	}
+
+	/* De hardste laag in een band die over zijn grens gaat, of null. De hoogtes komen uit
+	   `upperwinds`, dus een bord met andere hoogtes krijgt vanzelf de zijne die in de band vallen. */
+	hardest(hour, band, limit, range) {
+		var best = null;
+		Object.keys(hour.levels).forEach(key => {
+			var feet = Number(key);
+			var wind = hour.levels[key];
+			if (feet < band[0] || feet > band[1] || !wind || wind.kt === null || wind.kt === undefined) {
+				return;
+			}
+			if (wind.kt > limit && (best === null || wind.kt > best.kt)) {
+				best = { feet: feet, kt: wind.kt, dir: wind.dir, range: range };
+			}
+		});
+		return best;
+	}
+
+	/* De wind aan de grond: gemeten als er een meting is, anders wat het model voor dit uur zegt -
+	   dezelfde volgorde als de onderste regel van de windtabel, zodat de twee niet uit elkaar lopen. */
+	ground(hour) {
+		var measured = (document.modules || {}).luchtvaartmeteo;
+		var observation = measured ? measured.observation : null;
+		if (observation && observation.wind_kt !== null && observation.wind_kt !== undefined) {
+			return {
+				kt: Math.round(observation.wind_kt),
+				dir: (observation.wind_dir === null || observation.wind_dir === undefined)
+					? null : Math.round(observation.wind_dir),
+			};
+		}
+		return hour.ground ? { kt: hour.ground.kt, dir: hour.ground.dir } : null;
 	}
 
 	get active() {
@@ -72,6 +141,9 @@ class Module {
 
 	/* Het drukniveau van Windy dat het dichtst bij deze hoogte ligt */
 	level(feet) {
+		if (feet <= 0) {
+			return 'surface';
+		}
 		return LEVELS.reduce((best, one) =>
 			(Math.abs(one.feet - feet) < Math.abs(best.feet - feet)) ? one : best, LEVELS[0]).level;
 	}
@@ -161,10 +233,12 @@ class Module {
 		if (!caption) {
 			return;
 		}
+		var where = (which.range === 'ground')
+			? LANGUAGE_AT_GROUND
+			: LANGUAGE_JUMPRUN_AT_FT + ' ' + which.feet.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET;
 		caption.innerHTML = '<span class="windy-what">' + LANGUAGE_WIND + ' '
 			+ which.kt + '&nbsp;' + UNIT_KNOTS
-			+ '<span class="windy-alt">' + LANGUAGE_JUMPRUN_AT_FT + ' '
-			+ which.feet.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + '</span></span>';
+			+ '<span class="windy-alt">' + where + '</span></span>';
 	}
 
 	hide() {

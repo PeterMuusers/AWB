@@ -35,6 +35,7 @@ const LANGUAGE_FREEZING_LEVEL_AT = '0 \u00b0C op';
 const LANGUAGE_MEASURED = 'grond gemeten, hoogtes uit het model';
 const LANGUAGE_WIND_PROFILE = 'Windprofiel';
 const LANGUAGE_WIND = 'Wind';
+const LANGUAGE_AT_GROUND = 'aan de grond';
 const LANGUAGE_WIND_DIRECTION = 'Richting';
 const LANGUAGE_VISIBILITY = 'Zicht';
 const LANGUAGE_PRECIPITATION = 'Neerslag';
@@ -98,6 +99,7 @@ export {
         LANGUAGE_MEASURED,
         LANGUAGE_WIND_PROFILE,
         LANGUAGE_WIND,
+        LANGUAGE_AT_GROUND,
         LANGUAGE_WIND_DIRECTION,
         LANGUAGE_VISIBILITY,
         LANGUAGE_PRECIPITATION,

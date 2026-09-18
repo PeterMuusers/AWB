@@ -47,9 +47,6 @@ const LOW_WIND_BELOW = 5000;			// feet; hieronder telt de grens, want dat is de 
 /* Boven die hoogte hangt de springer nog aan de vrije val en drijft hij gewoon mee; daar telt pas
    veel hardere wind, omdat die de uitloop van de jumprun en de afstand tussen de groepen bepaalt. */
 const HIGH_WIND_LIMIT = 45;				// knots, boven LOW_WIND_BELOW
-/* Twee gemarkeerde lagen onderin die nauwelijks schelen zeggen hetzelfde; is er verderop in de lage
-   reeks een laag die er zoveel bovenuit steekt, dan is dat de laag om te laten zien. */
-const LOW_WIND_STRONGER_BY = 5;			// knots
 
 class Module {
 	constructor() {
@@ -319,37 +316,6 @@ class Module {
 		return (feet <= this.windLimitBelow)
 			? (wind.kt >= this.windLimit)
 			: (wind.kt >= this.windLimitHigh);
-	}
-
-	/* De hoogtes die op dit moment de moeite van een eigen beeld waard zijn, hooguit twee: een uit
-	   de lage reeks en een uit de hoge. Onderin is dat de laagste laag die over de grens gaat - daar
-	   begint de koepelrit - tenzij er in diezelfde reeks een laag staat die er met LOW_WIND_STRONGER_BY
-	   knopen bovenuit steekt; dan zegt die meer. Bovenin is het simpelweg de hardste laag.
-
-	   Geeft [{feet, kt, dir, range}] terug, van laag naar hoog, of een lege lijst als er niets is. */
-	alerts() {
-		var now = this.hours.length ? this.hours[0] : null;
-		if (!now) {
-			return [];
-		}
-		var flagged = this.altitudes.slice().sort((first, second) => first - second)
-			.filter(feet => this.overLimit(feet, now.levels[feet]))
-			.map(feet => ({ feet: feet, kt: now.levels[feet].kt, dir: now.levels[feet].dir,
-				range: (feet <= this.windLimitBelow) ? 'low' : 'high' }));
-		var strongest = list => list.reduce((best, one) => (one.kt > best.kt) ? one : best, list[0]);
-
-		var low = flagged.filter(one => one.range === 'low');
-		var high = flagged.filter(one => one.range === 'high');
-		var out = [];
-		if (low.length) {
-			var lowest = low[0];
-			var hardest = strongest(low);
-			out.push((hardest.kt >= lowest.kt + LOW_WIND_STRONGER_BY) ? hardest : lowest);
-		}
-		if (high.length) {
-			out.push(strongest(high));
-		}
-		return out;
 	}
 
 	cell(wind, extra, forecast, reference, limit) {
