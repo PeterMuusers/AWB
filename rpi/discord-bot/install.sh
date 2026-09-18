@@ -84,13 +84,7 @@ echo "cache     : \${CACHE:-leeg}"
 # Wat er tijdelijk anders staat dan normaal. Alleen noemen als het zo is: een regel die altijd
 # "niets bijzonders" zegt lees je na twee keer niet meer, en dan mis je hem juist als het ertoe doet.
 [ -e /var/lib/awb/jumprun-hidden ] && echo "tijdelijk : jumpruns van het bord sinds \$(date -r /var/lib/awb/jumprun-hidden '+%d-%m %H:%M')"
-if [ -e /run/awb-outlook-until ]; then
-        EIND="\$(cat /run/awb-outlook-until 2>/dev/null)"
-        NU="\$(date +%s)"
-        if [ -n "\${EIND}" ] && [ "\${EIND}" -gt "\${NU}" ] 2>/dev/null; then
-                echo "tijdelijk : vooruitzicht voor morgen nog \$(( EIND - NU )) s"
-        fi
-fi
+[ -e /run/awb-outlook ] && echo "tijdelijk : vooruitzicht voor morgen staat op het bord, /normaal haalt het eraf"
 if [ -e /run/awb-demo-scene ]; then
         EIND="\$(cut -d' ' -f1 /run/awb-demo-scene 2>/dev/null)"
         WAT="\$(cut -d' ' -f2 /run/awb-demo-scene 2>/dev/null)"

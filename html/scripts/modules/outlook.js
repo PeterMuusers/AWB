@@ -65,8 +65,6 @@ function cloudCode(okta) {
 class Module {
 	constructor() {
 		this.showing = false;
-		this.until = 0;
-		this.timer = null;
 		this.header = null;			// de kop van de tegel zoals hij was
 		this.observer = null;
 		this.drawn = null;
@@ -80,15 +78,14 @@ class Module {
 		fetch(STATE_URL, { cache: 'no-store' })
 			.then(response => response.json())
 			.then(state => {
-				var wanted = (state && state.outlook) ? Number(state.outlook.until) : 0;
-				if (!wanted || wanted * 1000 <= Date.now()) {
+				var wanted = !!(state && state.outlook);
+				if (!wanted) {
 					this.hide();
 					return;
 				}
-				if (this.showing && wanted === this.until) {
+				if (this.showing) {
 					return;
 				}
-				this.until = wanted;
 				this.show();
 			})
 			.catch(() => {});
@@ -141,8 +138,6 @@ class Module {
 				}
 				this.draw(hours, verloop, aloft);
 				this.showing = true;
-				clearTimeout(this.timer);
-				this.timer = setTimeout(this.hide.bind(this), Math.max(2000, (this.until * 1000) - Date.now()));
 			})
 			.catch(error => console.warn('Vooruitzicht mislukt: ' + error.message));
 	}
@@ -188,17 +183,15 @@ class Module {
 			+ hours.map(hour => {
 				var layers = hour.layers || [];
 				if (layers.length === 0) {
-					return '<td class="windcell"><span class="windcell-row">'
-						+ '<span class="winddirection">' + LANGUAGE_NO_CLOUDS + '</span></span></td>';
+					return '<td class="windcell"><span class="outlook-cloud-code">'
+						+ LANGUAGE_NO_CLOUDS + '</span></td>';
 				}
-				/* de code boven de achtsten, net als de stoot boven de graden: naast elkaar past het
-				   niet in deze kolom en dan wordt er een van de twee afgekapt */
-				return '<td class="windcell"><span class="windcell-row">'
-					+ '<span class="windspeed">' + layers[0].base.toLocaleString(document.config.locale) + '</span>'
-					+ '<span class="windcell-tail">'
-					+ '<span class="winddirection">' + cloudCode(layers[0].okta) + '</span>'
-					+ '<span class="winddirection">' + layers[0].okta + '/8</span>'
-					+ '</span></span></td>';
+				/* twee regels: de basis waar de getallen van de wind ook staan, en eronder hoeveel er
+				   hangt. Naast elkaar past het niet in deze kolom. */
+				return '<td class="windcell">'
+					+ '<span class="outlook-cloud-base">' + layers[0].base.toLocaleString(document.config.locale) + '</span>'
+					+ '<span class="outlook-cloud-code">' + cloudCode(layers[0].okta) + ' ' + layers[0].okta + '/8</span>'
+					+ '</td>';
 			}).join('')
 			+ '</tr>';
 
@@ -426,9 +419,6 @@ class Module {
 	}
 
 	hide() {
-		clearTimeout(this.timer);
-		this.timer = null;
-		this.until = 0;
 		if (!this.showing) {
 			return;
 		}

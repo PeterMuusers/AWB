@@ -9,11 +9,12 @@
  *
  *   awb-demo-until   de mooiweerstand: het bord laadt zichzelf opnieuw met ?demo=<tijd> (demo.js)
  *   awb-demo-scene   een vast tafereel van een halve minuut, zonder herladen (demo-scenes.js)
- *   awb-outlook-until  het vooruitzicht voor morgen op de plek van het bulletin (outlook.js)
+ *   awb-outlook      het vooruitzicht voor morgen op de plek van het bulletin (outlook.js); dit
+ *                    heeft geen eindtijd, het blijft staan tot /normaal
  */
 $until_file = '/run/awb-demo-until';
 $scene_file = '/run/awb-demo-scene';
-$outlook_file = '/run/awb-outlook-until';
+$outlook_file = '/run/awb-outlook';
 
 $until = is_readable($until_file) ? (int) trim(file_get_contents($until_file)) : 0;
 $active = ($until > time());
@@ -27,8 +28,9 @@ if (is_readable($scene_file)) {
 	}
 }
 
-/* Het vooruitzicht voor morgen: alleen een eindtijd, want er valt niets te kiezen. */
-$outlook = is_readable($outlook_file) ? (int) trim(file_get_contents($outlook_file)) : 0;
+/* Het vooruitzicht voor morgen: staat de markering er, dan staat het op het bord. Geen eindtijd -
+   het blijft tot iemand het uitzet, of tot de Pi herstart en /run leeg is. */
+$outlook = (is_readable($outlook_file) && trim(file_get_contents($outlook_file)) !== '');
 
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
@@ -36,5 +38,5 @@ echo(json_encode(array(
 	'active' => $active,
 	'until' => $active ? $until : null,
 	'scene' => $scene,
-	'outlook' => ($outlook > time()) ? array('until' => $outlook) : null,
+	'outlook' => $outlook ? array('on' => true) : null,
 )));

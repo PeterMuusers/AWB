@@ -604,12 +604,24 @@ header,
 .outlook-table thead th + th {
 	text-align: right;
 }
-/* de wolkenbasis is een getal met duizendtallen en heeft meer ruimte nodig dan een windsnelheid */
-.outlook-clouds .windspeed {
-	min-width: 3.6ch;
-}
+/* De wolkenbasis staat in twee regels: het getal waar de windgetallen ook staan, en eronder hoeveel
+   er hangt. Naast elkaar paste het niet in deze kolom, en dit leest bovendien als één ding. */
 .outlook-clouds td {
 	padding-bottom: 6px;
+	text-align: right;
+}
+.outlook-cloud-base {
+	display: block;
+	font-family: var(--font-condensed, 'Roboto Condensed', 'Roboto', sans-serif);
+	font-weight: 600;
+	font-size: var(--value-fontsize, var(--text-contents-fontsize));
+	line-height: 1.15;
+}
+.outlook-cloud-code {
+	display: block;
+	font-size: calc(var(--metadata-fontsize) * 1.35);
+	color: var(--metadata-textcolor);
+	line-height: 1.2;
 }
 /* de streep tussen de bewolking en de wind */
 .outlook-divider td {

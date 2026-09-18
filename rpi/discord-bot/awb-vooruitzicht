@@ -1,20 +1,17 @@
 #!/bin/bash
 # Zet het vooruitzicht voor morgen op de plek van het weerbulletin, of haal het er meteen weer af.
 #
-#   awb-vooruitzicht          een minuut
-#   awb-vooruitzicht 120      twee minuten
-#   awb-vooruitzicht stop     nu stoppen
+#   awb-vooruitzicht          aan, en blijft staan tot je hem uitzet
+#   awb-vooruitzicht stop     eraf halen (dat doet /normaal ook)
 #
 # Het bord haalt de cijfers zelf op als het deze markering ziet: dezelfde bron, hetzelfde model en
-# dezelfde hoogtes als de windtabel die er al staat. Hier staat alleen tot wanneer.
+# dezelfde hoogtes als de windtabel die er al staat. Hier staat alleen dát het aan moet.
 #
 # De markering staat in /run, dus op een tmpfs: na een herstart van de Pi is hij weg. Dat hoort ook,
 # want het bulletin is wat er standaard hoort te staan.
-MARKER=/run/awb-outlook-until
-DEFAULT_SECONDS=60
-MAX_SECONDS=600
+MARKER=/run/awb-outlook
 
-WANTED="${1:-${DEFAULT_SECONDS}}"
+WANTED="${1:-aan}"
 
 if [ "${WANTED}" = "stop" ] || [ "${WANTED}" = "0" ]; then
 	rm -f "${MARKER}" 2>/dev/null
@@ -29,22 +26,10 @@ if [ "${WANTED}" = "stop" ] || [ "${WANTED}" = "0" ]; then
 	exit 0
 fi
 
-case "${WANTED}" in
-	''|*[!0-9]*)
-		echo "de duur moet een getal in seconden zijn, niet ${WANTED}" >&2
-		exit 2
-		;;
-esac
-if [ "${WANTED}" -lt 10 ] || [ "${WANTED}" -gt "${MAX_SECONDS}" ]; then
-	echo "de duur moet tussen 10 en ${MAX_SECONDS} seconden liggen, niet ${WANTED}" >&2
-	exit 2
-fi
-
-UNTIL=$(( $(date +%s) + WANTED ))
-if ! echo "${UNTIL}" > "${MARKER}" 2>/dev/null; then
+if ! echo "aan" > "${MARKER}" 2>/dev/null; then
 	echo "kon ${MARKER} niet schrijven; staat /run op alleen-lezen voor deze dienst?" >&2
 	exit 1
 fi
 chmod 644 "${MARKER}" 2>/dev/null || true
-echo "vooruitzicht voor morgen staat op het bord tot $(date -d "@${UNTIL}" '+%H:%M:%S')"
-echo "het bord pakt het binnen vijf seconden op en gaat daarna vanzelf terug naar het bulletin"
+echo "het vooruitzicht voor morgen staat op het bord"
+echo "het bord pakt het binnen vijf seconden op; met /normaal gaat het bulletin er weer op"

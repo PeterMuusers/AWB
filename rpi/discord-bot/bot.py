@@ -368,20 +368,14 @@ async def summertime(interaction: discord.Interaction, minuten: int = 5) -> None
 
 
 @bot.tree.command(name="vooruitzicht", description="Het weer van morgen op de plek van het bulletin")
-@app_commands.describe(seconden="hoe lang, standaard zestig; 0 stopt hem meteen")
-async def vooruitzicht(interaction: discord.Interaction, seconden: int = 60) -> None:
+async def vooruitzicht(interaction: discord.Interaction) -> None:
     if not allowed(interaction):
         return await deny(interaction)
-    seconden = max(0, min(600, seconden))
     await interaction.response.defer(thinking=True)
-    if seconden == 0:
-        ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-vooruitzicht", "stop", timeout=30)
-        return await report(interaction, ok, result, "Het bulletin staat er weer.", limit=800)
-    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-vooruitzicht", str(seconden), timeout=30)
+    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-vooruitzicht", timeout=30)
     await report(interaction, ok, result,
-                 f"De wind van morgen op 10, 12, 14 en 16 uur, op dezelfde hoogtes als de tabel "
-                 f"ernaast, met de bewolking eronder. {seconden} seconden, dan is het bulletin er weer.",
-                 limit=800)
+                 "De wind van morgen op 10, 12, 14 en 16 uur, met de bewolking erboven en het "
+                 "verloop van de dag ernaast. Blijft staan tot /normaal.", limit=800)
 
 
 @bot.tree.command(name="demo", description="Zet een half minuutje een vast tafereel op het bord")
@@ -414,14 +408,26 @@ async def demo(interaction: discord.Interaction, wat: app_commands.Choice[str], 
                  "in de bovenbalk zolang het loopt.", limit=800)
 
 
-@bot.tree.command(name="normaal", description="Stop de mooiweerstand en zet het echte bord terug")
+@bot.tree.command(name="normaal", description="Alles eraf: terug naar het gewone bord")
 async def normaal(interaction: discord.Interaction) -> None:
     if not allowed(interaction):
         return await deny(interaction)
     await interaction.response.defer(thinking=True)
-    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-summertime", "0", timeout=30)
-    await report(interaction, ok, result,
-                 "Terug naar het echte weer. Het bord schakelt binnen een paar tellen om.", limit=600)
+    """Alles wat tijdelijk op het bord kan staan gaat eraf. Elk stuk apart, zodat een mislukking bij
+    het ene de andere niet tegenhoudt - en zodat je in het antwoord ziet wélk stuk niet meewerkte."""
+    stukken = (
+        ("mooiweerstand", ("/usr/local/sbin/awb-summertime", "0")),
+        ("demo", ("/usr/local/sbin/awb-demo", "stop")),
+        ("vooruitzicht", ("/usr/local/sbin/awb-vooruitzicht", "stop")),
+    )
+    klachten = []
+    for naam, opdracht in stukken:
+        ok, result = outcome("sudo", "-n", *opdracht, timeout=30)
+        if not ok:
+            klachten.append(f"{naam}: {result.strip().splitlines()[-1] if result.strip() else 'mislukt'}")
+    if klachten:
+        return await report(interaction, False, "\n".join(klachten), "", limit=800)
+    await report(interaction, True, "", "Terug naar het gewone bord. Dat is binnen een paar tellen te zien.", limit=600)
 
 
 @bot.tree.command(name="pi", description="De Raspberry Pi zelf")
