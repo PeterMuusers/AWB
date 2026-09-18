@@ -11,7 +11,10 @@ const SOURCE = 'KNMI';
    is better left slightly clipped than shrunk into nothing. */
 const FIT_MIN_SCALE = 0.72;
 const FIT_STEP = 0.04;
-const REWRITE_URL = './llfc-rewrite.php';
+/* De herschreven versie van het bulletin. Geen adres dat iets uitrekent maar een gewoon bestand:
+   een timer op de Pi haalt het bulletin zelf op en zet het antwoord van Claude hier klaar. Zo is er
+   geen weg van buiten naar de API, en hoeft dit bord alleen te lezen. */
+const REWRITE_URL = './llfc.json';
 
 const ID_LLFC_SOURCE_LABEL = 'llfc-source-label';
 const ID_LLFC_SOURCE_DATA = 'llfc-source-data';
@@ -400,6 +403,13 @@ class Module {
 		return (text === '') ? null : LANGUAGE_VALID_FOR + ' ' + text;
 	}
 
+	/* When this bulletin was issued: the six digits after EHDB, day-hour-minute in UTC. The same
+	   string the rewrite carries, and the only thing the two have to agree on. */
+	issued() {
+		var match = this.llfc ? /EHDB (\d{6})/.exec(this.llfc) : null;
+		return (match === null) ? null : match[1];
+	}
+
 	/* The period the bulletin applies to, from the GELDIG line: DDHHMM/DDHHMM in UTC. Converted
 	   here rather than by the model, because this is arithmetic and the board shows local time. */
 	validity() {
@@ -510,21 +520,24 @@ class Module {
 		this.fit();
 	}
 
-	/* The same bulletin in plain language, rewritten server-side. The bulletin itself stays on
-	   screen until the rewrite arrives, and stays there if it never does. */
+	/* The same bulletin in plain language, rewritten on the Pi itself. The bulletin stays on
+	   screen until the rewrite arrives, and stays there if it never does - so a Pi without the
+	   timer, or without a key, simply shows the bulletin as the KNMI writes it.
+
+	   Het antwoord hoort bij een bepaald bulletin, en dat van de timer kan een paar minuten voor of
+	   achter lopen op wat dit bord net ophaalde. Daarom draagt het het uitgiftemoment (de zes
+	   cijfers achter EHDB); komt dat niet overeen, dan blijft het bulletin zelf staan tot de
+	   volgende ronde. */
 	showRewrite() {
-		fetch(REWRITE_URL, {
-			method: 'POST',
-			headers: { 'Content-Type': 'text/plain' },
-			body: this.llfc,
-		}).then(response => {
-			return response.json().then(data => {
-				if (response.ok === true) {
-					return data;
-				}
-				throw new Error(data && data.error ? data.error : ('HTTP ' + response.status));
-			});
+		fetch(REWRITE_URL, { cache: 'no-store' }).then(response => {
+			if (response.ok !== true) {
+				throw new Error('HTTP ' + response.status);
+			}
+			return response.json();
 		}).then(data => {
+			if (data.issued && this.issued() !== null && data.issued !== this.issued()) {
+				throw new Error('rewrite is van bulletin ' + data.issued + ', dit is ' + this.issued());
+			}
 			/* the model keeps the UTC times of the bulletin; the board turns them into local time */
 			var lines = localiseTimes(data.text, this.valid_from).split('\n').map(line => line.trim()).filter(line => line.length > 0);
 			var content = '';

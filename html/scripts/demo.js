@@ -262,7 +262,7 @@ export function installDemo(until) {
 					return data;
 				});
 			}
-			if (url.indexOf('llfc-rewrite.php') !== -1) {
+			if (url.indexOf('llfc.json') !== -1) {
 				return rewrite(response, data => {
 					data.text = SUNNY_FORECAST;
 					return data;

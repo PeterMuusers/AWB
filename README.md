@@ -112,7 +112,13 @@ it, change the five keys that are about your place - `location`, `luchtvaartmete
 https://www.knmi.nl/
 #### KNMI GAFOR (Weerbulletin voor de kleine luchtvaart)
 https://www.knmi.nl/nederland-nu/luchtvaart/weerbulletin-kleine-luchtvaart
-The bulletin is written for pilots. Set `llfc.mode` in config.json to `ai` and it is rewritten into a few plain lines by `llfc-rewrite.php`, which asks Claude to simplify only: add nothing, leave nothing out, keep every number as it is and give no advice about whether to jump. That needs `ANTHROPIC_API_KEY` in `.env` (see `.env.example`); the model is `llfc.model`. The answer is cached under a hash of the bulletin, so the model is asked about four times a day however many screens are running. Anything that goes wrong, a missing key included, leaves the bulletin itself on screen. `raw` shows the bulletin as the KNMI writes it.
+The bulletin is written for pilots. Set `llfc.mode` in config.json to `ai` and it is rewritten into a few plain lines by Claude, which is asked to simplify only: add nothing, leave nothing out, keep every number as it is and give no advice about whether to jump. The model is `llfc.model`.
+
+That rewriting is not something the board asks for over HTTP. `rpi/llfc-rewrite.php` is a command, run every five minutes by `awb-llfc.timer` (installed by `rpi/setup.sh`): it fetches the bulletin itself, and only when there is a new one does it ask Claude and write the answer to `/var/lib/awb/llfc.json`, which lighttpd serves as `/llfc.json`. The board reads that file and nothing more. There is deliberately no address anyone can post text to — an endpoint that spends an API key is reachable by everyone on the same network, and the board hangs on a club network. For the same reason the key lives in `/etc/awb/anthropic-key`, readable by root alone, rather than in `.env`, which the web server reads. In development, without that file, the script falls back to `ANTHROPIC_API_KEY` in `.env` (see `.env.example`) and you run it by hand:
+
+    php rpi/llfc-rewrite.php --out html/llfc.json --state /tmp/llfc-state.json
+
+Anything that goes wrong, a missing key included, leaves the bulletin itself on screen: the rewrite is only shown when it belongs to the bulletin the board fetched, so a board without the timer shows the bulletin as the KNMI writes it. That is also what `raw` does.
 #### Luchtvaartmeteo (KNMI observations)
 https://www.luchtvaartmeteo.nl/
 You'll need a (free) luchtvaartmeteo.nl account to use this module. Copy `.env.example` to `.env` next to the `html` directory (`/var/www/.env` on the Raspberry Pi) and fill in `LVM_EMAIL` and `LVM_PASSWORD`; that file is ignored by git and lives outside the web root, so it is never served to the browser. The login is done server-side by `luchtvaartmeteo-proxy.php`.

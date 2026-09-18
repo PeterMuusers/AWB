@@ -1,2 +1,5 @@
 /html/config.json
 /.env
+
+# Het herschreven weerbulletin: op de Pi staat dit in /var/lib/awb, in ontwikkeling zet je het hier
+html/llfc.json

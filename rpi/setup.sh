@@ -99,7 +99,7 @@ fi
 say "Installing what the board needs"
 export DEBIAN_FRONTEND=noninteractive
 apt-get -qq update
-apt-get -qq -y install lighttpd php-cgi php-curl rsync chromium curl >/dev/null
+apt-get -qq -y install lighttpd php-cgi php-cli php-curl rsync chromium curl >/dev/null
 lighty-enable-mod fastcgi fastcgi-php >/dev/null 2>&1 || true
 
 # PHP onder lighttpd mag geen uitvoerbaar geheugen aanvragen, dus de JIT van de reguliere-
@@ -211,6 +211,15 @@ if grep -q '^server.document-root' /etc/lighttpd/lighttpd.conf; then
 else
 	echo "server.document-root        = \"${APP_DIR}/html\"" >> /etc/lighttpd/lighttpd.conf
 fi
+# Het herschreven weerbulletin staat buiten de documentmap - die wordt bij elke update overschreven
+# met een kopie van de repo - en wordt hier als een gewoon bestand uitgedeeld. Dit is een eigen
+# bestand en geen tweede server.document-root, dus lighttpd heeft er geen bezwaar tegen.
+cat > /etc/lighttpd/conf-available/50-awb-llfc.conf <<'EOF'
+# Geschreven door rpi/setup.sh
+alias.url += ( "/llfc.json" => "/var/lib/awb/llfc.json" )
+EOF
+ln -sf ../conf-available/50-awb-llfc.conf /etc/lighttpd/conf-enabled/50-awb-llfc.conf
+
 # Say what is wrong while the reason is still on the screen, instead of failing three steps later.
 if ! lighttpd -tt -f /etc/lighttpd/lighttpd.conf >/dev/null 2>&1; then
 	note "The lighttpd configuration does not pass its own check:"
@@ -231,6 +240,71 @@ else
 fi
 chmod 640 "${APP_DIR}/.env"
 chown root:www-data "${APP_DIR}/.env"
+
+# ---------------------------------------------------------------- het bulletin in gewone taal
+
+# Het weerbulletin van het KNMI is geschreven voor vliegers. Staat llfc.mode in config.json op "ai",
+# dan zet Claude het om in een paar leesbare regels - en dat gebeurt hier, op de Pi zelf, niet via de
+# webserver. Zolang het een adres op de webserver was kon iedereen die de Pi kan bereiken (de hele
+# clubwifi, de hele tailnet) er tekst naartoe sturen en die sleutel laten betalen. Nu loopt er geen
+# enkele weg van buiten naar de API: een timer haalt het bulletin op, schrijft het antwoord weg als
+# /var/lib/awb/llfc.json, en het bord leest dat als een gewoon bestand.
+#
+# Daarom hoort de sleutel ook niet meer in .env, dat de webserver leest voor de sleutels van de
+# weerbronnen. Stond hij daar van een eerdere installatie, dan verhuist hij hier.
+say "Het weerbulletin in gewone taal"
+install -d -m 755 /var/lib/awb
+CLAUDE_KEY="$(awk -F= '/^ANTHROPIC_API_KEY=/{print $2; exit}' "${APP_DIR}/.env" 2>/dev/null || true)"
+if [[ -n "${CLAUDE_KEY}" && "${CLAUDE_KEY}" != "0000000000" ]]; then
+	if [[ ! -s /etc/awb/anthropic-key ]]; then
+		printf '%s\n' "${CLAUDE_KEY}" > /etc/awb/anthropic-key
+		chmod 600 /etc/awb/anthropic-key
+		note "De Claude-sleutel staat nu in /etc/awb/anthropic-key, waar de webserver niet bij kan"
+	fi
+	sed -i '/^ANTHROPIC_API_KEY=/d' "${APP_DIR}/.env"
+fi
+unset CLAUDE_KEY
+
+cat > /etc/systemd/system/awb-llfc.service <<EOF
+# Geschreven door rpi/setup.sh
+[Unit]
+Description=Het weerbulletin van het KNMI in gewone taal zetten
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/php ${APP_DIR}/rpi/llfc-rewrite.php
+Nice=10
+# Alleen schrijven waar het antwoord komt te staan. De sleutel in /etc/awb wordt alleen gelezen.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/var/lib/awb
+EOF
+
+cat > /etc/systemd/system/awb-llfc.timer <<'EOF'
+# Geschreven door rpi/setup.sh
+[Unit]
+Description=Elke vijf minuten kijken of er een nieuw weerbulletin is
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now awb-llfc.timer >/dev/null 2>&1
+if [[ -s /etc/awb/anthropic-key ]]; then
+	note "Elke vijf minuten wordt gekeken of er een nieuw bulletin is; alleen dan wordt Claude gevraagd."
+else
+	note "Nog geen Claude-sleutel. Zet hem erin met:  sudo nano /etc/awb/anthropic-key  (chmod 600)"
+	note "Zonder sleutel toont het bord het bulletin zoals het KNMI het schrijft."
+fi
 
 # ---------------------------------------------------------------- kiosk
 
