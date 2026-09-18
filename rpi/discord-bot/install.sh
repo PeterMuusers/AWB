@@ -284,7 +284,12 @@ RestartSec=10
 NoNewPrivileges=false
 PrivateTmp=false
 ProtectSystem=strict
-ProtectHome=true
+# ProtectHome staat bewust uit. Hij verbergt naast /home en /root ook /run/user, en daar staat de
+# wayland-socket van de kiosk: met ProtectHome=true ziet alles wat de bot start een lege map met
+# rechten 000, en dan meldt grim "failed to create display" - /scherm gaf dus altijd "geen scherm
+# gevonden". Het legen van de browsercache loopt op hetzelfde stuk: het chromium-profiel staat in
+# /home/peter. Wat de bot mag doen wordt bepaald door de sudo-regel hieronder, niet hierdoor.
+ProtectHome=false
 # /run en /var/lib/awb moeten erbij: daar staan de markeringen van de mooiweerstand en van het
 # verbergen van de jumpruns. Zonder deze regel zijn die paden alleen-lezen voor alles wat de bot
 # start - ook voor wat hij via sudo als root draait - en dan mislukt het zetten en het weghalen
