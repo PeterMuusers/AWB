@@ -17,7 +17,19 @@
  * herkennen, en er staat iemand naar dat scherm te kijken die zo gaat springen.
  */
 
+import { computeAuto, computeAutoOffset } from '../jumprun/calc/auto.js';
+import { DIR_DEG, planInput, targetOf, exitAltOf, tracksTrue, notationOf } from '../jumprun/calc/dropzone.js';
+import { profileFromAloft } from '../jumprun/calc/wind.js';
+import { destination } from '../jumprun/calc/geo.js';
+import { NM } from '../jumprun/calc/units.js';
+
 const POLL_MS = 5000;
+const DROPZONES_URL = './jumprun-proxy.php?action=dropzones';
+const TRACK_STEP_DEG = 10;			// zoals de piloot hem invoert, net als bij de automatische jumprun
+
+/* De velden zoals jumprun.nl ze kent: ligging, voorkeurskoersen, exithoogte, notatie. Eén keer
+   opgehaald bij het starten van het bord; ze veranderen hooguit een paar keer per jaar. */
+var dropzones = [];
 const ID_CHIP = 'demo-chip-id';
 const STATE_URL = 'demo.php';
 
@@ -225,53 +237,66 @@ function clouds(m, layers) {
 	return () => { undos.forEach(undo => undo()); paint(m); };
 }
 
-/* Een of twee verzonnen jumpruns op de kaart, uitgerekend met de wind van nu. Alleen de afspraak is
-   verzonnen - de koers, de exits en het bereik komen uit dezelfde rekenkern als een echte run, dus
-   dit is hoe het er werkelijk uit zou zien. */
+/* Een of twee jumpruns op de kaart. Alleen het moment is verzonnen: de koers, de offset, het groene
+   licht en het bereik komen uit dezelfde automatiek als /jumprun-zetten, met de wind van nu. Dus de
+   voorkeurskoersen van het veld tellen mee, en de offset wordt zo gekozen dat het groene licht op de
+   bak uitkomt - een run waar je werkelijk mee zou vliegen, geen streep over de kaart.
+
+   Eerst de run over de bak zelf, want die geeft het offsetadvies; dan de lijn op de plek waar hij
+   komt te liggen, want daar hangt het groene licht van af. Precies de volgorde van jumprun-auto.mjs. */
 function jumpruns(m, altitudes) {
 	var jumprun = m.jumprun;
-	var location = document.config.location || {};
-	if (!jumprun || location.lattitude === undefined) {
-		return null;
-	}
-	var wind = (typeof jumprun.currentWind === 'function') ? jumprun.currentWind() : null;
-	if (!wind) {
+	if (!jumprun || dropzones.length === 0) {
 		return null;
 	}
 	var station = jumprun.stations[0];
-	/* lng, niet lon: de rekenkern en Leaflet spreken allebei die naam, en met lon rekent hij vrolijk
-	   door met NaN's - dan komt er een leeg grijs vlak op de kaart en geen foutmelding. */
-	var landing = { lat: location.lattitude, lng: location.longitude };
-	/* de lijn ligt een halve zeemijl ten zuiden van de bak, zoals een gewone offset-run */
-	var target = { lat: landing.lat - 0.0087, lng: landing.lng };
+	var dz = dropzones.find(one => one.id === station || (one.aliases || []).indexOf(station) !== -1);
+	var wind = (typeof jumprun.currentWind === 'function') ? jumprun.currentWind() : null;
+	var profile = wind ? profileFromAloft(wind.levels) : null;
+	if (!dz || !profile) {
+		return null;
+	}
+	var landing = targetOf(dz);
+	var dirDeg = one => (typeof one === 'number') ? one : (DIR_DEG[one] || 0);
+
 	var runs = altitudes.map(feet => {
-		var plan = {
-			target: target,
-			landing: landing,
-			trackDeg: 255,
-			exitAltFt: feet,
-			openAltFt: (feet > 6000) ? 3500 : 3000,
-			exits: 4,
-			greenLightMode: 'margin',
-			extraTargets: [],
-			elevationM: 0,
+		var base = { profile: profile, elevationM: 0, exitAltFt: feet, openAltFt: 3500 };
+		var auto = {
+			preferredTracks: tracksTrue(dz),
+			trackStep: TRACK_STEP_DEG,
+			highExitAltFt: exitAltOf(dz),
+			lowRunRule: true,
 		};
-		var entry = {
-			station: station,
-			set_at: new Date().toISOString(),
-			version: 1,
-			plan: plan,
-			wind: wind,
-			who: 'demo',
-		};
-		return { entry: entry, planned: jumprun.compute(plan, jumprun.profileOf(wind)) };
-	}).filter(run => run.planned !== null);
+		var at = target => computeAuto(planInput(dz, { ...base, target: target }), auto);
+		try {
+			var overTheTarget = at(landing);
+			var advised = computeAutoOffset(overTheTarget, { landing: landing, notation: notationOf(dz), compute: at });
+			var result = (advised.nm > 0)
+				? at(destination(landing, dirDeg(advised.dir), advised.nm * NM))
+				: overTheTarget;
+			return {
+				entry: {
+					station: dz.id,
+					set_at: new Date().toISOString(),
+					version: 1,
+					plan: result.input,
+					wind: wind,
+					who: 'demo',
+				},
+				planned: result,
+			};
+		} catch (error) {
+			console.warn('Demo kan geen jumprun uitrekenen op ' + feet + ' ft: ' + error.message);
+			return null;
+		}
+	}).filter(run => run !== null);
 	if (runs.length === 0) {
 		return null;
 	}
+
 	var before = jumprun.all[station];
 	var hidden = jumprun.hidden;
-	jumprun.all[station] = { notation: 'offset', runs: runs };
+	jumprun.all[station] = { notation: notationOf(dz) === 'polar' ? 'polar' : 'offset', runs: runs };
 	jumprun.hidden = false;
 	jumprun.sequence(Math.max(6, Math.floor(30 / runs.length)));
 	return () => {
@@ -295,6 +320,16 @@ class Module {
 		this.timer = null;
 		this.task = setInterval(this.check.bind(this), POLL_MS);
 		this.check();
+		this.loadDropzones();
+	}
+
+	/* De velden van jumprun.nl, voor de jumprun-demo. Eén keer bij het starten: ze staan achter een
+	   proxy die het antwoord uren bewaart, en zonder deze gegevens kan die demo niet rekenen. */
+	loadDropzones() {
+		fetch(DROPZONES_URL, { headers: { Accept: 'application/json' } })
+			.then(response => response.json())
+			.then(data => { dropzones = (data && data.dropzones) ? data.dropzones : []; })
+			.catch(error => console.warn('Demo kent de velden niet: ' + error.message));
 	}
 
 	/* Vraagt de Pi of er een tafereel klaarstaat. Hetzelfde adres als de mooiweerstand, want het is

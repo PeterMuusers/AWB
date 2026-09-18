@@ -12,6 +12,7 @@
  *   jumprun-proxy.php?action=frame&run=YYYYMMDDHHMM&i=N
  *       -> one frame PNG, cached 1 hour
  *   jumprun-proxy.php?action=jumprun&station=hoogeveen
+ *   jumprun-proxy.php?action=dropzones
  *       -> the jumprun somebody set for this dropzone today, or nothing. Short cache: it changes
  *          when a person decides it does, not on a schedule, so the board should see it soon.
  *          Answers "nothing" as long as the hide file exists (JUMPRUN_HIDDEN_FILE in .env, by
@@ -152,6 +153,31 @@ function action_jumprun() {
 	echo($output);
 }
 
+/* De velden zelf: hun ligging, voorkeurskoersen, exithoogte en hoe ze de spot uitspreken. Het bord
+   heeft die nodig om een jumprun te kunnen uitrekenen in plaats van alleen te tekenen wat er al
+   hangt - de demo doet dat. Ze veranderen hooguit een paar keer per jaar, dus de kopie hier mag
+   uren blijven staan. */
+function action_dropzones() {
+	global $CACHE_DIR;
+	$cache_file = $CACHE_DIR . '/awb-jumprun-stations.json';
+	serve_cached($cache_file, 6 * 3600, 'application/json');
+
+	list($status, $type, $body) = jumprun_get('/api/stations');
+	if ($status != 200) {
+		fail(502, 'jumprun.nl returned HTTP ' . $status);
+	}
+	$data = json_decode($body, true);
+	if (!is_array($data) || !isset($data['dropzones'])) {
+		fail(502, 'jumprun.nl returned no dropzones');
+	}
+	$output = json_encode($data);
+	file_put_contents($cache_file, $output, LOCK_EX);
+	header('Content-Type: application/json');
+	header('Cache-Control: public, max-age=' . (6 * 3600));
+	header('X-Cache: MISS');
+	echo($output);
+}
+
 /* De schakelaar en niets anders: verborgen of niet, en een stempel dat verandert zodra er iets aan
    de jumpruns gedaan is. Geen cache, geen jumprun.nl - dit hoort goedkoop te zijn, want het bord
    vraagt het elke paar seconden. */
@@ -210,6 +236,9 @@ switch (isset($_GET['action']) ? $_GET['action'] : '') {
 		break;
 	case 'jumprun' :
 		action_jumprun();
+		break;
+	case 'dropzones' :
+		action_dropzones();
 		break;
 	default :
 		fail(400, 'Unknown action.');
