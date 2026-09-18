@@ -336,7 +336,7 @@ while true; do
 	rm -rf "\${HOME}/.config/chromium" "\${HOME}/.cache/chromium"
 	chromium --kiosk --password-store=basic --noerrdialogs --disable-infobars \\
 		--disable-session-crashed-bubble --disable-features=Translate,TranslateUI \\
-		--check-for-update-interval=31536000 "http://127.0.0.1/?kiosk=1"
+		--check-for-update-interval=31536000 "http://127.0.0.1/tiles.html?kiosk=1"
 	sleep 3
 done
 EOF

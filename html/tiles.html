@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+-->
+		<link rel="manifest" href="/site.webmanifest">
+		<link rel="preconnect" href="https://www.huininga.nl">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+		<link rel="stylesheet" type="text/css" title="default" id="theme-stylesheet" href="css/jumprun-navy.css">
+		<link rel="stylesheet" type="text/css" title="default" href="css/tiles.css">
+		<title>Aviation Weather Board</title>
+	</head>
+	<body>
+		<header>
+			<div id="header-left">
+<!--
+				<span class="header-menu iconify" data-icon="menu"></span>
+-->
+				<span class="weather-forecast" id="metrics-forecast-data"></span>
+				<!-- Waar de cijfers vandaan komen en hoe oud ze zijn. Dit hoorde onderaan elke tegel,
+				     vijf keer hetzelfde soort regeltje in beeld; hier staat het één keer, klein, en
+				     houden de tegels zelf over wat je van een afstand moet kunnen lezen. Een bron die
+				     nog niets gezegd heeft valt vanzelf weg (zie default.css). -->
+				<div class="sources" id="sources">
+					<div class="source" id="source-metrics">
+						<span class="source-prefix" id="metrics-source-label"></span>
+						<span class="source-name" id="metrics-source-data"></span>
+						<span class="metadata-warning iconify" id="metrics-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="metrics-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="metrics-last-updated-label"></span>
+						<span class="source-time" id="metrics-last-updated"></span>
+					</div>
+					<div class="source" id="source-winds">
+						<span class="source-prefix" id="winds-source-label"></span>
+						<span class="source-name" id="winds-source-data"></span>
+						<span class="metadata-warning iconify" id="winds-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="winds-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="winds-last-updated-label"></span>
+						<span class="source-time" id="winds-last-updated"></span>
+					</div>
+					<div class="source" id="source-metar">
+						<span class="source-prefix" id="metar-source-label"></span>
+						<span class="source-name" id="metar-source-data"></span>
+						<span class="metadata-warning iconify" id="metar-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="metar-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="metar-last-updated-label"></span>
+						<span class="source-time" id="metar-last-updated"></span>
+					</div>
+					<div class="source" id="source-llfc">
+						<span class="source-prefix" id="llfc-source-label"></span>
+						<span class="source-name" id="llfc-source-data"></span>
+						<span class="metadata-warning iconify" id="llfc-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="llfc-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="llfc-last-updated-label"></span>
+						<span class="source-time" id="llfc-last-updated"></span>
+					</div>
+					<div class="source" id="source-images">
+						<span class="source-prefix" id="images-source-label"></span>
+						<span class="source-name" id="images-source-data"></span>
+						<span class="metadata-warning iconify" id="images-last-updated-warning" data-icon="mdi:warning-outline"></span>
+						<span class="metadata-spinner iconify" id="images-last-updated-spinner" data-icon="line-md:loading-loop"></span>
+						<span class="source-label" id="images-last-updated-label"></span>
+						<span class="source-time" id="images-last-updated"></span>
+					</div>
+				</div>
+			</div>
+			<div id="header-right">
+				<!-- Staat er alleen als er een demo loopt. Zie scripts/modules/demo-scenes.js: een
+				     verzonnen windkracht hoort herkenbaar te zijn voor wie er toevallig langsloopt. -->
+				<span class="demo-chip" id="demo-chip-id" hidden>DEMO</span>
+				<span id="datetime-data"></span>
+			</div>
+		</header>
+		<main>
+			<div class="contents">
+				<div class="text">
+					<div class="weather">
+						<div class="metrics-header">
+							<div class="metrics-location" id="location-data"></div>
+							<div class="metrics-text"><span class="iconify metrics-icon" id="metrics-icon"></span><span id="metrics-data"></span></div>
+						</div>
+						<!-- De lucht van boven naar beneden: eerst de lagen bóven de laagste, klein, en
+						     daaronder de laagste als het grote getal waar het om gaat. -->
+						<div class="metrics-cloudbase" id="metrics-cloudbase">
+							<span class="metrics-cloudbase-layers" id="cloudbase-layers"></span>
+							<span class="metrics-cloudbase-value" id="cloudbase-data"></span>
+						</div>
+						<div class="metrics-content">
+							<div class="metrics-grid">
+								<div class="metrics-cell">
+									<span class="metrics-label" id="wind-label"></span>
+									<span class="metrics-value"><span id="wind-value"></span>&nbsp;<span class="metrics-unit" id="wind-unit"></span><span id="wind-gust" class="metrics-gust"></span></span>
+									<span class="metrics-sub" id="wind-jumplimit"></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="wind-direction-label"></span>
+									<span class="metrics-value"><span id="wind-direction-degrees"></span>&nbsp;<span class="metrics-unit">&deg;</span><span id="wind-direction-arrow"></span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="freezing-altitude-label"></span>
+									<span class="metrics-value"><span id="freezing-altitude-data"></span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="pressure-label"></span>
+									<span class="metrics-value"><span id="pressure-value"></span>&nbsp;<span class="metrics-unit" id="pressure-unit"></span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="visibility-label"></span>
+									<span class="metrics-value"><span id="visibility-value"></span>&nbsp;<span class="metrics-unit" id="visibility-unit"></span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="precipitation-label"></span>
+									<span class="metrics-value"><span id="precipitation-data"></span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="temperature-label"></span>
+									<span class="metrics-value"><span id="temperature-data"></span>&nbsp;<span class="metrics-unit">&deg;C</span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="dewpoint-label"></span>
+									<span class="metrics-value"><span id="dewpoint-data"></span>&nbsp;<span class="metrics-unit">&deg;C</span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="sunrise-label"></span>
+									<span class="metrics-value"><span id="sunrise-data"></span></span>
+								</div>
+								<div class="metrics-cell">
+									<span class="metrics-label" id="sunset-label"></span>
+									<span class="metrics-value"><span id="sunset-data"></span></span>
+								</div>
+							</div>
+							<div class="metrics-note" id="metrics-note"></div>
+						</div>
+					</div>
+					<div class="cloudprofile" id="cloudprofile">
+					</div>
+
+					<div class="upper-winds" id="upper-winds">
+						<div class="upper-winds-header">
+							<span class="header-name">Windprofiel</span>&nbsp;-&nbsp;<span id="winds-valid-from"></span>
+						</div>
+						<div class="upper-winds-content">
+							<table>
+								<thead id="upper-winds-content-head">
+								</thead>
+								<tbody id="uppper-winds-content-data">
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div class="metar" id="metar">
+						<div class="metar-header">
+							<span class="header-name">METAR</span>&nbsp;-&nbsp;<span id="metar-valid-from"></span>
+						</div>
+						<div class="metar-content" id="metar-content">
+						</div>
+					</div>
+					<div class="llfc" id="llfc">
+						<div class="llfc-header">
+							<span class="header-name">Low Level Forecast</span>&nbsp;-&nbsp;<span id="llfc-valid-from"></span>
+						</div>
+						<div class="llfc-content" id="llfc-content">
+						</div>
+					</div>
+				</div>
+				<div class="images">
+					<!--
+					<iframe class="layer-map" src="https://www.wunderground.com/wundermap/?renderer=2&Units=metric&zoom=8&lat=37.76834106&lon=37.76834106&wxstn=1&wxstnmode=tw&aq=0&aqvalue=NaN&radar=0&radarType=NaN&radaropa=0.7&satellite=0&satelliteopa=0.8&storm-cells=0&severe=0&severeopa=0.9&sst=0&sstopa=0.8&sstanom=0&sstanomopa=0.8&fronts=0&hur=0&models=0&modelsmodel=ecmwf&modelsopa=0.8&modelstype=SURPRE&lightning=0&fire=0&fireopa=0.9&firePerimeter=0&firePerimeterOpacity=0.9&smoke=0&smokeOpacity=0.9&rep=0&surge=0&tor=0&windstr=0&windstrDensity=undefined&windstreamSpeed=undefined&windstreamSpeedFilter=undefined&windstreamPalette=undefined&hurrArch=0&hurrArchBasin=undefined&hurrArchYear=undefined&hurrArchStorm=undefined"></iframe>
+					-->
+					<!--
+					<iframe class="layer-map" src="https://www.rainviewer.com/map.html?loc=52.1941,5.1416,7&oFa=0&oC=0&oU=0&oCS=1&oF=0&oAP=1&c=1&o=88&lm=1&layer=radar-sat&sm=1&sn=1&hu=0" frameborder="0" allowfullscreen></iframe>
+					?.html	map.html / hurricane-map.html
+					c	Color Scheme
+					hu	Hurricane Tracking
+					lm	Legend map (0=normal, 1=small)
+					o	Radar Layer Opacity
+					oAP	Auto Play
+					oC	Coverage
+					oF	?
+					oFa	Fast Animation
+					oCS	Show legend
+					oU	UTC Time Zone
+					sm	Smoothing Radar Data
+					sn	Snow
+					layer	radar/radar-sat/sat
+					-->
+					<div class="layer-map" id="layer-map-id">
+					</div>
+					<!-- de jumprun van vandaag, die af en toe de kaart overneemt; zie scripts/modules/jumprun.js -->
+					<div class="layer-jumprun" id="layer-jumprun-id" hidden>
+						<div class="jumprun-map" id="jumprun-map-id"></div>
+						<div class="jumprun-caption" id="jumprun-caption-id"></div>
+					</div>
+					<!-- de windkaart van Windy, alleen bij harde wind op hoogte; zie scripts/modules/windy.js -->
+					<div class="layer-windy" id="layer-windy-id" hidden>
+						<div class="windy-frame-clip">
+							<iframe class="windy-frame" id="windy-frame-id" title="Windy" frameborder="0"
+								referrerpolicy="no-referrer"></iframe>
+						</div>
+						<!-- waar de dropzone ligt: het midden van het venster, want daar is de kaart op
+						     gecentreerd en er wordt aan alle kanten evenveel afgesneden -->
+						<div class="windy-here" aria-hidden="true"></div>
+						<div class="windy-caption" id="windy-caption-id"></div>
+					</div>
+					<img class="layer-cloud" alt="" src="#" id="img-layer-cloud-id">
+					<img class="layer-rain" alt="" src="#" id="img-layer-rain-id">
+					<canvas class="layer-location" id="img-layer-location-id"></canvas>
+				</div>
+			</div>
+			<div class="systemmessage" id="systemmessage">
+			</div>
+		</main>
+		<footer>
+			<div class="weather-alert" id="weather-alert">
+				<span id="weather-alert-data"></span>
+			</div>
+		</footer>
+
+		<!-- JavaScript sources: icons -->
+		<script src="https://code.iconify.design/1/1.0.6/iconify.min.js"></script>
+
+		<!-- JavaScript sources: Leaflet (radar map) -->
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+		<!-- JavaScript sources: main code -->
+		<script src="scripts/tiles.js" type="module"></script>
+	</body>
+</html>

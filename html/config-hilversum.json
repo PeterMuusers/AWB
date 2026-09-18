@@ -4,6 +4,7 @@
 		"lattitude": 52.192527,
 		"longitude": 5.146259
 	},
+	"layout": "tiles",
 	"locale": "nl-NL",
 	"theme": "navy",
 	"options": {
