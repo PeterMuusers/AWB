@@ -547,7 +547,7 @@ header,
 }
 .demo-chip {
 	display: inline-block;
-	margin-right: 10px;
+	margin-right: 12px;
 	padding: 1px 8px 2px;
 	border-radius: 4px;
 	background-color: var(--gust, #f0a020);

@@ -94,7 +94,10 @@ export function computeAuto(input, options = {}) {
 				trackDeg: undefined,
 			});
 			if (apart(result.windAtExit.fromDeg, high.windAtExit.fromDeg) <= LOW_RUN_DIR_DIFF_DEG) {
-				snapped = high.trackDeg;
+				/* De koers waarop de hoge run uitkomt, dus mét de baanrichting erbij. Zonder dat
+				   afronden volgde de lage run de ruwe windkoers van de hoge en lag hij een graad of
+				   twee naast de hoge run - precies wat deze regel wil voorkomen. */
+				snapped = snapToTracks(high.trackDeg, tracks);
 			}
 		}
 		if (snapped !== result.trackDeg) {
