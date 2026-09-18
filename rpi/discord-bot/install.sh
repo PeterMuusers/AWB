@@ -155,6 +155,22 @@ fi
 rsync -a --delete --exclude .git --exclude .env --exclude html/config.json "\${SRC}/" ${APP_DIR}/
 chown -R root:www-data ${APP_DIR}/html && chmod -R a+rX ${APP_DIR}/html
 /usr/local/sbin/awb-cache-clear
+
+# En de bot zelf. Die draait uit een eigen kopie in ${BOT_DIR}, en de hulpscripts in
+# /usr/local/sbin staan daar ook los; een nieuwe versie van het bord is dus nog geen nieuw commando.
+# Dat kostte op 18 sep 2026 een kwartier zoeken naar een /demo dat niet verscheen. install.sh vraagt
+# niets en is bedoeld om opnieuw te draaien, dus die doet het werk. De herstart gaat er een paar
+# tellen achteraan: dit script draait op dit moment als kind van diezelfde bot, en die kan zijn
+# antwoord niet meer geven als hij halverwege omvalt.
+if [ -f "\${SRC}/rpi/discord-bot/install.sh" ] && [ -f ${ENV_FILE} ]; then
+        if bash "\${SRC}/rpi/discord-bot/install.sh" >/tmp/awb-bot-update.log 2>&1; then
+                echo "bot en hulpscripts bijgewerkt; hij herstart zo"
+                systemd-run --on-active=4 systemctl restart awb-discord >/dev/null 2>&1
+        else
+                echo "bot bijwerken mislukte; zie /tmp/awb-bot-update.log"
+                tail -3 /tmp/awb-bot-update.log
+        fi
+fi
 EOF
 
 # Jumpruns tijdelijk van het bord halen zonder er iets aan te wissen. De proxy kijkt naar dit
