@@ -513,7 +513,14 @@ class Module {
 	showBulletin() {
 		var content = '';
 		var subjects = this.subjects();
+		/* De geldigheid staat al in de kop van de tegel, achter het tijdstip van uitgifte. Hem hier
+		   ook als blok tonen is dezelfde zin twee keer, en in de ruwe vorm ("181500/182100 UTC")
+		   bovendien de minst leesbare van de twee. */
+		var inHeader = (this.validityText() !== null);
 		for (var i = 0; i < subjects.length; i++) {
+			if (inHeader && subjects[i].toUpperCase() === 'GELDIG') {
+				continue;
+			}
 			var item = this.llfc_items[subjects[i].toUpperCase()];
 			if (item !== null && item !== undefined) {
 				content += '<div class=llfc-item><span class="llfc-item-header">' + subjects[i] + '</span><span class="llfc-item-text">' + item + '</span></div>';
@@ -602,8 +609,16 @@ class Module {
 			return null;
 		}).then(data => {
 			if (data === undefined) {
+				/* Niets veranderd bij het KNMI. Het bulletin op het scherm klopt dus nog, maar de
+				   herschreven versie kan er intussen wél bij gekomen zijn: die wordt door een timer op
+				   de Pi gemaakt en is een minuut of wat later klaar dan het bulletin zelf. Zonder deze
+				   poging blijft het bord tot het volgende bulletin op de ruwe tekst staan. */
 				document.getElementById(ID_LLFC_LAST_UPDATED_SPINNER).style.display = 'none';
-				this.showData();
+				document.getElementById(ID_LAST_UPDATED).innerHTML =
+					this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
+				if (this.rewrite) {
+					this.showRewrite();
+				}
 				return;
 			}
 			/* Disable spinner icon */
