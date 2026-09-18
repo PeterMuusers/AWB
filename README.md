@@ -91,6 +91,14 @@ falls back to the KNMI layer.
 The rest needs nothing. The low level forecast is one bulletin for the whole country, the wind
 profile is fetched for your own coordinates, and radar and satellite are national layers.
 
+A board can hold more than one field. `config-<name>.json` next to `config.json` is picked up by
+`?location=<name>`, so `/?location=hilversum` runs the same board on another dropzone while the
+screen in the hangar keeps to its own. `config-hilversum.json` is in the repository as a worked
+example: Hilversum has no ceilometer of its own, so it measures at De Bilt eleven kilometres away,
+and the panel says so under the numbers while the heading still reads the name of the field. Copy
+it, change the five keys that are about your place - `location`, `luchtvaartmeteo`, `jumprun`,
+`radar.forecast` - and you have a second board without touching the first.
+
 ### Keyboard shortcuts
 
 | Key | Description |

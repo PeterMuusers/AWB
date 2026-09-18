@@ -1,0 +1,123 @@
+{
+	"location": {
+		"name": "Hilversum",
+		"lattitude": 52.192527,
+		"longitude": 5.146259
+	},
+	"locale": "nl-NL",
+	"theme": "navy",
+	"options": {
+		"timeZoneName": "short",
+		"weekday": "short",
+		"year": "numeric",
+		"month": "short",
+		"day": "numeric",
+		"hour12": false,
+		"hour": "2-digit",
+		"minute": "2-digit",
+		"second": "2-digit"
+	},
+	"cloudProfile": {
+		"hoursBack": 2,
+		"hoursAhead": 2
+	},
+	"metar": [],
+	"taf": [],
+	"aloft": {
+		"model": "knmi_seamless",
+		"hoursAhead": 2
+	},
+	"upperwinds": [
+		1000,
+		2000,
+		3000,
+		5000,
+		9000,
+		12000,
+		15000
+	],
+	"airplanes": [
+		"48488d"
+	],
+	"alerts": {
+		"enabled": false
+	},
+	"knmi_llfc": [
+		"Geldig",
+		"Situatie",
+		"Significant weer",
+		"Wind",
+		"Bewolking",
+		"Thermiek",
+		"Vooruitzichten"
+	],
+	"jumprun": {
+		"stations": [
+			"hilversum"
+		],
+		"afterRuns": 2,
+		"seconds": 20
+	},
+	"llfc": {
+		"mode": "ai",
+		"model": "claude-haiku-4-5"
+	},
+	"luchtvaartmeteo": {
+		"station": "de-bilt",
+		"stationName": "Hilversum",
+		"note": "Ceilometer en wind gemeten in De Bilt, 11 km van de dropzone",
+		"windUnit": "kt"
+	},
+	"openweathermap": {
+		"appid": "00000000000000000000000000000000"
+	},
+	"radar": {
+		"bounds": [
+			[
+				50.72,
+				3.25
+			],
+			[
+				53.58,
+				7.25
+			]
+		],
+		"hoursBack": 2,
+		"hoursAhead": 2,
+		"satellite": {
+			"enabled": true,
+			"layer": "clouds",
+			"blend": true,
+			"opacity": 1,
+			"advect": true,
+			"altitude": 5000
+		},
+		"frameInterval": 250,
+		"pauseAtNow": 1000,
+		"pauseAtEnd": 2000,
+		"forecast": {
+			"source": "jumprun",
+			"station": "hilversum",
+			"fallback": "wms"
+		}
+	},
+	"sat24": {
+		"image_size": "3",
+		"timezone": "W_dot_%20Europe%20Standard%20Time",
+		"location": "8115883"
+	},
+	"weatherandradar": {
+		"zoom": 7.6,
+		"layer": "wr",
+		"hideControls": false,
+		"timezone": "UTC",
+		"timeformat": "HH:mm",
+		"tempunit": "celcius",
+		"windunit": "kmh",
+		"period": "periodCurrentHighRes"
+	},
+	"windsaloft": {
+		"hourOffset": "0",
+		"referrer": "MSWA"
+	}
+}
