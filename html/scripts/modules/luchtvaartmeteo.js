@@ -10,17 +10,36 @@ import {
 } from '../language.js';
 
 /*
- * KNMI observations from the API behind luchtvaartmeteo.nl (login required), measured at a real
- * station instead of modelled: wind and gusts, temperature, dew point, humidity, QNH, visibility,
- * the cloud layers of the ceilometer and precipitation. The login and the API calls are done
- * server-side by luchtvaartmeteo-proxy.php; this module fills the metrics panel with the result.
+ * Het meetblok links op het bord. Waar de cijfers vandaan komen hangt van de instelling af:
  *
- * The summary line, the icon and the sunrise and sunset times are derived here from those same
- * measurements and from the position of the sun, so the board needs no second weather source.
+ *   - staat er een `luchtvaartmeteo`-blok in config.json, dan komen ze van de API achter
+ *     luchtvaartmeteo.nl: gemeten op een echt station in plaats van gerekend, met wind en stoten,
+ *     temperatuur, dauwpunt, QNH, zicht, neerslag en de wolkenlagen van de ceilometer. Inloggen en
+ *     ophalen doet luchtvaartmeteo-proxy.php, zodat het wachtwoord niet in de browser komt.
+ *   - staat dat blok er niet, dan valt het terug op Weerlive - de bron waar dit bord het vroeger van
+ *     had. Dat vraagt geen account maar wel een sleutel in `weerlive.key`, en het levert minder:
+ *     geen stoten, geen neerslag in mm/u en geen wolkenbasis, want daar hoort een ceilometer bij.
+ *
+ * Zo blijft een bestaand bord met zijn eigen config draaien zoals het draaide, en is het nieuwe een
+ * keuze in plaats van een voorwaarde.
+ *
+ * De samenvatting, het icoontje en de tijden van zonsopkomst en -ondergang komen uit diezelfde
+ * metingen en uit de stand van de zon, dus het bord heeft geen tweede weerbron nodig.
  */
 
 const SOURCE = 'luchtvaartmeteo.nl';
 const PROXY_URL = './luchtvaartmeteo-proxy.php';
+const WEERLIVE_SOURCE = 'Weerlive';
+const WEERLIVE_URL = 'https://weerlive.nl/api/weerlive_api_v2.php';
+/* Het beeld dat Weerlive meestuurt, naar het icoontje dat dit bord gebruikt. Weerlive kent er meer;
+   wat hier niet in staat valt terug op het icoontje dat bij de bewolking hoort. */
+const WEERLIVE_SKY = {
+	zonnig: 'clear', helderenacht: 'clear_night',
+	lichtbewolkt: 'few', wolkennacht: 'few_night', halfbewolkt: 'scattered',
+	halfbewolkt_regen: 'rain', bewolkt: 'broken', zwaarbewolkt: 'overcast', nachtbewolkt: 'overcast',
+	regen: 'rain', buien: 'rain', hagel: 'rain', bliksem: 'rain', sneeuw: 'fog',
+	mist: 'fog', nachtmist: 'fog',
+};
 const HTTP_SERVICE_UNAVAILABLE = 503; // the proxy has no (valid) credentials file
 
 const ID_METRICS_SOURCE_LABEL = 'metrics-source-label';
@@ -35,6 +54,7 @@ const ID_SUMMARY = 'metrics-data';
 const ID_NOTE = 'metrics-note';
 const ID_CLOUDBASE = 'cloudbase-data';
 const ID_CLOUDBASE_LAYERS = 'cloudbase-layers';
+const ID_CLOUDBASE_BLOCK = 'metrics-cloudbase';
 
 /* Each cell of the grid: label, value, unit and an optional second line */
 const CELLS = [
@@ -87,7 +107,13 @@ function cloudAmountCode(okta) {
 class Module {
 	constructor(location) {
 		this.location = location;
-		this.station = document.config.luchtvaartmeteo.station || 'hoogeveen';
+		/* Zonder het blok valt hij terug op Weerlive; alles hieronder moet dus tegen een lege
+		   instelling kunnen. */
+		this.settings = document.config.luchtvaartmeteo || {};
+		this.measured = (document.config.luchtvaartmeteo !== undefined);
+		this.source = this.measured ? SOURCE : WEERLIVE_SOURCE;
+		this.summaryText = null;			// alleen bij Weerlive: hun eigen samenvatting
+		this.station = this.settings.station || 'hoogeveen';
 		/* The station publishes every ten minutes and the proxy holds on to an answer until the next
 		   one is due, so asking often costs nothing beyond the dropzone and keeps what the board shows
 		   within a couple of minutes of what was measured. */
@@ -99,11 +125,11 @@ class Module {
 		this.series = null;		// the past hours per field, for the chart under the panel
 		this.units = null;
 
-		this.unit = (document.config.luchtvaartmeteo.windUnit === 'kt') ? UNIT_KNOTS : UNIT_METERS_PER_SECOND;
+		this.unit = (this.settings.windUnit === 'kt') ? UNIT_KNOTS : UNIT_METERS_PER_SECOND;
 
 		/* Set language specific stuff */
 		document.getElementById(ID_METRICS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
-		document.getElementById(ID_METRICS_SOURCE_DATA).innerHTML = SOURCE;
+		document.getElementById(ID_METRICS_SOURCE_DATA).innerHTML = this.source;
 		document.getElementById(ID_METRICS_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_LAST_UPDATED;
 		CELLS.forEach(cell => {
 			document.getElementById(cell.label).innerHTML = cell.text();
@@ -120,6 +146,9 @@ class Module {
 	}
 
 	updateData() {
+		if (!this.measured) {
+			return this.updateFromWeerlive();
+		}
 		/* Disable warning icon */
 		document.getElementById(ID_METRICS_LAST_UPDATED_WARNING).style.display = 'none';
 
@@ -174,6 +203,72 @@ class Module {
 		});
 	}
 
+	/* De terugval: Weerlive in plaats van een meetstation. Hun antwoord wordt omgezet naar dezelfde
+	   velden die de rest van deze module leest, zodat er verder niets van hoeft te weten. Wat Weerlive
+	   niet heeft blijft leeg - stoten, neerslag in mm/u en de wolkenbasis - en dat is beter dan een
+	   getal verzinnen dat er niet is. */
+	updateFromWeerlive() {
+		var key = (document.config.weerlive || {}).key;
+		if (!key) {
+			createSystemMessage('Geen meetbron ingesteld: vul `luchtvaartmeteo` of `weerlive` in config.json in.');
+			clearInterval(this.task);
+			return;
+		}
+		document.getElementById(ID_METRICS_LAST_UPDATED_WARNING).style.display = 'none';
+		document.getElementById(ID_METRICS_LAST_UPDATED_SPINNER).style.display = 'block';
+
+		var url = WEERLIVE_URL + '?key=' + encodeURIComponent(key)
+			+ '&locatie=' + document.config.location.lattitude + ',' + document.config.location.longitude;
+		fetch(url, { headers: { Accept: 'application/json' } })
+			.then(response => {
+				if (response.ok !== true) {
+					throw new Error('HTTP ' + response.status + ' (' + response.statusText + ')');
+				}
+				return response.json();
+			})
+			.then(data => {
+				document.getElementById(ID_METRICS_LAST_UPDATED_SPINNER).style.display = 'none';
+				var live = (data && Array.isArray(data.liveweer) && data.liveweer.length) ? data.liveweer[0] : null;
+				if (live === null) {
+					document.getElementById(ID_METRICS_LAST_UPDATED_WARNING).style.display = 'block';
+					return;
+				}
+				var number = one => {
+					var value = Number(one);
+					return (one === undefined || one === null || one === '' || isNaN(value)) ? null : value;
+				};
+				/* Weerlive v2 geeft het zicht in meters, ondanks dat weerlive.js er km achter zet -
+				   daar staat op een onbewolkte dag dus "61700 km" op het scherm. */
+				var visibility = number(live.zicht);
+				this.last_updated = new Date();
+				this.observed_at = null;
+				this.series = null;
+				this.units = null;
+				this.observation = {
+					wind_kt: number(live.windknp),
+					wind_dir: number(live.windrgr),
+					gust_kt: null,
+					temp_c: number(live.temp),
+					dewpoint_c: number(live.dauwp),
+					qnh_hpa: number(live.luchtd),
+					vis_m: visibility,
+					rain_mmh: null,
+				};
+				/* Hun eigen samenvatting en beeld: zonder ceilometer valt er hier niets af te leiden. */
+				this.summaryText = live.samenv || null;
+				this.summaryKey = WEERLIVE_SKY[live.image] || null;
+				if (this.settings.stationName === undefined && live.plaats) {
+					this.settings = { ...this.settings, stationName: live.plaats };
+				}
+				this.showData();
+			})
+			.catch(error => {
+				document.getElementById(ID_METRICS_LAST_UPDATED_SPINNER).style.display = 'none';
+				document.getElementById(ID_METRICS_LAST_UPDATED_WARNING).style.display = 'block';
+				console.warn(WEERLIVE_SOURCE + ': ' + error.message);
+			});
+	}
+
 	/* Value of a field, or null when the station did not report it */
 	value(field) {
 		var value = this.observation ? this.observation[field] : null;
@@ -196,6 +291,13 @@ class Module {
 	/* Summary and icon from our own measurements */
 	sky() {
 		var night = sunElevation(new Date(), document.config.location.lattitude, document.config.location.longitude) < 0;
+		/* Bij Weerlive is er geen ceilometer om iets uit af te leiden; dan telt het beeld dat zij
+		   meesturen. */
+		if (this.summaryKey) {
+			var theirs = (night && SKY_ICONS[this.summaryKey + '_night'])
+				? SKY_ICONS[this.summaryKey + '_night'] : SKY_ICONS[this.summaryKey];
+			return { key: this.summaryKey, icon: theirs || SKY_ICONS.clear };
+		}
 		var rain = this.value('rain_mmh');
 		var visibility = this.value('vis_m');
 		if (rain !== null && rain > 0) {
@@ -227,19 +329,33 @@ class Module {
 
 	showData() {
 		/* Station and how far it is from the dropzone */
-		this.set(ID_LOCATION, document.config.luchtvaartmeteo.stationName || this.station);
+		this.set(ID_LOCATION, this.settings.stationName || this.station);
 		/* De regel onder het blok: wat er in de instelling staat, en anders waar gemeten wordt. Staat
 		   er met opzet niets ("note": ""), dan hoort er ook niets te staan; vandaar dat een lege tekst
 		   hier iets anders betekent dan een ontbrekende. */
-		var note = document.config.luchtvaartmeteo.note;
+		var note = this.settings.note;
 		this.set(ID_NOTE, (note === undefined || note === null)
-			? LANGUAGE_MEASURED_AT + ' ' + (document.config.luchtvaartmeteo.stationName || this.station)
+			? LANGUAGE_MEASURED_AT + ' ' + (this.settings.stationName || this.station)
 			: note);
 
 		/* Summary and icon */
 		var sky = this.sky();
 		document.getElementById(ID_ICON).setAttribute('data-icon', sky.icon);
-		var summary = LANGUAGE_SKY[sky.key] || '';
+		var summary = this.summaryText || LANGUAGE_SKY[sky.key] || '';
+
+		/* Zonder ceilometer valt er over de wolkenbasis niets te zeggen, en dan hoort dat vak er ook
+		   niet te staan: een leeg veld leest als "geen wolken" en dat is iets anders dan "niet
+		   gemeten". De samenvatting neemt het dan over. */
+		var block = document.getElementById(ID_CLOUDBASE_BLOCK);
+		if (block) {
+			block.hidden = !this.measured;
+		}
+		if (!this.measured) {
+			this.set(ID_SUMMARY, summary);
+			document.getElementById(ID_ICON).style.display = summary === '' ? 'none' : '';
+			this.showCells();
+			return;
+		}
 
 		/* Cloud base: the lowest layer as the big number, the rest behind it */
 		var layers = this.layers();
@@ -276,7 +392,12 @@ class Module {
 		/* Zonder tekst ook geen icoontje: een wolkje op een lege regel is een halve zin. */
 		this.set(ID_SUMMARY, summary);
 		document.getElementById(ID_ICON).style.display = summary === '' ? 'none' : '';
+		this.showCells();
+	}
 
+	/* De cijfers in het raster. Apart, omdat de terugval op Weerlive hier ook langskomt
+	   maar het stuk over de wolkenbasis erboven overslaat. */
+	showCells() {
 		/* Wind, in the unit from config.json */
 		var wind = this.value('wind_kt');
 		var gust = this.value('gust_kt');
@@ -308,9 +429,12 @@ class Module {
 			this.set('visibility-unit', 'm');
 		}
 
-		/* Precipitation */
+		/* Precipitation. Niets gemeten is iets anders dan nul gemeten: Weerlive kent geen mm/u, en
+		   dan hoort er een streepje te staan en niet "droog". */
 		var rain = this.value('rain_mmh');
-		this.set('precipitation-data', (rain === null || rain === 0) ? LANGUAGE_DRY : rain.toFixed(1) + '&nbsp;<span class="metrics-unit">mm/h</span>');
+		var dry = this.measured ? LANGUAGE_DRY : '&ndash;';
+		this.set('precipitation-data', (rain === null) ? dry
+			: (rain === 0 ? LANGUAGE_DRY : rain.toFixed(1) + '&nbsp;<span class="metrics-unit">mm/h</span>'));
 
 		/* Temperature, dew point and pressure */
 		var temperature = this.value('temp_c');

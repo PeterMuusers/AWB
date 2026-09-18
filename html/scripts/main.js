@@ -106,6 +106,14 @@ function demoUntil() {
 	return (until * 1000 > Date.now()) ? until : 0;
 }
 
+/* Verbergt een tegel waarvan de module niet draait */
+function hideWithoutModule(selector, module) {
+	var element = document.querySelector(selector);
+	if (element && !module) {
+		element.hidden = true;
+	}
+}
+
 function watchDemo() {
 	/* Zitten we er al in, dan niets doen. Zonder deze regel navigeert het bord elke vijftien
 	   seconden opnieuw naar zichzelf, en dat is een pagina die zichzelf eindeloos herlaadt. */
@@ -381,6 +389,10 @@ loadConfig(location).then(response => {
 	if (document.config.windy && demoUntil() === 0) {
 		document.modules.windy = new Windy();
 	}
+	/* Een tegel zonder module blijft anders als leeg vak staan. Dat komt voor op een bord dat de
+	   nieuwe blokken niet in zijn config heeft - en een leeg kader ziet eruit als iets dat stuk is. */
+	hideWithoutModule('.cloudprofile', document.modules.cloudprofile);
+
 	/* De vaste demo's uit Discord. Die overschrijven de modules hierboven, dus ze komen erna. */
 	if (demoUntil() === 0) {
 		document.modules.demoScenes = new DemoScenes();

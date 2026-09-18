@@ -850,6 +850,11 @@ header,
 }
 
 /* Cloud and wind chart, drawn by scripts/modules/cloudprofile.js */
+/* Een tegel met display in zijn eigen regel wint van de display:none die bij het hidden-attribuut
+   hoort, dus die hoort er expliciet bij te staan. Zie ook .demo-chip. */
+.cloudprofile[hidden] {
+	display: none;
+}
 .cloudprofile {
 	flex: 1;
 	min-width: 0;

@@ -137,6 +137,11 @@ https://opensky-network.org/aircraft-profile
 https://openweathermap.org/
 #### Sat24
 https://www.sat24.com/
+#### Measurements: luchtvaartmeteo, or Weerlive
+The metrics panel is filled by `luchtvaartmeteo.js` from the API behind luchtvaartmeteo.nl, which needs an account (`LVM_EMAIL`/`LVM_PASSWORD` in `.env`) and is configured with the `luchtvaartmeteo` block. Leave that block out and the same panel falls back to Weerlive, the source this board used before — no account, a key in `weerlive.key`, and less: no gusts, no precipitation in mm/h and no cloud base, because that comes from a ceilometer. The cloud base block and the cloud chart hide themselves when there is nothing to put in them, and precipitation shows a dash rather than "dry": not measured is not the same as nothing falling.
+
+Note for anyone reading Weerlive's answer elsewhere: `zicht` in the v2 API is in **metres**, not kilometres. `weerlive.js` labels it km, which is why a clear day reads as "61700 km".
+
 #### Radar map (KNMI / EUMETSAT / jumprun.nl)
 Own radar map (Leaflet) instead of the Weather and radar iframe, based on the radar screen of https://weer.jumprun.nl/: KNMI precipitation radar for the last hours, precipitation forecast for the next hours and the EUMETSAT satellite image as background. Enabled by the `radar` block in config.json (remove it to get the Weather and radar iframe back). The forecast frames come from jumprun.nl through `jumprun-proxy.php` (server-side, with an optional API key `JUMPRUN_API_KEY` in `.env` and a frame cache); as fallback (`forecast.fallback`) or as source (`forecast.source`) the KNMI Data Platform WMS can be used, which needs a free API key in `.env` (`KNMI_WMS_KEY`, see `.env.example`), added server-side by `knmi-wms-proxy.php`.
 #### Wind map (Windy)
