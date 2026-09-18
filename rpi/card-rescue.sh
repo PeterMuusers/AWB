@@ -8,7 +8,6 @@
 # loses everything on it. This edits the settings the Imager left behind instead.
 #
 #   ./rpi/card-rescue.sh show              what the card says now, and any logs it brought back
-#   ./rpi/card-rescue.sh tailscale         put it in your Tailscale network at the next boot
 #   ./rpi/card-rescue.sh wifi "SSID" [pri] teach it another wifi network (higher pri wins)
 #   ./rpi/card-rescue.sh forget "SSID"     take a network out of the Imager's own list
 #   ./rpi/card-rescue.sh debug             have the next boot leave its logs on this card
@@ -208,73 +207,6 @@ PYTHON
 	fi
 }
 
-# ---------------------------------------------------------------- tailscale
-
-add_tailscale() {
-	say "Tailscale at the next boot"
-	note "Make a key at https://login.tailscale.com/admin/settings/keys"
-	note "Single use, and an hour is plenty: it is traded for the machine's own identity at the"
-	note "first login and is worthless after that. Which matters, because until the Pi has booted"
-	note "once, the key sits on this card in plain text."
-	echo
-	# Never as an argument: everything on a command line is visible to every process on the machine,
-	# and lands in the shell history besides.
-	local key
-	key="$(ask_secret "Auth key (tskey-...)")"
-	[[ -n "${key}" ]] || die "No key given."
-	[[ "${key}" == tskey-* ]] || die "That does not look like a Tailscale auth key; they start with tskey-."
-
-	AWB_NAME=tailscale \
-	AWB_EXTRA="/run/awb-tskey
-'0600'
-${key}" \
-	AWB_BODY='#!/bin/bash
-# Written onto the card by rpi/card-rescue.sh. Runs at the first boot after that.
-set -uo pipefail
-exec >>/var/log/awb-tailscale.log 2>&1
-echo "== $(date -Is) putting this board in the tailnet =="
-# Wait for the network rather than assume it. cloud-init starts this early - a minute after power
-# on, seen on a real board - and wifi association plus DHCP can easily take longer than that. No
-# network is a reason to wait; three minutes without one is a reason to stop and say so.
-for attempt in $(seq 1 36); do
-    getent hosts pkgs.tailscale.com >/dev/null 2>&1 && break
-    [ "$attempt" = 36 ] && echo "no name resolution after three minutes; giving up" && exit 1
-    sleep 5
-done
-echo "network is up after about $((attempt * 5)) seconds"
-. /etc/os-release
-# Their apt repository, so Tailscale is updated along with everything else on the machine. That
-# path is keyed on the Debian codename, and a fresh Raspberry Pi OS can be out before it exists;
-# their own install script works out what the machine is, so it is the honest fallback.
-if curl -fsSL "https://pkgs.tailscale.com/stable/raspbian/${VERSION_CODENAME}.noarmor.gpg" \
-        > /usr/share/keyrings/tailscale-archive-keyring.gpg \
-    && curl -fsSL "https://pkgs.tailscale.com/stable/raspbian/${VERSION_CODENAME}.tailscale-keyring.list" \
-        > /etc/apt/sources.list.d/tailscale.list \
-    && apt-get update && apt-get install -y tailscale; then
-    echo "installed from the apt repository"
-else
-    echo "no apt repository for ${VERSION_CODENAME}; using the install script"
-    rm -f /etc/apt/sources.list.d/tailscale.list /usr/share/keyrings/tailscale-archive-keyring.gpg
-    curl -fsSL https://tailscale.com/install.sh | sh
-fi
-systemctl enable --now tailscaled
-# --ssh so you get in over Tailscale even when the network underneath blocks everything else.
-if [ -r /run/awb-tskey ]; then
-    tailscale up --authkey "$(cat /run/awb-tskey)" --hostname "$(hostname)" --ssh
-    echo "tailscale up exited $?"
-    rm -f /run/awb-tskey
-    tailscale status | head -3
-else
-    echo "no key on this boot; sign in from a browser with: sudo tailscale up"
-fi' \
-		edit_user_data
-	bump_instance_id
-	say "Done"
-	note "Eject the card, put it back in the Pi and power it up."
-	note "It installs Tailscale and signs in by itself; give it a few minutes on a slow line."
-	note "Then it appears in your tailnet and you reach it by name, whatever wifi it is on."
-}
-
 # ---------------------------------------------------------------- debug
 
 add_debug() {
@@ -292,12 +224,11 @@ mkdir -p "$OUT"
   echo "-- who am i"; hostname; head -2 /etc/os-release; uptime
   echo "-- network"; ip -br addr; ip route
   echo "-- wifi"; nmcli -t -f ACTIVE,SSID,SIGNAL device wifi list --rescan no 2>&1 | head -20
-  echo "-- name resolution"; getent hosts pkgs.tailscale.com
-  echo "-- reaching the internet"; curl -sS -o /dev/null -w "%{http_code}\n" --max-time 20 https://pkgs.tailscale.com/
-  echo "-- tailscale"; command -v tailscale >/dev/null && tailscale status 2>&1 | head -5 || echo "not installed"
+  echo "-- name resolution"; getent hosts deb.debian.org
+  echo "-- reaching the internet"; curl -sS -o /dev/null -w "%{http_code}\n" --max-time 20 https://deb.debian.org/
   echo "-- cloud-init"; cloud-init status --long 2>&1 | head -20
 } > "$OUT/summary.txt" 2>&1
-for f in /var/log/awb-tailscale.log /var/log/cloud-init-output.log /var/log/cloud-init.log; do
+for f in /var/log/cloud-init-output.log /var/log/cloud-init.log; do
   [ -r "$f" ] && tail -c 200000 "$f" > "$OUT/$(basename "$f")"
 done
 journalctl -b --no-pager 2>/dev/null | tail -n 800 > "$OUT/journal.txt"
@@ -406,7 +337,6 @@ PYTHON
 
 case "${1:-}" in
 	show) show_card ;;
-	tailscale) add_tailscale ;;
 	debug) add_debug ;;
 	wifi) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh wifi \"SSID\" [priority]"; add_wifi "$2" "${3:-0}" ;;
 	forget) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh forget \"SSID\""; forget_wifi "$2" ;;
