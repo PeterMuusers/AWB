@@ -2,7 +2,7 @@
 
 import { DATE_OPTIONS_LOCAL } from '../const.js';
 import { createSystemMessage, sunElevation } from '../functions.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_RADAR, LANGUAGE_RADAR_FORECAST } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_RADAR, LANGUAGE_RADAR_FORECAST } from '../language.js';
 
 /*
  * Own radar map (Leaflet), based on the radar screen of jumprun.nl (cloudbase):
@@ -270,7 +270,7 @@ class Module {
 		/* Set language specific stuff */
 		document.getElementById(ID_IMAGES_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
 		document.getElementById(ID_IMAGES_SOURCE_DATA).innerHTML = SOURCE;
-		document.getElementById(ID_IMAGES_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_LAST_UPDATED;
+		document.getElementById(ID_IMAGES_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_UPDATED_INLINE;
 
 		/* Build the map container and the time bar */
 		var container = document.getElementById(container_id);

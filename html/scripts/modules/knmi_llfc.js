@@ -3,7 +3,7 @@
 
 import { DATE_OPTIONS_UTC, DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET } from '../const.js';
 import { localiseTimes } from '../functions.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL, LANGUAGE_VALID_FOR } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_UPDATED_INLINE, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL, LANGUAGE_VALID_FOR } from '../language.js';
 
 const SOURCE = 'KNMI';
 /* How far the forecast text may be scaled down to keep the board inside the screen, and in what
@@ -360,7 +360,11 @@ class Module {
 		/* Set language specific stuff */
 		document.getElementById(ID_LLFC_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
 		document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE;
-		document.getElementById(ID_LLFC_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_LAST_UPDATED;
+		/* Deze module draait op allebei de pagina's. In de tegelindeling staat dit achter de bron in
+		   de kopbalk, op de oorspronkelijke pagina onder het paneel - en daar hoort het te blijven
+		   staan zoals het stond. */
+		document.getElementById(ID_LLFC_LAST_UPDATED_LABEL).innerHTML = document.querySelector('.sources')
+			? LANGUAGE_UPDATED_INLINE : LANGUAGE_LAST_UPDATED;
 
 		/* Schedule update of document content */
 		this.task = setInterval(

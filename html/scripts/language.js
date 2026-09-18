@@ -2,7 +2,11 @@
 
 const LANGUAGE_INTERNET_DOWN = 'Geen internet verbinding';
 const LANGUAGE_INTERNET_RESTORED = 'De internet verbinding is hersteld';
-const LANGUAGE_LAST_UPDATED = 'laatste update';   /* staat in de kopbalk achter de naam van de bron, dus zonder hoofdletter en zonder dubbele punt */
+const LANGUAGE_LAST_UPDATED = 'Laatste update:';
+/* In de tegelindeling staat dit in de kopbalk achter de naam van de bron - daar past geen hoofdletter
+   en geen dubbele punt. Op de oorspronkelijke pagina staat het onder een paneel en blijft het zoals
+   het was; een pull request hoort niemands scherm te veranderen zonder dat hij erom vraagt. */
+const LANGUAGE_UPDATED_INLINE = 'laatste update';
 const LANGUAGE_SOURCE = 'Bron:';
 const LANGUAGE_VALID_UNTIL = 'geldig tot';
 const LANGUAGE_VALID_FOR = 'geldig voor';
@@ -65,6 +69,7 @@ export {
 	LANGUAGE_INTERNET_DOWN,
 	LANGUAGE_INTERNET_RESTORED,
         LANGUAGE_LAST_UPDATED,
+        LANGUAGE_UPDATED_INLINE,
         LANGUAGE_SOURCE,
         LANGUAGE_REWRITTEN,
         LANGUAGE_VALID_UNTIL,

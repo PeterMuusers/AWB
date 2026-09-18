@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED, LANGUAGE_GLOVES } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED, LANGUAGE_GLOVES } from '../language.js';
 
 /*
  * Wind profile for the dropzone: wind per altitude for now and the coming hours, plus the height
@@ -70,7 +70,7 @@ class Module {
 		/* Set language specific stuff */
 		document.getElementById(ID_WINDS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
 		document.getElementById(ID_WINDS_SOURCE_DATA).innerHTML = SOURCE;
-		document.getElementById(ID_WINDS_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_LAST_UPDATED;
+		document.getElementById(ID_WINDS_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_UPDATED_INLINE;
 
 		/* Schedule update of document content */
 		this.task = setInterval(
