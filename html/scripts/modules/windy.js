@@ -14,7 +14,7 @@
  * keer een half scherm waard. Er komt pas een kaart bij:
  *
  *     - meer dan 30 kt op 1.000, 2.000 of 3.000 ft   -> de hardste van die drie
- *     - meer dan 40 kt tussen 9.000 en 12.000 ft     -> de hardste van die twee
+ *     - meer dan 45 kt tussen 9.000 en 12.000 ft     -> de hardste van die twee
  *     - meer dan 20 kt aan de grond                  -> de gemeten wind
  *
  * Ze kunnen alle drie tegelijk gelden, en dan komen ze ook alle drie langs, van de grond omhoog.
@@ -44,7 +44,7 @@ const EMBED_URL = 'https://embed.windy.com/embed2.html';
 const LOW_BAND = [1000, 3000];			// feet, van en tot
 const LOW_LIMIT = 30;					// knots, meer dan
 const HIGH_BAND = [9000, 12000];
-const HIGH_LIMIT = 40;
+const HIGH_LIMIT = 45;
 const GROUND_LIMIT = 20;
 
 const LEVELS = [
