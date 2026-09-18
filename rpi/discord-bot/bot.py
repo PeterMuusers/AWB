@@ -367,6 +367,36 @@ async def summertime(interaction: discord.Interaction, minuten: int = 5) -> None
                  "lang. Met /normaal staat het echte weer er meteen weer.", limit=800)
 
 
+@bot.tree.command(name="demo", description="Zet een half minuutje een vast tafereel op het bord")
+@app_commands.describe(wat="welk tafereel", seconden="hoe lang, standaard dertig")
+@app_commands.choices(wat=[
+    app_commands.Choice(name="harde grondwind (24 kt, stoten 31)", value="grondwind"),
+    app_commands.Choice(name="harde wind onderin (34 kt op 3.000 ft)", value="wind-laag"),
+    app_commands.Choice(name="harde wind bovenin (52 kt op 12.000 ft)", value="wind-hoog"),
+    app_commands.Choice(name="de windgrens in de tabel (geen kaart)", value="windgrens"),
+    app_commands.Choice(name="stoten in de grondwind (12 kt G24)", value="stoten"),
+    app_commands.Choice(name="handschoenen (0 °C op 6.000 ft)", value="handschoenen"),
+    app_commands.Choice(name="drie wolkenlagen", value="wolkenlagen"),
+    app_commands.Choice(name="een gesloten wolkendek (8/8 op 1.200 ft)", value="dek"),
+    app_commands.Choice(name="onweer in het bulletin", value="onweer"),
+    app_commands.Choice(name="een jumprun op de kaart", value="jumprun"),
+    app_commands.Choice(name="een hoge en een lage jumprun", value="jumprun-hoog-laag"),
+    app_commands.Choice(name="stoppen", value="stop"),
+])
+async def demo(interaction: discord.Interaction, wat: app_commands.Choice[str], seconden: int = 30) -> None:
+    if not allowed(interaction):
+        return await deny(interaction)
+    seconden = max(5, min(300, seconden))
+    await interaction.response.defer(thinking=True)
+    if wat.value == "stop":
+        ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-demo", "stop", timeout=30)
+        return await report(interaction, ok, result, "Demo gestopt.", limit=800)
+    ok, result = outcome("sudo", "-n", "/usr/local/sbin/awb-demo", wat.value, str(seconden), timeout=30)
+    await report(interaction, ok, result,
+                 f"{wat.name} — {seconden} seconden, dan is het bord weer zichzelf. Er staat DEMO "
+                 "in de bovenbalk zolang het loopt.", limit=800)
+
+
 @bot.tree.command(name="normaal", description="Stop de mooiweerstand en zet het echte bord terug")
 async def normaal(interaction: discord.Interaction) -> None:
     if not allowed(interaction):

@@ -17,6 +17,7 @@ import { Module as Aloft } from './modules/aloft.js';
 import { Module as CloudProfile } from './modules/cloudprofile.js';
 import { Module as Jumprun } from './modules/jumprun.js';
 import { Module as Windy } from './modules/windy.js';
+import { Module as DemoScenes } from './modules/demo-scenes.js';
 import { installDemo, showDemoMap } from './demo.js';
 
 const ID_DATETIME = 'datetime-data';
@@ -379,6 +380,10 @@ loadConfig(location).then(response => {
 	/* De windkaart hoort achter de hoogtewinden aan: die bepalen of er iets te tonen is. */
 	if (document.config.windy && demoUntil() === 0) {
 		document.modules.windy = new Windy();
+	}
+	/* De vaste demo's uit Discord. Die overschrijven de modules hierboven, dus ze komen erna. */
+	if (demoUntil() === 0) {
+		document.modules.demoScenes = new DemoScenes();
 	}
 	if (document.config.cloudProfile) {
 		document.modules.cloudprofile = new CloudProfile('cloudprofile');

@@ -1,0 +1,62 @@
+#!/bin/bash
+# Zet een vast tafereel op het bord, of haal het er meteen weer af.
+#
+#   awb-demo grondwind        dertig seconden harde grondwind
+#   awb-demo wind-hoog 60     een minuut, als je langer wil kijken
+#   awb-demo stop             nu stoppen
+#
+# De markering staat in /run, dus op een tmpfs: na een herstart van de Pi is het tafereel weg. Net
+# als bij de mooiweerstand is dat met opzet. Een bord dat na een stroomstoring blijft hangen in
+# verzonnen wind, op een plek waar mensen beslissen of ze springen, is wat niet mag gebeuren.
+#
+# De namen staan ook in html/scripts/modules/demo-scenes.js; die lijst hier is de poortwachter, want
+# wat hier doorheen komt wordt zo in een bestand geschreven dat het bord uitleest.
+MARKER=/run/awb-demo-scene
+SCENES="grondwind wind-laag wind-hoog windgrens stoten handschoenen wolkenlagen dek onweer jumprun jumprun-hoog-laag"
+DEFAULT_SECONDS=30
+MAX_SECONDS=300
+
+WANTED="${1:-}"
+SECONDS_WANTED="${2:-${DEFAULT_SECONDS}}"
+
+if [ -z "${WANTED}" ] || [ "${WANTED}" = "stop" ]; then
+	rm -f "${MARKER}" 2>/dev/null
+	# Controleren in plaats van aannemen: rm -f slikt een fout in, en als /run alleen-lezen is voor
+	# deze dienst lijkt het te lukken terwijl het tafereel gewoon doorloopt.
+	if [ -e "${MARKER}" ]; then
+		echo "kon de markering niet weghalen: ${MARKER} bestaat nog" >&2
+		echo "staat /run op alleen-lezen voor deze dienst? zie ReadWritePaths in awb-discord.service" >&2
+		exit 1
+	fi
+	echo "demo gestopt; het bord is binnen vijf seconden weer zichzelf"
+	exit 0
+fi
+
+case " ${SCENES} " in
+	*" ${WANTED} "*) ;;
+	*)
+		echo "onbekende demo: ${WANTED}" >&2
+		echo "kies uit: ${SCENES}" >&2
+		exit 2
+		;;
+esac
+
+case "${SECONDS_WANTED}" in
+	''|*[!0-9]*)
+		echo "de duur moet een getal in seconden zijn, niet ${SECONDS_WANTED}" >&2
+		exit 2
+		;;
+esac
+if [ "${SECONDS_WANTED}" -lt 5 ] || [ "${SECONDS_WANTED}" -gt "${MAX_SECONDS}" ]; then
+	echo "de duur moet tussen 5 en ${MAX_SECONDS} seconden liggen, niet ${SECONDS_WANTED}" >&2
+	exit 2
+fi
+
+UNTIL=$(( $(date +%s) + SECONDS_WANTED ))
+if ! echo "${UNTIL} ${WANTED}" > "${MARKER}" 2>/dev/null; then
+	echo "kon ${MARKER} niet schrijven; staat /run op alleen-lezen voor deze dienst?" >&2
+	exit 1
+fi
+chmod 644 "${MARKER}" 2>/dev/null || true
+echo "${WANTED} staat op het bord tot $(date -d "@${UNTIL}" '+%H:%M:%S')"
+echo "het bord pakt het binnen vijf seconden op en komt daarna vanzelf terug"
