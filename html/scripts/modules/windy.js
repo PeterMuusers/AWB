@@ -4,8 +4,8 @@
 /*
  * De windkaart van Windy, in de kaarttegel, maar alleen als het er toe doet.
  *
- * Staat er harde wind op hoogte, dan zegt een gekleurde cel in de tabel wel dát het zo is maar niet
- * hoe het eruitziet. Windy tekent dat veld over heel Nederland, en dit beeld neemt de kaart even
+ * Staat er harde wind onderin de lucht, dan zegt een gekleurde cel in de tabel wel dát het zo is
+ * maar niet hoe het eruitziet. Windy tekent dat veld over heel Nederland, en dit beeld neemt de kaart
  * over - net als een jumprun - zodat je in één oogopslag ziet waar het vandaan komt en hoe breed
  * het zit.
  *
@@ -14,10 +14,14 @@
  * keer een half scherm waard. Er komt pas een kaart bij:
  *
  *     - meer dan 30 kt op 1.000, 2.000 of 3.000 ft   -> de hardste van die drie
- *     - meer dan 45 kt tussen 9.000 en 12.000 ft     -> de hardste van die twee
  *     - meer dan 20 kt aan de grond                  -> de gemeten wind
  *
- * Ze kunnen alle drie tegelijk gelden, en dan komen ze ook alle drie langs, van de grond omhoog.
+ * Ze kunnen allebei tegelijk gelden, en dan komen ze ook allebei langs, van de grond omhoog.
+ *
+ * Alleen de onderste laag dus. Harde wind op hoogte is wel een gekleurde cel in het windprofiel
+ * waard - daar staat het getal waar het bij hoort - maar geen eigen beeld in de carrousel: het is
+ * de wind onder de koepel en bij de landing waar je naar de kaart wil kijken.
+ *
  * Dit beeld voegt niets toe en trekt geen conclusies; het toont hetzelfde getal dat elders op het
  * bord staat, op de kaart.
  *
@@ -38,13 +42,10 @@ const EMBED_URL = 'https://embed.windy.com/embed2.html';
    Van de hoogte in de tabel wordt het dichtstbijzijnde niveau gekozen - tussenliggende niveaus
    bestaan daar niet, dus 9.000 ft wordt 700 hPa en dat is 9.900 ft. Het getal in de kop blijft de
    hoogte uit de tabel, want dat is waar de waarde bij hoort. */
-/* Wanneer een hoogte een kaart waard is. Onderin gaat het om de koepelrit en om wat de wind met een
-   landing doet; daarboven om de uitloop van de jumprun en de afstand tussen de groepen. De grond
-   staat er apart in, want die wordt gemeten en niet gerekend. */
+/* Wanneer een hoogte een kaart waard is: onderin, waar het om de koepelrit gaat en om wat de wind
+   met een landing doet. De grond staat er apart in, want die wordt gemeten en niet gerekend. */
 const LOW_BAND = [1000, 3000];			// feet, van en tot
 const LOW_LIMIT = 30;					// knots, meer dan
-const HIGH_BAND = [9000, 12000];
-const HIGH_LIMIT = 45;
 const GROUND_LIMIT = 20;
 
 const LEVELS = [
@@ -71,8 +72,6 @@ class Module {
 		this.zoom = this.config.zoom || 7;
 		this.lowBand = this.config.lowBand || LOW_BAND;
 		this.lowLimit = (this.config.lowLimit !== undefined) ? this.config.lowLimit : LOW_LIMIT;
-		this.highBand = this.config.highBand || HIGH_BAND;
-		this.highLimit = (this.config.highLimit !== undefined) ? this.config.highLimit : HIGH_LIMIT;
 		this.groundLimit = (this.config.groundLimit !== undefined) ? this.config.groundLimit : GROUND_LIMIT;
 		this.turn = -1;
 		this.sequenceTimer = null;
@@ -99,10 +98,6 @@ class Module {
 		var low = this.hardest(now, this.lowBand, this.lowLimit, 'low');
 		if (low !== null) {
 			out.push(low);
-		}
-		var high = this.hardest(now, this.highBand, this.highLimit, 'high');
-		if (high !== null) {
-			out.push(high);
 		}
 		return out;
 	}
