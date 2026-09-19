@@ -35,6 +35,10 @@ const STATE_URL = 'demo.php';
 
 /* De waarden in de taferelen zijn met opzet rond en herkenbaar: ze horen eruit te zien als een dag
    die je je kunt voorstellen, niet als een meting. */
+/* Hoeveel knopen het bulletin er in de demo bovenop krijgt: ruim boven de marge waarmee het bord
+   pas iets meldt, zodat het blok gegarandeerd verschijnt. */
+const DEMO_BULLETIN_KT = 25;
+
 const SCENES = {
 	'grondwind': {
 		label: 'harde grondwind',
@@ -107,6 +111,35 @@ const SCENES = {
 			llfc.showBulletin();
 			return () => {
 				undo();
+				llfc.showBulletin();
+				if (llfc.rewrite) {
+					llfc.showRewrite();
+				}
+			};
+		},
+	},
+	'hoogtewinden': {
+		label: 'het model wijkt af van het KNMI-bulletin',
+		/* Het bulletin harder laten zeggen dan het model, zodat het gele blok met de hoogtewinden
+		   van het KNMI in de bulletintegel verschijnt. Er wordt niets aan de tabel van het bord
+		   gesleuteld: juist het verschil tussen die twee is wat je wil laten zien. */
+		apply: m => {
+			var llfc = m.knmi_llfc;
+			var aloft = m.aloft;
+			if (!llfc || !aloft || typeof llfc.upperWinds !== 'function') {
+				return null;
+			}
+			var echt = llfc.upperWinds.bind(llfc);
+			llfc.upperWinds = () => echt().map(regel => ({
+				...regel, min: regel.min + DEMO_BULLETIN_KT, max: regel.max + DEMO_BULLETIN_KT,
+			}));
+			/* de tegel tekent zichzelf alleen als het bulletin verandert, dus even zelf */
+			llfc.showBulletin();
+			if (llfc.rewrite) {
+				llfc.showRewrite();
+			}
+			return () => {
+				llfc.upperWinds = echt;
 				llfc.showBulletin();
 				if (llfc.rewrite) {
 					llfc.showRewrite();
