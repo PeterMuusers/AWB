@@ -255,6 +255,14 @@ header,
 	display: block;
 	font-weight: 500;
 }
+/* Wanneer het model iets heel anders beweert dan het weerbulletin van het KNMI. Geen signaalkleur:
+   de kleuren op dit bord zijn vergeven aan dingen die over de sprong gaan - stoten, harde wind,
+   de nulgradengrens - en dit gaat over de gegevens zelf. Wel zwaarder gezet dan de regel erboven,
+   want het staat er alleen als er iets aan de hand is. */
+.upper-winds-differs {
+	font-weight: 700;
+	color: var(--textcolor-2, var(--textcolor));
+}
 .upper-winds-content {
 	text-align: right;
 	font-variant-numeric: tabular-nums;

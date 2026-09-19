@@ -710,6 +710,75 @@ class Module {
 		});
 	}
 
+	/* De hoogtewinden uit het bulletin, als getallen.
+	 *
+	 * Het KNMI zet ze onderaan het bulletin in een blokje van twee kolommen - het begin en het eind
+	 * van de geldigheidsperiode - met per hoogte een richting, een snelheid of een marge daarvan,
+	 * en de temperatuur:
+	 *
+	 *        09 UTC:       15 UTC:
+	 * 0500VT 230/20-30 +16 230/25-35 +19
+	 * FL 050 260/35    +11 260/25-35 +09
+	 *
+	 * Dit zijn landelijke waarden met opzet ruim genomen ("hoogste windsnelheden in het
+	 * noordwesten"), dus ze zijn niet bedoeld om een puntvoorspelling mee na te rekenen. Wat je er
+	 * wel mee kunt: kijken of het model niet iets heel anders beweert dan de meteoroloog.
+	 *
+	 * Geeft een lijst terug van { feet, at, dir, min, max, temp }, of een lege lijst. `at` is het
+	 * hele uur in UTC waar de kolom bij hoort.
+	 */
+	upperWinds() {
+		if (!this.llfc) {
+			return [];
+		}
+		var start = this.llfc.indexOf('HOOGTEWINDEN');
+		if (start === -1) {
+			return [];
+		}
+		/* tot de volgende alinea: de regels van het bulletin staan tussen puntregels */
+		var end = this.llfc.indexOf('\n.', start);
+		var blok = this.llfc.slice(start, end === -1 ? undefined : end).split('\n');
+
+		/* de uren staan in de kop erboven, in dezelfde volgorde als de kolommen eronder */
+		var uren = [];
+		blok.forEach(regel => {
+			if (uren.length === 0) {
+				var gevonden = regel.match(/(\d{2})\s*UTC/g);
+				if (gevonden && gevonden.length > 1) {
+					uren = gevonden.map(stuk => Number(stuk.slice(0, 2)));
+				}
+			}
+		});
+		if (uren.length === 0) {
+			return [];
+		}
+
+		var out = [];
+		blok.forEach(regel => {
+			var hoogte = regel.match(/^\s*(?:FL\s*(\d{2,3})|(\d{3,4})\s*VT)/i);
+			if (!hoogte) {
+				return;
+			}
+			var feet = hoogte[1] ? Number(hoogte[1]) * 100 : Number(hoogte[2]);
+			var waarden = regel.slice(hoogte[0].length).match(/(\d{3})\/(\d{2,3})(?:-(\d{2,3}))?\s*([+-]\s*\d+)?/g) || [];
+			waarden.forEach((stuk, kolom) => {
+				var deel = stuk.match(/(\d{3})\/(\d{2,3})(?:-(\d{2,3}))?\s*([+-]\s*\d+)?/);
+				if (!deel || kolom >= uren.length) {
+					return;
+				}
+				out.push({
+					feet: feet,
+					at: uren[kolom],
+					dir: Number(deel[1]),
+					min: Number(deel[2]),
+					max: deel[3] ? Number(deel[3]) : Number(deel[2]),
+					temp: deel[4] ? Number(deel[4].replace(/\s+/g, '')) : null,
+				});
+			});
+		});
+		return out;
+	}
+
 	llfc_decompose(component) {
 		var i, start, data, sentences, key, result = null;
 
