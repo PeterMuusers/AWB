@@ -333,6 +333,8 @@ chown "${USER_NAME}:${USER_NAME}" "${KIOSK}"
 # gebeurt er ook niets: dit script kijkt gewoon elke twintig seconden of er iets bijgekomen is, dus
 # een scherm dat er later bij wordt geprikt komt vanzelf aan.
 SCREEN2="${USER_HOME}/awb-screen2.sh"
+# cec-ctl hoort bij v4l-utils en is waarmee we de tv naar zijn aan/uit-stand vragen.
+apt-get -qq -y install v4l-utils >/dev/null 2>&1 || true
 # De markering van het tweede scherm komt hier te staan: de kiosk schrijft hem, de webserver leest
 # hem. In /run, op een tmpfs, zodat hij een herstart niet overleeft - een bord dat na een
 # stroomstoring denkt dat er een tweede scherm hangt laat de jumpruns weg en toont ze nergens meer.
@@ -341,6 +343,11 @@ SCREEN2="${USER_HOME}/awb-screen2.sh"
 printf 'd /run/awb-screens 0755 %s %s -\n' "${USER_NAME}" "${USER_NAME}" > /etc/tmpfiles.d/awb-screens.conf
 systemd-tmpfiles --create /etc/tmpfiles.d/awb-screens.conf >/dev/null 2>&1 || true
 OUTPUT2="$(ask "Second HDMI output, for the jumpruns (empty to skip)" "HDMI-A-2")"
+# HDMI-A-1 hangt aan /dev/cec0, HDMI-A-2 aan /dev/cec1.
+case "${OUTPUT2}" in
+	*-1) CEC_INDEX=0 ;;
+	*) CEC_INDEX=1 ;;
+esac
 cat > "${SCREEN2}" <<EOF
 #!/usr/bin/env bash
 # Written by rpi/setup.sh. De jumpruns op het tweede scherm, als er een tweede scherm is.
@@ -359,16 +366,34 @@ PROFILE=/tmp/awb-kiosk2
 # als de gebruiker en die mag daar niet schrijven; en niet in /tmp, want lighttpd heeft daar met
 # PrivateTmp een eigen exemplaar van en ziet er nooit iets van een ander staan.
 MARKER=/run/awb-screens/second
+# Welke CEC-adapter bij deze uitgang hoort: HDMI-A-1 is /dev/cec0, HDMI-A-2 is /dev/cec1.
+CEC=${CEC_INDEX}
 
 draait() { pgrep -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1; }
 aangesloten() { WAYLAND_DISPLAY=wayland-0 wlr-randr 2>/dev/null | grep -q "^\${OUTPUT2} "; }
+
+# Staat die tv ook echt aan? Een scherm dat je uitzet laat zijn HDMI-verbinding gewoon staan - de
+# Pi blijft "connected" zien, en ook de kernel zegt dat - maar over CEC kun je het hem vragen.
+# Antwoordt hij niet, dan weten we het niet, en dan geldt hij als aan: een tv zonder CEC hoort niet
+# stilzwijgend als uitgezet te tellen.
+aan() {
+	local antwoord
+	antwoord=\$(cec-ctl -d"\${CEC}" --to 0 --give-device-power-status 2>/dev/null | grep -o "pwr-state: [a-z-]*")
+	case "\${antwoord}" in
+		*standby*) return 1 ;;
+		*) return 0 ;;
+	esac
+}
 
 # gaat dit script eruit, dan gaat de markering mee: een bord dat blijft denken dat er een tweede
 # scherm hangt laat de jumpruns weg en toont ze dus nergens meer
 trap 'rm -f "\${MARKER}"; pkill -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1' EXIT
 
+# De adapter eenmalig aanmelden; zonder logisch adres kan hij niets vragen.
+cec-ctl -d"\${CEC}" --playback >/dev/null 2>&1
+
 while true; do
-	if aangesloten; then
+	if aangesloten && aan; then
 		if ! draait; then
 			WAYLAND_DISPLAY=wayland-0 wlr-randr --output "\${OUTPUT2}" --mode "\${MODE2}" \\
 				2>/dev/null || WAYLAND_DISPLAY=wayland-0 wlr-randr --output "\${OUTPUT2}" \\
@@ -382,9 +407,10 @@ while true; do
 		fi
 		draait && touch "\${MARKER}"
 	else
+		# scherm eraf of uitgezet: de markering weg, zodat het bord de jumpruns weer in zijn
+		# carrousel opneemt, en geen browser laten draaien die nergens staat te renderen
 		rm -f "\${MARKER}"
 		if draait; then
-			# scherm eraf: geen browser laten draaien die nergens staat te renderen
 			pkill -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1
 		fi
 	fi
