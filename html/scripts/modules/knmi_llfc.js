@@ -554,7 +554,7 @@ class Module {
 				content += '<div class=llfc-item><span class="llfc-item-header">' + subjects[i] + '</span><span class="llfc-item-text">' + item + '</span></div>';
 			}
 		}
-		document.getElementById(ID_LLFC_CONTENT).innerHTML = this.alertBlock() + content;
+		document.getElementById(ID_LLFC_CONTENT).innerHTML = content + this.alertBlock();
 		document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE;
 		this.fit();
 	}
@@ -592,7 +592,7 @@ class Module {
 				}
 			});
 			if (content !== '' && !this.takenOver()) {
-				document.getElementById(ID_LLFC_CONTENT).innerHTML = this.alertBlock() + content;
+				document.getElementById(ID_LLFC_CONTENT).innerHTML = content + this.alertBlock();
 				document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE + ' ' + LANGUAGE_REWRITTEN;
 				this.fit();
 			}
