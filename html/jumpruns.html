@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="nl">
+	<head>
+		<meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+		<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+		<link rel="stylesheet" type="text/css" title="default" id="theme-stylesheet" href="css/jumprun-navy.css">
+		<!-- De kaart, de handvatten en het onderschrift zien er hier uit zoals op het bord: die
+		     opmaak staat in tiles.css en wordt hier hergebruikt in plaats van overgeschreven. -->
+		<link rel="stylesheet" type="text/css" title="default" href="css/tiles.css">
+		<link rel="stylesheet" type="text/css" title="default" href="css/jumpruns.css">
+		<!-- De titel is ook waar de compositor het venster aan herkent als hij het naar het tweede
+		     scherm moet sturen; zie de vensterregel die rpi/setup.sh schrijft. -->
+		<title>Jumpruns</title>
+	</head>
+	<body class="jumpruns-page">
+		<header class="runs-header">
+			<span class="runs-title" id="runs-title">Jumpruns</span>
+			<span class="runs-clock" id="runs-clock"></span>
+		</header>
+		<main class="runs" id="runs"></main>
+
+		<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+		<script src="scripts/jumpruns.js" type="module"></script>
+	</body>
+</html>

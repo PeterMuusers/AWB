@@ -1,0 +1,96 @@
+/* Het tweede scherm: de jumpruns van vandaag naast elkaar.
+ *
+ * Dit is geen tegelbord. Er staat één ding op - de kaarten - en die krijgen alle ruimte die er is,
+ * dus geen vaste maat van 1920 bij 1080 met een schaal eromheen maar gewoon het hele scherm. Zo
+ * klopt het ook op een televisie die iets anders kan.
+ */
+html.jumpruns,
+body.jumpruns-page {
+	height: 100%;
+	margin: 0;
+	overflow: hidden;
+}
+body.jumpruns-page {
+	/* tiles.css zet het bord op een vast vlak van 1920 bij 1080 en schaalt dat naar het venster.
+	   Deze pagina doet dat niet: er staan twee kaarten op en die mogen gewoon het scherm vullen,
+	   welke maat dat ook heeft. Vandaar dat die maten hier terug naar "het venster" gaan. */
+	width: 100%;
+	height: 100vh;
+	transform: none;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	background-color: var(--background-color);
+	color: var(--textcolor);
+}
+
+/* Een smalle balk bovenaan, in dezelfde vormentaal als de kopbalk van het bord: je moet in één
+   oogopslag zien dat deze twee schermen bij elkaar horen. */
+.runs-header {
+	flex: none;
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 10px 18px;
+	background-color: var(--header-background-color, var(--block-background-color));
+	font-family: var(--font-condensed, 'Barlow Condensed', system-ui, sans-serif);
+}
+.runs-title {
+	font-size: 15pt;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--textcolor-2, var(--textcolor));
+}
+.runs-clock {
+	font-size: 13pt;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: var(--textcolor-2, var(--textcolor));
+}
+
+/* De kaarten zelf: zoveel gelijke kolommen als er dropzones zijn. Twee is de gewone stand
+   (Hoogeveen en Echten), maar een bord met drie velden hoeft hier niets voor te veranderen. */
+.runs {
+	flex: 1;
+	min-height: 0;
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 1fr;
+	gap: 12px;
+	padding: 12px;
+}
+.run {
+	position: relative;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.run-head {
+	flex: none;
+	font-family: var(--font-condensed, 'Barlow Condensed', system-ui, sans-serif);
+	font-size: 13pt;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--textcolor-2, var(--textcolor));
+}
+/* Het vak waar de kaart in ligt. `.layer-jumprun` uit tiles.css legt zichzelf over zijn ouder
+   heen, dus die ouder moet hier de ruimte zijn die overblijft. */
+.run-body {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+}
+/* Op het bord verschijnt en verdwijnt deze laag om beurten; hier staat hij altijd. */
+.run-body .layer-jumprun {
+	z-index: 0;
+}
+
+/* Dit scherm hangt aan de muur en niemand bedient het. */
+.jumpruns-page,
+.jumpruns-page * {
+	cursor: none;
+}

@@ -293,6 +293,45 @@ EOF
 chmod +x "${KIOSK}"
 chown "${USER_NAME}:${USER_NAME}" "${KIOSK}"
 
+# ---------------------------------------------------------------- het tweede scherm
+#
+# De Pi heeft twee HDMI-uitgangen. Hangt er een tweede scherm aan, dan staan daar de jumpruns van
+# vandaag naast elkaar - op het bord krijgen die maar om beurten de kaarttegel. Hangt er niets, dan
+# gebeurt er ook niets: dit script kijkt gewoon elke twintig seconden of er iets bijgekomen is, dus
+# een scherm dat er later bij wordt geprikt komt vanzelf aan.
+SCREEN2="${USER_HOME}/awb-screen2.sh"
+OUTPUT2="$(ask "Second HDMI output, for the jumpruns (empty to skip)" "HDMI-A-2")"
+cat > "${SCREEN2}" <<EOF
+#!/usr/bin/env bash
+# Written by rpi/setup.sh. De jumpruns op het tweede scherm, als er een tweede scherm is.
+OUTPUT2="${OUTPUT2}"
+URL="http://127.0.0.1/jumpruns.html?kiosk=1"
+PROFILE=/tmp/awb-kiosk2
+
+# Een eigen profielmap, want twee browsers kunnen niet uit dezelfde: de tweede ziet dan dat de
+# eerste er al is en geeft het venster aan hém - je krijgt twee tabbladen op één scherm.
+draait() { pgrep -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1; }
+aangesloten() { WAYLAND_DISPLAY=wayland-0 wlr-randr 2>/dev/null | grep -q "^\${OUTPUT2} "; }
+
+while true; do
+	if aangesloten; then
+		if ! draait; then
+			rm -rf "\${PROFILE}"
+			chromium --kiosk --user-data-dir="\${PROFILE}" --password-store=basic \\
+				--noerrdialogs --disable-infobars --disable-session-crashed-bubble \\
+				--disable-features=Translate,TranslateUI \\
+				--check-for-update-interval=31536000 "\${URL}" >/dev/null 2>&1 &
+		fi
+	elif draait; then
+		# scherm eraf: geen browser laten draaien die nergens staat te renderen
+		pkill -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1
+	fi
+	sleep 20
+done
+EOF
+chmod +x "${SCREEN2}"
+chown "${USER_NAME}:${USER_NAME}" "${SCREEN2}"
+
 # Geen muisaanwijzer op dit scherm, van welke muis hij ook komt. De stylesheet zet hem al op none,
 # maar dat werkt pas zodra de aanwijzer over de pagina beweegt - en er hangt geen muis aan de Pi:
 # wie op afstand meekijkt stuurt er een, en dan staat er een pijltje midden op de televisie in de
@@ -349,6 +388,12 @@ if command -v labwc >/dev/null 2>&1 || command -v wayfire >/dev/null 2>&1; then
 profile {
 	output ${OUTPUT} enable mode ${RESOLUTION} position 0,0 scale 1
 }
+# En hetzelfde voor als er een tweede scherm aan hangt: dat krijgt zijn eigen voorkeursmaat en komt
+# rechts van het bord te staan, zodat de jumpruns er een heel scherm voor zichzelf hebben.
+profile {
+	output ${OUTPUT} enable mode ${RESOLUTION} position 0,0 scale 1
+	output ${OUTPUT2:-HDMI-A-2} enable position 1920,0 scale 1
+}
 EOF
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/kanshi/config"
 fi
@@ -360,7 +405,45 @@ if command -v labwc >/dev/null 2>&1; then
 		|| echo "kanshi &" > "${USER_HOME}/.config/labwc/autostart"
 	grep -qxF "${KIOSK} &" "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
 		|| echo "${KIOSK} &" >> "${USER_HOME}/.config/labwc/autostart"
+	if [ -n "${OUTPUT2}" ]; then
+		grep -qxF "${SCREEN2} &" "${USER_HOME}/.config/labwc/autostart" 2>/dev/null \
+			|| echo "${SCREEN2} &" >> "${USER_HOME}/.config/labwc/autostart"
+	fi
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/labwc/autostart"
+	# Een venster kan zichzelf niet op een scherm zetten - op Wayland bepaalt de compositor dat.
+	# Vandaar een vensterregel: het venster met de titel van de jumprun-pagina gaat naar de tweede
+	# uitgang. De regel gaat in een kopie van de instellingen van het systeem, zodat alles wat
+	# labwc verder standaard doet blijft staan.
+	if [ -n "${OUTPUT2}" ] && [ ! -f "${USER_HOME}/.config/labwc/rc.xml" ]; then
+		if [ -f /etc/xdg/labwc/rc.xml ]; then
+			cp /etc/xdg/labwc/rc.xml "${USER_HOME}/.config/labwc/rc.xml"
+		else
+			printf '<?xml version="1.0"?>\n<labwc_config>\n</labwc_config>\n' \
+				> "${USER_HOME}/.config/labwc/rc.xml"
+		fi
+		python3 - "${USER_HOME}/.config/labwc/rc.xml" "${OUTPUT2}" <<'PYEOF'
+import io, re, sys
+
+path, output = sys.argv[1], sys.argv[2]
+text = io.open(path, encoding='utf-8').read()
+regel = ('  <windowRules>\n'
+         '    <!-- Geschreven door rpi/setup.sh: de jumpruns horen op het tweede scherm. -->\n'
+         '    <windowRule title="Jumpruns*" matchOnce="false">\n'
+         '      <action name="MoveToOutput" output="%s" />\n'
+         '    </windowRule>\n'
+         '  </windowRules>\n') % output
+if 'Jumpruns*' in text:
+    raise SystemExit(0)
+if re.search(r'^\s*<windowRules>', text, re.M):
+    text = re.sub(r'(^\s*<windowRules>[ \t]*\n)',
+                  lambda m: m.group(1) + regel.split('\n', 1)[1].rsplit('  </windowRules>', 1)[0],
+                  text, count=1, flags=re.M)
+else:
+    text = text.replace('</labwc_config>', regel + '</labwc_config>', 1)
+io.open(path, 'w', encoding='utf-8').write(text)
+PYEOF
+		chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/labwc/rc.xml"
+	fi
 	touch "${USER_HOME}/.config/labwc/environment"
 	grep -q '^XCURSOR_THEME=' "${USER_HOME}/.config/labwc/environment" \
 		|| printf 'XCURSOR_THEME=%s\nXCURSOR_SIZE=24\n' "${CURSOR_THEME}" >> "${USER_HOME}/.config/labwc/environment"

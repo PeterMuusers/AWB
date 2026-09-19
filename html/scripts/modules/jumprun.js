@@ -35,7 +35,7 @@ import {
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
 	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE, LANGUAGE_SOURCE,
-	LANGUAGE_JUMPRUN_BEARING, LANGUAGE_JUMPRUN_DISTANCE,
+	LANGUAGE_JUMPRUN_BEARING, LANGUAGE_JUMPRUN_DISTANCE, LANGUAGE_JUMPRUN_NONE,
 } from '../language.js';
 
 const PROXY_URL = './jumprun-proxy.php';
@@ -47,6 +47,7 @@ const IMAGERY = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imag
 const RUN_BEFORE_M = 600;				// hoeveel lijn er vóór de eerste exit getekend wordt
 const RUN_AFTER_M = 600;				// en erachter
 const PAD_M = 300;						// ruimte rond alles wat er staat, zodat niets tegen de rand plakt
+const EMPTY_ZOOM = 14;					// hoe ver de kaart uitzoomt op een veld zonder jumprun
 const PLAN_VERSION = 1;					// the shape of the plan this board understands
 
 /* When a change since the plan is worth a word. A turn of twenty degrees moves the exit point
@@ -65,10 +66,19 @@ const POLAR_STEP_DEG = 5;
 const POLAR_MIN_M = 20;
 
 class Module {
-	constructor(stations) {
+	constructor(stations, options) {
 		/* Meer dan één dropzone kan: het bord bij Hoogeveen kijkt ook naar Echten, en dan krijgt elk
 		   om de beurt zijn eigen beurt in de lus. */
 		this.stations = Array.isArray(stations) ? stations : [stations];
+		/* Op welke drie vakken deze kaart tekent. Standaard die van het bord, want daar is er maar
+		   één van. Het tweede scherm zet er twee naast elkaar - Hoogeveen en Echten, elk zijn eigen
+		   kaart - en dan moet elk exemplaar zijn eigen vakken kennen. */
+		var ids = (options && options.ids) || {};
+		this.ids = {
+			layer: ids.layer || ID_LAYER,
+			map: ids.map || ID_MAP,
+			caption: ids.caption || ID_CAPTION,
+		};
 		/* Twee vragen met een heel ander prijskaartje, dus ook met een eigen tempo.
 
 		   "Is er iets veranderd?" is een blik op twee bestandsdatums bij de proxy hiernaast: geen
@@ -127,7 +137,7 @@ class Module {
 	   Geeft terug hoeveel schermen er komen, zodat de radar weet hoe lang hij moet wachten. */
 	sequence(seconds) {
 		var waiting = this.waiting;
-		if (waiting.length === 0 || !document.getElementById(ID_LAYER)) {
+		if (waiting.length === 0 || !document.getElementById(this.ids.layer)) {
 			return 0;
 		}
 		var step = 0;
@@ -149,7 +159,7 @@ class Module {
 	   there when it gets its turn back. */
 	show(which) {
 		var waiting = this.waiting;
-		var layer = document.getElementById(ID_LAYER);
+		var layer = document.getElementById(this.ids.layer);
 		if (waiting.length === 0 || !layer) {
 			return false;
 		}
@@ -171,9 +181,61 @@ class Module {
 		return true;
 	}
 
+	/* Geen jumprun voor dit veld: dan de luchtfoto, met de bak erop en verder niets. Dat is een
+	   antwoord op zichzelf - er hangt vandaag niets - en het is beter te lezen dan een leeg vak.
+	   De coördinaten komen van jumprun.nl zelf, dezelfde lijst waar de dropzones uit komen. */
+	empty(dropzone) {
+		var jmap = this.ensureMap();
+		if (!jmap || !dropzone) {
+			return false;
+		}
+		var layer = document.getElementById(this.ids.layer);
+		if (layer) {
+			layer.hidden = false;
+		}
+		var where = {
+			lat: Number(dropzone.lat),
+			lng: Number(dropzone.lng !== undefined ? dropzone.lng : dropzone.lon),
+		};
+		if (!isFinite(where.lat) || !isFinite(where.lng)) {
+			return false;
+		}
+		/* de kaart is gemaakt terwijl het vak nog geen maat had, dus eerst opnieuw meten */
+		jmap.map.invalidateSize();
+		/* Niet setTarget(): die tekent er twintig bereikringen bij, en die horen bij een jumprun.
+		   Zonder run zeggen ze niets en leggen ze de luchtfoto onder een witte waas. Wat er wel
+		   hoort te staan is waar de bak ligt - hetzelfde symbool als op de kaart mét een run, want
+		   dat is wat je herkent - en dat is hier met de hand getekend omdat de kaartcode zelf uit
+		   Jumprun komt en niet gewijzigd mag worden. */
+		jmap.map.setView([where.lat, where.lng], EMPTY_ZOOM);
+		if (!this.emptyLayer) {
+			this.emptyLayer = L.layerGroup().addTo(jmap.map);
+		}
+		this.emptyLayer.clearLayers();
+		[
+			{ radius: 9, color: '#111', weight: 3, opacity: 0.45, fillOpacity: 0 },
+			{ radius: 9, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0 },
+			{ radius: 2.5, color: '#fff', weight: 1, opacity: 1, fillColor: '#fff', fillOpacity: 1 },
+		].forEach(ring => {
+			L.circleMarker(where, Object.assign({ interactive: false }, ring)).addTo(this.emptyLayer);
+		});
+		/* geen plan, geen windprofiel: de driftbanen zouden nergens op slaan */
+		if (jmap.wind) {
+			jmap.wind.setEnabled(false);
+		}
+		this.entry = null;
+		this.planned = null;
+		var caption = document.getElementById(this.ids.caption);
+		if (caption) {
+			caption.innerHTML = '<span class="jumprun-where">' + (dropzone.name || '')
+				+ '</span><span class="jumprun-who">' + LANGUAGE_JUMPRUN_NONE + '</span>';
+		}
+		return true;
+	}
+
 	hide() {
 		clearTimeout(this.sequenceTimer);
-		var layer = document.getElementById(ID_LAYER);
+		var layer = document.getElementById(this.ids.layer);
 		if (layer) {
 			layer.hidden = true;
 		}
@@ -190,7 +252,7 @@ class Module {
 		if (this.jmap) {
 			return this.jmap;
 		}
-		var element = document.getElementById(ID_MAP);
+		var element = document.getElementById(this.ids.map);
 		if (!element || typeof L === 'undefined') {
 			return null;
 		}
@@ -210,6 +272,10 @@ class Module {
 		var r = this.planned;
 		if (!jmap || !r) {
 			return;
+		}
+		/* de losse bak van "geen jumprun" weg: hieronder komt de echte kaart */
+		if (this.emptyLayer) {
+			this.emptyLayer.clearLayers();
 		}
 		var plan = this.entry.plan;
 		var landing = plan.landing || plan.target;
@@ -239,7 +305,7 @@ class Module {
 	/* What is under the picture: who put this up and when, what it was worked out with, and only
 	   when it matters what the wind has done since. */
 	caption() {
-		var element = document.getElementById(ID_CAPTION);
+		var element = document.getElementById(this.ids.caption);
 		if (!element) {
 			return;
 		}

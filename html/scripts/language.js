@@ -28,6 +28,7 @@ const LANGUAGE_JUMPRUN_DISTANCE = 'afstand';
 const LANGUAGE_JUMPRUN_GREEN = 'groen licht';
 const LANGUAGE_JUMPRUN_SEPARATION = 'exitseparatie';
 const LANGUAGE_JUMPRUN_LARGE_GROUP = 'na grote groep';
+const LANGUAGE_JUMPRUN_NONE = 'Geen jumprun ingesteld';
 const LANGUAGE_JUMPRUN_SOURCE = 'jumprun.nl';
 const LANGUAGE_REWRITTEN = '\u00b7 automatisch herschreven';
 const LANGUAGE_NOW = 'Nu';
@@ -95,6 +96,7 @@ export {
         LANGUAGE_JUMPRUN_GREEN,
         LANGUAGE_JUMPRUN_SEPARATION,
         LANGUAGE_JUMPRUN_LARGE_GROUP,
+        LANGUAGE_JUMPRUN_NONE,
         LANGUAGE_JUMPRUN_SOURCE,
         LANGUAGE_RADAR,
         LANGUAGE_RADAR_FORECAST,
