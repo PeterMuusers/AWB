@@ -256,6 +256,39 @@ else
 	note "Zonder sleutel toont het bord het bulletin zoals het KNMI het schrijft."
 fi
 
+# ---------------------------------------------------------------- staande blijven
+
+say "Making sure the board keeps standing"
+
+# De stroombesparing van de wifi uit. Op een Pi die aan de muur hangt valt er niets te besparen -
+# hij zit aan het stopcontact - en de brcmfmac-chip is er berucht om: met power save aan valt de
+# verbinding weg bij een matig signaal, en in het ergste geval blijft de driver hangen en staat het
+# hele bord stil, zonder een regel in het journaal.
+install -d /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/awb-wifi.conf <<'EOF'
+# Geschreven door rpi/setup.sh; zie de toelichting daar.
+[connection]
+wifi.powersave = 2
+EOF
+
+# De hardwarewatchdog van de Pi. Loopt het bord vast, dan houdt systemd op met aankloppen en start
+# het ding zichzelf op. Er staat niemand bij het scherm om dat te zien, laat staan om de stekker
+# eruit te trekken; zonder dit blijft een vastgelopen bord staan tot iemand langskomt. Dat is geen
+# theorie: dit bord heeft het twee keer op een ochtend gedaan.
+if [ -e /dev/watchdog ]; then
+	install -d /etc/systemd/system.conf.d
+	cat > /etc/systemd/system.conf.d/awb-watchdog.conf <<'EOF'
+# Geschreven door rpi/setup.sh; zie de toelichting daar.
+[Manager]
+RuntimeWatchdogSec=15s
+RebootWatchdogSec=2min
+EOF
+	systemctl daemon-reexec >/dev/null 2>&1 || true
+	note "The hardware watchdog restarts the board if it ever freezes."
+else
+	note "No /dev/watchdog on this machine; skipping the watchdog."
+fi
+
 # ---------------------------------------------------------------- kiosk
 
 say "Starting the board on the screen"
@@ -300,31 +333,60 @@ chown "${USER_NAME}:${USER_NAME}" "${KIOSK}"
 # gebeurt er ook niets: dit script kijkt gewoon elke twintig seconden of er iets bijgekomen is, dus
 # een scherm dat er later bij wordt geprikt komt vanzelf aan.
 SCREEN2="${USER_HOME}/awb-screen2.sh"
+# De markering van het tweede scherm komt hier te staan: de kiosk schrijft hem, de webserver leest
+# hem. In /run, op een tmpfs, zodat hij een herstart niet overleeft - een bord dat na een
+# stroomstoring denkt dat er een tweede scherm hangt laat de jumpruns weg en toont ze nergens meer.
+# De map zelf hoort van de gebruiker te zijn, want die schrijft erin; systemd maakt hem bij elke
+# start opnieuw aan.
+printf 'd /run/awb-screens 0755 %s %s -\n' "${USER_NAME}" "${USER_NAME}" > /etc/tmpfiles.d/awb-screens.conf
+systemd-tmpfiles --create /etc/tmpfiles.d/awb-screens.conf >/dev/null 2>&1 || true
 OUTPUT2="$(ask "Second HDMI output, for the jumpruns (empty to skip)" "HDMI-A-2")"
 cat > "${SCREEN2}" <<EOF
 #!/usr/bin/env bash
 # Written by rpi/setup.sh. De jumpruns op het tweede scherm, als er een tweede scherm is.
 OUTPUT2="${OUTPUT2}"
+# Dezelfde maat als het bord. Zonder dit pakt een scherm zijn eigen voorkeur, en bij een 4K-tv zit
+# de Pi dan twee beelden te tekenen waarvan een op vier keer zoveel pixels. Dat trekt hij niet: het
+# bord zelf wordt er traag van en de kaarten haperen.
+MODE2="${RESOLUTION}"
 URL="http://127.0.0.1/jumpruns.html?kiosk=1"
 PROFILE=/tmp/awb-kiosk2
 
 # Een eigen profielmap, want twee browsers kunnen niet uit dezelfde: de tweede ziet dan dat de
 # eerste er al is en geeft het venster aan hém - je krijgt twee tabbladen op één scherm.
+# Het bord hiernaast leest deze markering via demo.php: staan de jumpruns hier, dan laat het ze uit
+# zijn kaartlus - anders staat hetzelfde op twee schermen tegelijk. Niet in /run, want dit draait
+# als de gebruiker en die mag daar niet schrijven; en niet in /tmp, want lighttpd heeft daar met
+# PrivateTmp een eigen exemplaar van en ziet er nooit iets van een ander staan.
+MARKER=/run/awb-screens/second
+
 draait() { pgrep -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1; }
 aangesloten() { WAYLAND_DISPLAY=wayland-0 wlr-randr 2>/dev/null | grep -q "^\${OUTPUT2} "; }
+
+# gaat dit script eruit, dan gaat de markering mee: een bord dat blijft denken dat er een tweede
+# scherm hangt laat de jumpruns weg en toont ze dus nergens meer
+trap 'rm -f "\${MARKER}"; pkill -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1' EXIT
 
 while true; do
 	if aangesloten; then
 		if ! draait; then
+			WAYLAND_DISPLAY=wayland-0 wlr-randr --output "\${OUTPUT2}" --mode "\${MODE2}" \\
+				2>/dev/null || WAYLAND_DISPLAY=wayland-0 wlr-randr --output "\${OUTPUT2}" \\
+				--mode "\${MODE2%@*}" 2>/dev/null || true
 			rm -rf "\${PROFILE}"
 			chromium --kiosk --user-data-dir="\${PROFILE}" --password-store=basic \\
 				--noerrdialogs --disable-infobars --disable-session-crashed-bubble \\
 				--disable-features=Translate,TranslateUI \\
 				--check-for-update-interval=31536000 "\${URL}" >/dev/null 2>&1 &
+			sleep 2
 		fi
-	elif draait; then
-		# scherm eraf: geen browser laten draaien die nergens staat te renderen
-		pkill -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1
+		draait && touch "\${MARKER}"
+	else
+		rm -f "\${MARKER}"
+		if draait; then
+			# scherm eraf: geen browser laten draaien die nergens staat te renderen
+			pkill -f "user-data-dir=\${PROFILE}" >/dev/null 2>&1
+		fi
 	fi
 	sleep 20
 done
@@ -392,7 +454,7 @@ profile {
 # rechts van het bord te staan, zodat de jumpruns er een heel scherm voor zichzelf hebben.
 profile {
 	output ${OUTPUT} enable mode ${RESOLUTION} position 0,0 scale 1
-	output ${OUTPUT2:-HDMI-A-2} enable position 1920,0 scale 1
+	output ${OUTPUT2:-HDMI-A-2} enable mode 1920x1080 position 1920,0 scale 1
 }
 EOF
 	chown "${USER_NAME}:${USER_NAME}" "${USER_HOME}/.config/kanshi/config"

@@ -339,6 +339,10 @@ class Module {
 		fetch(STATE_URL, { cache: 'no-store' })
 			.then(response => response.json())
 			.then(state => {
+				/* Hangt er een tweede scherm met de jumpruns erop? Dan hoeft de kaartlus van dit
+				   bord ze niet ook te tonen - dat zou hetzelfde twee keer zijn. Deze module vraagt
+				   het toch al elke vijf seconden, dus het antwoord komt gratis mee. */
+				document.secondScreen = !!(state && state.screen2);
 				var wanted = (state && state.scene) ? state.scene : null;
 				if (wanted === null) {
 					this.stop();

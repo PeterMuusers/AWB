@@ -11,10 +11,20 @@
  *   awb-demo-scene   een vast tafereel van een halve minuut, zonder herladen (demo-scenes.js)
  *   awb-outlook      het vooruitzicht voor morgen op de plek van het bulletin (outlook.js); dit
  *                    heeft geen eindtijd, het blijft staan tot /normaal
+ *
+ * En één die geen demo is maar dezelfde vraag beantwoordt - staat er iets anders dan normaal:
+ *
+ *   /run/awb-screens/second   er hangt een tweede scherm en daar staan de jumpruns. Dan hoeft
+ *                     het bord ze niet ook nog eens in zijn kaartlus te zetten. Gezet door
+ *                     awb-screen2.sh. De map wordt door systemd aangemaakt en is van de
+ *                     kioskgebruiker, want /run zelf mag die niet beschrijven; en niet in /tmp,
+ *                     want lighttpd heeft er met PrivateTmp een eigen exemplaar van en ziet daar
+ *                     nooit iets van een ander staan.
  */
 $until_file = '/run/awb-demo-until';
 $scene_file = '/run/awb-demo-scene';
 $outlook_file = '/run/awb-outlook';
+$screen2_file = '/run/awb-screens/second';
 
 $until = is_readable($until_file) ? (int) trim(file_get_contents($until_file)) : 0;
 $active = ($until > time());
@@ -32,6 +42,9 @@ if (is_readable($scene_file)) {
    het blijft tot iemand het uitzet, of tot de Pi herstart en /run leeg is. */
 $outlook = (is_readable($outlook_file) && trim(file_get_contents($outlook_file)) !== '');
 
+/* Draait er een tweede scherm met de jumpruns erop? */
+$screen2 = is_readable($screen2_file);
+
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
 echo(json_encode(array(
@@ -39,4 +52,5 @@ echo(json_encode(array(
 	'until' => $active ? $until : null,
 	'scene' => $scene,
 	'outlook' => $outlook ? array('on' => true) : null,
+	'screen2' => $screen2,
 )));

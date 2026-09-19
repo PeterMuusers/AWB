@@ -764,6 +764,12 @@ class Module {
 		if (!jumprun || !jumprun.active || !this.jumprunAfterRuns) {
 			return 0;
 		}
+		/* Staat er een tweede scherm naast dit bord, dan staan de jumpruns daar al - de hele dag,
+		   naast elkaar, in plaats van om beurten tussen de radar door. Ze hier ook nog laten
+		   langskomen is hetzelfde twee keer, en het kost de radar zijn beurt. */
+		if (document.secondScreen) {
+			return 0;
+		}
 		this.runs = (this.runs || 0) + 1;
 		if (this.runs < this.jumprunAfterRuns) {
 			return 0;
