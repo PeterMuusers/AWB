@@ -376,7 +376,7 @@ while true; do
 			rm -rf "\${PROFILE}"
 			chromium --kiosk --user-data-dir="\${PROFILE}" --password-store=basic \\
 				--noerrdialogs --disable-infobars --disable-session-crashed-bubble \\
-				--disable-features=Translate,TranslateUI \\
+				--disable-features=Translate,TranslateUI --disable-translate \\
 				--check-for-update-interval=31536000 "\${URL}" >/dev/null 2>&1 &
 			sleep 2
 		fi
@@ -483,17 +483,24 @@ if command -v labwc >/dev/null 2>&1; then
 			printf '<?xml version="1.0"?>\n<labwc_config>\n</labwc_config>\n' \
 				> "${USER_HOME}/.config/labwc/rc.xml"
 		fi
-		python3 - "${USER_HOME}/.config/labwc/rc.xml" "${OUTPUT2}" <<'PYEOF'
+		python3 - "${USER_HOME}/.config/labwc/rc.xml" "${OUTPUT}" "${OUTPUT2}" <<'PYEOF'
 import io, re, sys
 
-path, output = sys.argv[1], sys.argv[2]
+path, board, output = sys.argv[1], sys.argv[2], sys.argv[3]
 text = io.open(path, encoding='utf-8').read()
 regel = ('  <windowRules>\n'
-         '    <!-- Geschreven door rpi/setup.sh: de jumpruns horen op het tweede scherm. -->\n'
+         '    <!-- Geschreven door rpi/setup.sh. Allebei de vensters krijgen hun scherm gewezen.\n'
+         '         Ook het bord, dat het tot nu toe zonder kon: labwc zet een venster zonder\n'
+         '         aanwijzing op de eerste uitgang in zijn lijst, en dat hoeft niet die van het\n'
+         '         bord te zijn - bij het aansluiten van een tweede scherm stond het bord ineens\n'
+         '         daarop en op het eigen scherm een lege desktop. -->\n'
+         '    <windowRule title="Aviation Weather Board*" matchOnce="false">\n'
+         '      <action name="MoveToOutput" output="%s" />\n'
+         '    </windowRule>\n'
          '    <windowRule title="Jumpruns*" matchOnce="false">\n'
          '      <action name="MoveToOutput" output="%s" />\n'
          '    </windowRule>\n'
-         '  </windowRules>\n') % output
+         '  </windowRules>\n') % (board, output)
 if 'Jumpruns*' in text:
     raise SystemExit(0)
 if re.search(r'^\s*<windowRules>', text, re.M):
