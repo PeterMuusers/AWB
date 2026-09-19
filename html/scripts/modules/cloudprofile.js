@@ -68,6 +68,7 @@ const MEASURED_BAR = 3;					// pixels, thickness of a measured layer
 const OKTA_OF = '/8';					// how the eighths are written on an expected layer
 const OKTA_LABEL_MIN_HEIGHT = 13;		// pixels; under this a block has no room for its number
 const OKTA_LABEL_TOP = 10;				// pixels from the top of the block to the baseline of the number
+const BASE_EDGE = 3;					// pixels, the bright rim along the base of an expected block
 
 class Module {
 	constructor(container_id) {
@@ -273,6 +274,12 @@ class Module {
 				var height = y(layer.base) - top;
 				context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', ' + (0.15 + 0.6 * (layer.okta / 8)).toFixed(2) + ')';
 				context.fillRect(left, top, right - left, height);
+				/* A bright rim along the foot of the block. The block itself says how deep the cloud
+				   is expected to be, but the number people act on is where it starts - and the top of
+				   a translucent block reads just as strongly as its base. The rim puts the weight
+				   where the meaning is. */
+				context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', ' + (0.55 + 0.45 * (layer.okta / 8)).toFixed(2) + ')';
+				context.fillRect(left, top + height - BASE_EDGE, right - left, BASE_EDGE);
 				blocks.push({ left: left, right: right, top: top, bottom: top + height });
 				/* How many eighths, in the block itself. The shade of the block says the same thing,
 				   but only next to another block: alone it is a tone without a scale to read it by.

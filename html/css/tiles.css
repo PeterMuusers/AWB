@@ -1085,14 +1085,19 @@ header,
 	color: color-mix(in srgb, var(--textcolor-2, #ffffff) calc(30% + var(--okta, 0.5) * 60%), var(--metadata-textcolor));
 	font-weight: 500;
 }
-/* Hoeveel bedekking, als beeld naast het getal: hoe voller het balkje, hoe meer lucht dicht zit.
-   Dezelfde taal als de blokjes in de wolkenbasisgrafiek ernaast, waar meer bedekking ook lichter is. */
+/* Hoeveel bedekking, als beeld naast het getal: acht vakjes, zoals de okta's heten. Zes volle
+   vakjes zie je; "6/8" moet je lezen. De vulling loopt tot var(--okta) en het masker knipt de
+   tussenruimtes eruit, dus de grens valt altijd op een vakjesrand - okta's zijn hele getallen. */
 .metrics-layer-bar {
-	width: 22px;
+	--vak: 3px;
+	--gat: 1.5px;
+	width: calc(8 * var(--vak) + 7 * var(--gat));
 	height: 10px;
-	border-radius: 5px;
-	border: 1px solid var(--block-border-color);
-	background: color-mix(in srgb, var(--cloud-color, #8fb0cc) calc(var(--okta, 0) * 100%), transparent);
+	background: linear-gradient(to right,
+		var(--cloud-color, #8fb0cc) 0 calc(var(--okta, 0) * 100%),
+		color-mix(in srgb, var(--cloud-color, #8fb0cc) 22%, transparent) calc(var(--okta, 0) * 100%));
+	-webkit-mask: repeating-linear-gradient(to right, #000 0 var(--vak), transparent var(--vak) calc(var(--vak) + var(--gat)));
+	mask: repeating-linear-gradient(to right, #000 0 var(--vak), transparent var(--vak) calc(var(--vak) + var(--gat)));
 }
 /* De drie blokken naast elkaar zijn even hoog - de hoogste zet de rij - en dit blok heeft de minste
    inhoud. Zonder dit bleef die ruimte onderin liggen als een lege band van zeventig pixels, terwijl
