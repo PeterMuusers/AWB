@@ -177,7 +177,11 @@ async def jumprun(interaction: discord.Interaction, wat: app_commands.Choice[str
 # ----------------------------------------------------------------- een jumprun opbouwen
 
 DROPZONES = (("Hoogeveen", "hoogeveen"), ("Echten", "echten"))
-EXIT_ALTS = ((12000, "hoge run"), (5000, "lage run"))
+# De hoogtes die als suggestie in het lijstje komen. Je bent er niet aan gebonden: het veld neemt
+# elk getal aan, want welke hoogte er gesprongen wordt hangt van de dag af - het wolkendek, de
+# klant, het vliegtuig. De eerste is de gewone hoge run en staat bovenaan.
+EXIT_ALTS = ((12000, "hoge run"), (10000, ""), (9000, ""), (5000, "lage run"), (4000, ""), (3000, ""))
+EXIT_MIN, EXIT_MAX = 1000, 20000
 OFFSET_NM = [round(0.1 * i, 1) for i in range(0, 16)]          # 0,0 tot 1,5 NM
 GREEN_NM = [round(0.1 * i, 1) for i in range(-8, 16)]          # −0,8 tot +1,5 NM
 COMPASS = (("noord", "N"), ("oost", "O"), ("zuid", "Z"), ("west", "W"))
@@ -316,18 +320,52 @@ class Publish(discord.ui.Button):
         self.jumprun.stop()
 
 
+def exit_label(ft: int, wat: str) -> str:
+    """12000 wordt "12.000 ft (hoge run)"; zonder omschrijving alleen het getal."""
+    getal = f"{ft:,}".replace(",", ".") + " ft"
+    return f"{getal} ({wat})" if wat else getal
+
+
+async def exit_suggesties(interaction: discord.Interaction, wat: str) -> list[app_commands.Choice[int]]:
+    """Meedenken terwijl je typt, zonder je vast te zetten.
+
+    Typ je niets, dan staan de gebruikelijke hoogtes er; typ je een getal, dan is dat de eerste
+    keuze - ook als het niet in het lijstje staat. Discord laat namelijk alleen kiezen uit wat de
+    bot aanbiedt, dus zonder die eerste regel zou "13000" niet in te vullen zijn.
+    """
+    cijfers = "".join(teken for teken in wat if teken.isdigit())
+    suggesties: list[app_commands.Choice[int]] = []
+    if cijfers:
+        eigen = int(cijfers)
+        if EXIT_MIN <= eigen <= EXIT_MAX:
+            suggesties.append(app_commands.Choice(name=exit_label(eigen, ""), value=eigen))
+    for ft, omschrijving in EXIT_ALTS:
+        if len(suggesties) >= 25:
+            break
+        if cijfers and not str(ft).startswith(cijfers):
+            continue
+        if any(keuze.value == ft for keuze in suggesties):
+            continue
+        suggesties.append(app_commands.Choice(name=exit_label(ft, omschrijving), value=ft))
+    return suggesties
+
+
 @bot.tree.command(name="jumprun-zetten", description="Een jumprun uitrekenen en op het bord zetten")
-@app_commands.describe(dropzone="welk veld", hoogte="hoge of lage run")
+@app_commands.describe(dropzone="welk veld", hoogte="exithoogte in voet; kies er een of typ je eigen getal")
 @app_commands.choices(
     dropzone=[app_commands.Choice(name=naam, value=id_) for naam, id_ in DROPZONES],
-    hoogte=[app_commands.Choice(name=f"{ft:,}".replace(",", ".") + f" ft ({wat})", value=ft) for ft, wat in EXIT_ALTS],
 )
+@app_commands.autocomplete(hoogte=exit_suggesties)
 async def jumprun_zetten(interaction: discord.Interaction, dropzone: app_commands.Choice[str],
-                         hoogte: app_commands.Choice[int] | None = None) -> None:
+                         hoogte: int) -> None:
     if not allowed(interaction):
         return await deny(interaction)
+    if not EXIT_MIN <= hoogte <= EXIT_MAX:
+        return await interaction.response.send_message(
+            f"Een exithoogte tussen {EXIT_MIN:,} en {EXIT_MAX:,} ft graag.".replace(",", "."),
+            ephemeral=True)
     await interaction.response.defer(thinking=True, ephemeral=True)
-    view = JumprunView(interaction.user.id, dropzone.value, hoogte.value if hoogte else EXIT_ALTS[0][0])
+    view = JumprunView(interaction.user.id, dropzone.value, hoogte)
     view.build()
     await view.recompute()
     await interaction.followup.send(view.message(), view=view, ephemeral=True)
