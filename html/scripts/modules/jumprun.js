@@ -79,6 +79,9 @@ class Module {
 			map: ids.map || ID_MAP,
 			caption: ids.caption || ID_CAPTION,
 		};
+		/* Hoe dit veld heet, als de kaart dat van buiten meekrijgt. Zonder opgave leidt het
+		   onderschrift de naam zelf af, zoals het bord dat altijd al deed. */
+		this.name = (options && options.name) || null;
 		/* Twee vragen met een heel ander prijskaartje, dus ook met een eigen tempo.
 
 		   "Is er iets veranderd?" is een blik op twee bestandsdatums bij de proxy hiernaast: geen
@@ -319,10 +322,19 @@ class Module {
 		/* De naam van de dropzone waar dit plan voor geldt, en dat is niet altijd die van het bord:
 		   hier kunnen er twee langskomen. Het eigen veld draagt de naam uit de instelling, de rest
 		   die van het station zelf. */
+		/* Weet deze kaart hoe zijn veld heet, dan die naam - het tweede scherm krijgt hem mee uit
+		   de lijst van jumprun.nl, dus daar staat "Echten" en niet "echten". Anders: het eigen veld
+		   van het bord draagt de naam uit de instellingen, de rest die van het station zelf.
+
+		   Let op welk station "het eigen veld" is. Dat is dat van het bórd, en niet het eerste van
+		   deze kaart: op het tweede scherm heeft elk vak zijn eigen module met één station, en dan
+		   zou elk vak zichzelf voor het eigen veld houden. Zo stond er bij Echten "Hoogeveen". */
 		var own = document.config.location || {};
-		var where = (this.stations[0] === entry.station && own.name)
-			? own.name
-			: entry.station.charAt(0).toUpperCase() + entry.station.slice(1);
+		var here = ((document.config.jumprun || {}).stations || [])[0] || this.stations[0];
+		var where = this.name
+			|| ((here === entry.station && own.name)
+				? own.name
+				: entry.station.charAt(0).toUpperCase() + entry.station.slice(1));
 		/* De exithoogte hoort bij de naam: er kunnen twee runs van dezelfde dropzone langskomen en
 		   dan is dit het enige wat ze uit elkaar houdt. Iets kleiner dan de naam, zodat je eerst het
 		   veld leest en dan de hoogte. De koers en de rest staan groot onder de kop, dus een

@@ -118,7 +118,9 @@ loadConfig(getURLParameter('location')).then(() => {
 			return {
 				station: station,
 				dropzone: dropzone,
-				module: new Jumprun([station], { ids: ids }),
+				/* De naam gaat mee: het onderschrift van de kaart hoort "Echten" te zeggen, niet
+				   de naam van het veld waar dit bord toevallig hangt. */
+				module: new Jumprun([station], { ids: ids, name: dropzone.name || station }),
 			};
 		});
 		/* De module haalt zijn plannen zelf op en dat duurt even; tot die tijd staat er de
