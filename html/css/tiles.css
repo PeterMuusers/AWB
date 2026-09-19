@@ -918,12 +918,18 @@ header,
 	font-weight: 600;
 }
 /* Opmaak van de jumprun-kaart, overgenomen uit jumprun.nl zodat het bord er hetzelfde uitziet als
-   het scherm waarop het plan gemaakt is. Eén verschil: --crit is hier dezelfde kleur als --good, dus
-   de lens wordt nooit rood. Dat hij gestippeld wordt en wat de legenda zegt blijft staan, want de
-   informatie moet er zijn; alleen het alarmsignaal hoort niet op een bord waar iedereen langsloopt. */
+   het scherm waarop het plan gemaakt is - inclusief de kleuren. De lens wordt dus rood zodra niet
+   elke exit het landingsgebied haalt, en de exits die het niet halen worden dat ook.
+
+   Dat is een herziening: eerst stond --crit hier op dezelfde groene kleur, zodat de lens nooit rood
+   werd. De gedachte was dat "niet elke exit haalt het veld" een conclusie is die in een briefing
+   thuishoort en niet op een bord waar iedereen langsloopt. Bij het zien op het scherm bleek het
+   omgekeerde: wie de lens kent leest er juist uit dat hij moet opletten, en hem groen houden
+   terwijl hij dat niet is verzwijgt precies het ding dat ertoe doet. De kleur komt uit het donkere
+   thema van jumprun.nl zelf. */
 :root {
 	--good: #0ca30c;
-	--crit: #0ca30c;
+	--crit: #e25b5b;
 	--alt2: #9d85e3;
 }
 .ring-label span { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; padding: 1px 5px; border-radius: 5px; background: rgba(17,26,36,0.6); color: rgba(255,255,255,0.9); font-size: 10px; font-weight: 600; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
