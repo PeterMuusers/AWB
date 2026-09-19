@@ -457,12 +457,17 @@ class Module {
 	   taller than the screen. Only this card scales: the measurements and the wind profile are
 	   numbers you read at a glance and they keep their size. */
 	fit() {
-		if (this.takenOver()) {
-			return;
-		}
 		var content = document.getElementById(ID_LLFC_CONTENT);
 		var card = content ? content.closest('.llfc') : null;
 		if (!card) {
+			return;
+		}
+		/* Leent het vooruitzicht deze tegel, dan blijft zijn tekst met rust - maar hoe hoog de tegel
+		   is gaat over het bord en niet over wie erin schrijft. Zonder dit hield de tegel de maat die
+		   het bulletin ooit uitrekende, toen de tegels erboven nog leeg waren, en viel de onderste rij
+		   van de tabel - de grondwind - buiten de tegel. */
+		if (this.takenOver()) {
+			this.stretch(card);
 			return;
 		}
 		/* measure against the natural height of the tiles, so let the card find its own size first */
@@ -471,36 +476,46 @@ class Module {
 
 		var available = this.room(content, card);
 		var scale = 1;
-		while (content.getBoundingClientRect().height > available && scale > FIT_MIN_SCALE) {
+		while (content.offsetHeight > available && scale > FIT_MIN_SCALE) {
 			scale -= FIT_STEP;
 			content.style.setProperty('--llfc-scale', scale.toFixed(2));
 		}
-		if (content.getBoundingClientRect().height > available) {
+		if (content.offsetHeight > available) {
 			console.warn('Forecast does not fit at ' + Math.round(scale * 100) + '% and is cut off at the bottom.');
 		}
 
-		/* and then down to the bottom edge of the screen, so the card fills its half */
-		var style = window.getComputedStyle(card);
-		var height = window.innerHeight - card.getBoundingClientRect().top
-			- parseFloat(style.marginBottom) - this.pageMargin();
-		card.style.height = Math.max(height, 0) + 'px';
+		/* en dan tot onderaan de kolom, zodat de tegel zijn helft vult */
+		this.stretch(card);
 	}
 
-	/* The height the tiles may take: from where they start down to the bottom edge of the screen,
-	   less the room the card needs underneath them for its border and its padding. Where the source
-	   and the update time used to sit there is now nothing: those moved to the header, so this card
-	   keeps that space. */
+	/* De tegel loopt door tot onderaan de kolom, en eindigt daarmee op dezelfde regel als de kaart
+	   ernaast: die is de andere helft van diezelfde rij. Niet tot de onderkant van het scherm - daar
+	   zit onder de kolommen nog een voetregel, en dan hing deze tegel vijfentwintig pixels lager dan
+	   de kaart.
+
+	   In bordpixels gerekend, met offsetTop en clientHeight. Het bord wordt als geheel op het venster
+	   gepast met een CSS-transform, dus getBoundingClientRect() en window.innerHeight geven de maten
+	   van het venster terug terwijl de hoogte die hier gezet wordt in bordpixels telt. Op de televisie
+	   is dat hetzelfde getal, in elk ander venster niet: daar werd de tegel te kort of te lang, en een
+	   tegel die te kort is snijdt zijn onderste regel af. */
+	height(card) {
+		var column = card.parentElement;
+		if (!column) {
+			return card.offsetHeight;
+		}
+		var margin = parseFloat(window.getComputedStyle(card).marginBottom) || 0;
+		return Math.max(column.clientHeight - (card.offsetTop - column.offsetTop) - margin, 0);
+	}
+
+	stretch(card) {
+		card.style.height = this.height(card) + 'px';
+	}
+
+	/* The height the tiles may take: the card runs to the bottom of the column, less what the header,
+	   the border and the padding around the text take up. That difference is measured on the card as
+	   it stands, so the stylesheet is not spelled out a second time here. */
 	room(content, card) {
-		var style = window.getComputedStyle(card);
-		var below = parseFloat(style.paddingBottom)
-			+ parseFloat(style.borderBottomWidth) + parseFloat(style.marginBottom);
-		return window.innerHeight - content.getBoundingClientRect().top - below - this.pageMargin();
-	}
-
-	/* What the page keeps free below the cards */
-	pageMargin() {
-		var style = window.getComputedStyle(document.body);
-		return (parseFloat(style.marginBottom) || 0) + (parseFloat(style.paddingBottom) || 0);
+		return Math.max(this.height(card) - (card.offsetHeight - content.offsetHeight), 0);
 	}
 
 	/* The subjects of the bulletin to show, in the order of the config. The key used to be called

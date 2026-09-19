@@ -20,7 +20,6 @@ import { UNIT_FEET, UNIT_KNOTS } from '../const.js';
 import { LANGUAGE_GROUND, LANGUAGE_OUTLOOK, LANGUAGE_OUTLOOK_CHART, LANGUAGE_CLOUDS, LANGUAGE_NO_CLOUDS } from '../language.js';
 import { sunTimes } from '../functions.js';
 
-const SOURCE = 'Open-Meteo';
 const POLL_MS = 5000;
 const STATE_URL = 'demo.php';
 const ID_CONTENT = 'llfc-content';
@@ -217,13 +216,27 @@ class Module {
 			+ '<canvas class="outlook-chart"></canvas></div>'
 			+ '</div>';
 
+		/* De tegel is van het bulletin, en dat bepaalt hoe hoog hij is: tot onderaan de kolom, gelijk
+		   met de kaart ernaast. Zolang het vooruitzicht erin staat schrijft die module hier niets, dus
+		   moet hij wel even opnieuw meten - anders houdt de tegel de maat van het bulletin en valt de
+		   grondwind, de onderste rij van de tabel, eronder weg. */
+		var llfc = (document.modules || {}).knmi_llfc;
+		if (llfc && llfc.fit) {
+			llfc.fit();
+		}
+
 		/* De kop van de tegel gaat mee: daar staat normaal het weerbulletin aangekondigd, en dat is
 		   niet wat je nu leest. */
 		var when = hours[0].time.toLocaleDateString(document.config.locale, { weekday: 'long', day: 'numeric', month: 'long' });
 		var name = document.getElementById(ID_HEADER_NAME);
 		var valid = document.getElementById(ID_VALID_FROM);
+		var source = document.getElementById(ID_SOURCE);
 		if (name && this.header === null) {
-			this.header = { name: name.innerHTML, valid: valid ? valid.innerHTML : '' };
+			this.header = {
+				name: name.innerHTML,
+				valid: valid ? valid.innerHTML : '',
+				source: source ? source.innerHTML : '',
+			};
 		}
 		if (name) {
 			name.innerHTML = LANGUAGE_OUTLOOK;
@@ -231,7 +244,13 @@ class Module {
 		if (valid) {
 			valid.innerHTML = when;
 		}
-		document.getElementById(ID_SOURCE).innerHTML = SOURCE + ' &middot; ' + aloft.model;
+		/* Geen eigen bron in de kopbalk. Deze tabel komt uit hetzelfde antwoord van hetzelfde model
+		   als het windprofiel ernaast, en die staat er al - Open-Meteo twee keer noemen is één bron te
+		   veel. Het bulletin waar deze tegel van is zegt hier even niets, en een bron zonder naam valt
+		   vanzelf weg uit de kopbalk (zie tiles.css). */
+		if (source) {
+			source.innerHTML = '';
+		}
 
 		/* Tekenen zodra het vak zijn maat heeft. Eén beeldje wachten is niet genoeg: de tegel staat in
 		   een flexindeling die pas een hoogte krijgt als de rest gezet is, en dan tekent hij op een
@@ -517,10 +536,14 @@ class Module {
 		}
 		var name = document.getElementById(ID_HEADER_NAME);
 		var valid = document.getElementById(ID_VALID_FROM);
+		var source = document.getElementById(ID_SOURCE);
 		if (this.header !== null && name) {
 			name.innerHTML = this.header.name;
 			if (valid) {
 				valid.innerHTML = this.header.valid;
+			}
+			if (source) {
+				source.innerHTML = this.header.source;
 			}
 			this.header = null;
 		}

@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED, LANGUAGE_GLOVES } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_GLOVES } from '../language.js';
 
 /*
  * Wind profile for the dropzone: wind per altitude for now and the coming hours, plus the height
@@ -69,7 +69,10 @@ class Module {
 
 		/* Set language specific stuff */
 		document.getElementById(ID_WINDS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
-		document.getElementById(ID_WINDS_SOURCE_DATA).innerHTML = SOURCE;
+		/* Met het model erbij: de naam Open-Meteo zegt waar de cijfers vandaan komen, het model zegt
+		   welke van de zijne het is. Het vooruitzicht rekent met ditzelfde antwoord en zei het er
+		   daarom zelf ook bij; dan stond Open-Meteo twee keer in de kopbalk. Eén keer, hier. */
+		document.getElementById(ID_WINDS_SOURCE_DATA).innerHTML = SOURCE + ' &middot; ' + this.model;
 		document.getElementById(ID_WINDS_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_UPDATED_INLINE;
 
 		/* Schedule update of document content */
@@ -418,9 +421,10 @@ class Module {
 			}
 		}
 
-		/* the unit stays on the title line, the explanation goes on its own line below it */
-		document.getElementById(ID_VALID_FROM).innerHTML = UNIT_KNOTS
-			+ '<span class="upper-winds-note">' + LANGUAGE_MEASURED + '</span>';
+		/* Alleen de eenheid in de kop. Waar de cijfers vandaan komen stond hier een regel lang onder
+		   ("grond gemeten, hoogtes uit het model"); die hoort bij de bronnen in de kopbalk en niet in de
+		   tegel, waar hij ruimte kostte van de getallen zelf. */
+		document.getElementById(ID_VALID_FROM).innerHTML = UNIT_KNOTS;
 		document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 	}
 }

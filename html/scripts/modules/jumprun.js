@@ -34,7 +34,7 @@ import {
 	LANGUAGE_JUMPRUN_PLACED, LANGUAGE_JUMPRUN_BY, LANGUAGE_JUMPRUN_AT, LANGUAGE_JUMPRUN_WITH,
 	LANGUAGE_JUMPRUN_SINCE, LANGUAGE_JUMPRUN_TURNED, LANGUAGE_JUMPRUN_STRONGER, LANGUAGE_JUMPRUN_WEAKER,
 	LANGUAGE_JUMPRUN_AT_FT, LANGUAGE_JUMPRUN_TRACK, LANGUAGE_JUMPRUN_OFFSET, LANGUAGE_JUMPRUN_GREEN,
-	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP, LANGUAGE_JUMPRUN_SOURCE, LANGUAGE_SOURCE,
+	LANGUAGE_JUMPRUN_SEPARATION, LANGUAGE_JUMPRUN_LARGE_GROUP,
 	LANGUAGE_JUMPRUN_BEARING, LANGUAGE_JUMPRUN_DISTANCE, LANGUAGE_JUMPRUN_NONE,
 } from '../language.js';
 
@@ -261,12 +261,12 @@ class Module {
 		}
 		var nothing = () => {};
 		this.jmap = createJumprunMap(element, { onTrack: nothing, onGreen: nothing });
-		/* Eén bronregel, niet twee. De jumprun komt van jumprun.nl en de luchtfoto noemt zichzelf;
-		   als voorvoegsel staat de eerste vooraan en volgt de rest erachter, gescheiden door een
-		   streepje. Als losse vermelding ernaast las het als twee keer hetzelfde zeggen. */
-		this.jmap.map.attributionControl.setPrefix(LANGUAGE_SOURCE + ' ' + LANGUAGE_JUMPRUN_SOURCE);
-		/* linksonder: rechtsonder staat op het bord de laatste-updateregel van de kaart eronder */
-		this.jmap.map.attributionControl.setPosition('bottomleft');
+		/* Geen bronregel over de kaart heen: op dit bord staan de bronnen in de kopbalk en nergens
+		   anders. Wat de luchtfoto aan vermelding vraagt - PDOK, CC BY 4.0 - staat daar bij de bronnen
+		   van de kaarttegel (zie radar.js), dus er gaat niets verloren, het staat alleen op één plek. */
+		if (this.jmap.map.attributionControl) {
+			this.jmap.map.removeControl(this.jmap.map.attributionControl);
+		}
 		return this.jmap;
 	}
 

@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_NOW, LANGUAGE_CLOUD_BASE, LANGUAGE_MEASURED_LABEL, LANGUAGE_EXPECTED_LABEL } from '../language.js';
+import { LANGUAGE_NOW, LANGUAGE_CLOUD_BASE } from '../language.js';
 
 /*
  * Cloud layers and wind over time: the past hours as measured at the station (ceilometer and
@@ -48,15 +48,11 @@ const AXIS_WEIGHT = 600;
    windprofiel naast staat om naar te kijken. */
 const TIME_BASELINE = 13;				// pixels above the bottom edge for the bottom of the digits
 const TIME_TICK = 6;					// pixels, the little line above each time
-/* De strook bovenin met 'gemeten | verwacht'. Die twee woorden staan op dezelfde maat en dezelfde
-   regel als de ondertitel van het windprofiel ernaast, zodat de twee tegels als één bord lezen: het
-   canvas begint daarom vlak onder de kop (geen marge) en deze strook is precies zo hoog dat de
-   bovenste hoogtelijn op dezelfde plek blijft als eerst. */
-const TOP_LABEL_HEIGHT = 21;			// pixels at the top, above the chart, for 'measured | expected'
-const TOP_FONT = '500 13px "Roboto Condensed", "Roboto", sans-serif';	/* alleen als de buurman er niet is */
-const TOP_NOTE = '.upper-winds-note';	/* de ondertitel waar deze woorden zich naar voegen */
+/* Wat lucht boven de grafiek. Hier stond 'gemeten | verwacht' links en rechts van de lijn voor nu;
+   waar de cijfers vandaan komen staat bij de bronnen in de kopbalk, en de lijn zelf zegt al waar het
+   gemetene ophoudt. Wat blijft is de ruimte die de bovenste hoogtelijn van de kop vrijhoudt. */
+const TOP_GAP = 6;						// pixels at the top, between the header and the chart
 const FREEZING_SIZE = 14;				// px; het 0 °C-niveau is een getal om te lezen, geen bijschrift
-const TOP_BASELINE = 13;				// pixels from the top of the canvas to the foot of those words
 const WIND_HEIGHT = 74;					// pixels at the bottom for the wind lines
 /* De hoogteschaal krijgt precies de breedte van zijn breedste getal plus wat lucht naar de grafiek.
    Zo begint dat getal op de rand van het canvas en houdt het dus de veertien pixels van de tegel
@@ -221,7 +217,7 @@ class Module {
 			Math.max(widest, context.measureText(this.altitudeLabel(feet)).width), 0)) + AXIS_GAP;
 		var x = time => axis + (time - start) / (end - start) * (width - axis);
 		var cloudBottom = height - LABEL_HEIGHT - WIND_HEIGHT;
-		var y = feet => cloudBottom - this.altitudeFraction(feet) * (cloudBottom - TOP_LABEL_HEIGHT - 2);
+		var y = feet => cloudBottom - this.altitudeFraction(feet) * (cloudBottom - TOP_GAP - 2);
 
 		var style = getComputedStyle(document.documentElement);
 		var muted = style.getPropertyValue('--metadata-textcolor').trim() || '#8a96a3';
@@ -253,7 +249,7 @@ class Module {
 
 		/* The part ahead gets a slightly lighter background */
 		context.fillStyle = 'rgba(' + CLOUD_COLOUR + ', 0.06)';
-		context.fillRect(x(now), TOP_LABEL_HEIGHT, width - x(now), cloudBottom - TOP_LABEL_HEIGHT);
+		context.fillRect(x(now), TOP_GAP, width - x(now), cloudBottom - TOP_GAP);
 
 		/* Expected layers: a block from base to top, the more eighths the more solid */
 		var ahead = hours.filter(hour => hour.time.getTime() >= now - 1800000 && hour.time.getTime() <= end);
@@ -305,7 +301,7 @@ class Module {
 		   weggelaten, zodat je ziet dat de reeks doorloopt. */
 		context.save();
 		context.beginPath();
-		context.rect(axis, TOP_LABEL_HEIGHT, width - axis, cloudBottom - TOP_LABEL_HEIGHT);
+		context.rect(axis, TOP_GAP, width - axis, cloudBottom - TOP_GAP);
 		context.clip();
 		layers.forEach(moment => {
 			moment.layers.forEach(layer => {
@@ -361,7 +357,7 @@ class Module {
 		context.strokeStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
 		context.lineWidth = 1.5;
 		context.beginPath();
-		context.moveTo(x(now), TOP_LABEL_HEIGHT);
+		context.moveTo(x(now), TOP_GAP);
 		context.lineTo(x(now), windBottomEdge);
 		context.stroke();
 
@@ -525,31 +521,6 @@ class Module {
 		context.fillStyle = style.getPropertyValue('--textcolor').trim() || '#ffffff';
 		context.textAlign = 'center';
 		context.fillText(LANGUAGE_NOW, x(now), baseline);
-		context.textBaseline = 'middle';
-
-		/* What the line divides, said once in the strip above the chart itself. Letterlijk dezelfde
-		   letter als de ondertitel van het windprofiel ernaast: die wordt hier uitgelezen in plaats
-		   van nagemaakt, want een maatje ernaast valt juist op naast een tegel die er direct aan
-		   grenst. */
-		var note = document.querySelector(TOP_NOTE);
-		var noteStyle = note ? window.getComputedStyle(note) : null;
-		context.fillStyle = muted;
-		context.font = noteStyle
-			? noteStyle.fontWeight + ' ' + noteStyle.fontSize + ' ' + noteStyle.fontFamily
-			: TOP_FONT;
-		context.textBaseline = 'alphabetic';
-		if ('letterSpacing' in context) {
-			context.letterSpacing = (noteStyle && noteStyle.letterSpacing !== 'normal')
-				? noteStyle.letterSpacing : '0.08em';
-		}
-		context.textAlign = 'right';
-		context.fillText(LANGUAGE_MEASURED_LABEL.toUpperCase(), x(now) - 8, TOP_BASELINE);
-		context.textAlign = 'left';
-		context.fillText(LANGUAGE_EXPECTED_LABEL.toUpperCase(), x(now) + 8, TOP_BASELINE);
-		if ('letterSpacing' in context) {
-			context.letterSpacing = '0px';
-		}
-		context.font = CHART_FONT;
 		context.textBaseline = 'middle';
 
 		this.drawn = true;

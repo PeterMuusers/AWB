@@ -269,7 +269,7 @@ class Module {
 
 		/* Set language specific stuff */
 		document.getElementById(ID_IMAGES_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
-		document.getElementById(ID_IMAGES_SOURCE_DATA).innerHTML = SOURCE;
+		document.getElementById(ID_IMAGES_SOURCE_DATA).innerHTML = this.sources();
 		document.getElementById(ID_IMAGES_LAST_UPDATED_LABEL).innerHTML = LANGUAGE_UPDATED_INLINE;
 
 		/* Build the map container and the time bar */
@@ -655,7 +655,7 @@ class Module {
 			this.rainForecast = (forecast && forecast.rain) ? forecast.rain : [];
 
 			this.last_updated = new Date();
-			document.getElementById(ID_IMAGES_SOURCE_DATA).innerHTML = SOURCE + ((forecast && forecast.source === 'jumprun') ? ' / jumprun.nl' : '');
+			document.getElementById(ID_IMAGES_SOURCE_DATA).innerHTML = this.sources(forecast);
 			document.getElementById(ID_IMAGES_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 			document.getElementById(ID_IMAGES_LAST_UPDATED_SPINNER).style.display = 'none';
 
@@ -991,6 +991,20 @@ class Module {
 			delay += this.windTurn(jumpruns) * this.windSeconds * 1000;
 		}
 		this.timer = setTimeout(this.showFrame.bind(this), delay);
+	}
+	/* De bronnen van de kaarttegel, op één regel in de kopbalk - want daar staan ze op dit bord, en
+	   nergens anders. Behalve de radar en de satelliet hangt ook de jumprunkaart in deze tegel, en
+	   die tekent op de luchtfoto van PDOK; die vraagt om vermelding (CC BY 4.0) en krijgt hem hier,
+	   in plaats van als regeltje over de kaart heen. */
+	sources(forecast) {
+		var out = SOURCE;
+		if (forecast && forecast.source === 'jumprun') {
+			out += ' / jumprun.nl';
+		}
+		if (document.config.jumprun) {
+			out += ' / PDOK';
+		}
+		return out;
 	}
 }
 

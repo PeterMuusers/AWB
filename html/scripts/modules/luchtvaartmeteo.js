@@ -5,7 +5,7 @@ import { createSystemMessage, sunElevation, sunTimes } from '../functions.js';
 import {
 	LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_WIND, LANGUAGE_WIND_DIRECTION, LANGUAGE_VISIBILITY,
 	LANGUAGE_PRECIPITATION, LANGUAGE_TEMPERATURE, LANGUAGE_DEWPOINT, LANGUAGE_FREEZING_ALTITUDE, LANGUAGE_PRESSURE,
-	LANGUAGE_SUNRISE, LANGUAGE_SUNSET, LANGUAGE_AT, LANGUAGE_NO_CLOUDS, LANGUAGE_DRY, LANGUAGE_MEASURED_AT,
+	LANGUAGE_SUNRISE, LANGUAGE_SUNSET, LANGUAGE_AT, LANGUAGE_NO_CLOUDS, LANGUAGE_DRY,
 	LANGUAGE_SKY,
 } from '../language.js';
 
@@ -330,13 +330,12 @@ class Module {
 	showData() {
 		/* Station and how far it is from the dropzone */
 		this.set(ID_LOCATION, this.settings.stationName || this.station);
-		/* De regel onder het blok: wat er in de instelling staat, en anders waar gemeten wordt. Staat
-		   er met opzet niets ("note": ""), dan hoort er ook niets te staan; vandaar dat een lege tekst
-		   hier iets anders betekent dan een ontbrekende. */
+		/* De regel onder het blok: wat er in de instelling staat, en anders niets. Hier stond vanzelf
+		   "Gemeten op <station>", maar waar de cijfers vandaan komen staat in de kopbalk bij de bronnen
+		   en hoort niet nog eens in de tegel. Wie er wél iets te melden heeft dat ertoe doet - een
+		   ceilometer elf kilometer verderop, bijvoorbeeld - zet dat in "note". */
 		var note = this.settings.note;
-		this.set(ID_NOTE, (note === undefined || note === null)
-			? LANGUAGE_MEASURED_AT + ' ' + (this.settings.stationName || this.station)
-			: note);
+		this.set(ID_NOTE, (note === undefined || note === null) ? '' : note);
 
 		/* Summary and icon */
 		var sky = this.sky();

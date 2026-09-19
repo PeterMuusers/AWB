@@ -251,10 +251,6 @@ header,
 	max-height: var(--tile-height, 500px);
 	overflow: hidden;
 }
-.upper-winds-note {
-	display: block;
-	font-weight: 500;
-}
 .upper-winds-content {
 	text-align: right;
 	font-variant-numeric: tabular-nums;
@@ -554,6 +550,10 @@ header,
 	display: grid;
 	/* de tabel is het zwaarste deel en krijgt de meeste ruimte */
 	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	/* Eén rij, en die mag niet hoger worden dan de tegel. Zonder deze regel zet het grafiekje de maat:
+	   een canvas heeft een eigen hoogte, en die telt mee als de rij vanzelf hoog mag worden. Dan
+	   steekt de grafiek onder de tegel uit en snijdt die de onderste regels eraf. */
+	grid-template-rows: minmax(0, 1fr);
 	gap: 16px;
 	height: 100%;
 }
@@ -562,12 +562,14 @@ header,
 	flex-direction: column;
 	gap: 10px;
 	min-width: 0;
+	min-height: 0;
 }
 .outlook-right {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
 	min-width: 0;
+	min-height: 0;
 	/* dezelfde aanloop als de tabel links, die hem van .upper-winds-content krijgt */
 	padding-top: 9px;
 }
