@@ -3,11 +3,22 @@
 // Onder een parachute met constante luchtsnelheid V en daalsnelheid D is de
 // vliegtijd van de opening tot de circuithoogte T = (h_open − h_circuit) / D.
 // Het bereikbare gebied is een cirkel met straal V·T rond het punt waar de
-// springer zou uitkomen als hij in die tijd alleen met de wind mee zou
-// drijven (∫ wind(h) dt). De laatste ~1.000 ft zijn voor het landingscircuit
-// en tellen niet mee als "terugvliegen": de springer moet op circuithoogte
-// al bij het doel zijn. Draaien kost in dit model niets; dat maakt de cirkel
-// een kleine overschatting aan de randen.
+// springer zou uitkomen als hij alleen met de wind mee zou drijven.
+//
+// Twee hoogtes doen dus verschillend mee, en dat is met opzet:
+//
+//  - het BEREIK houdt op circuithoogte op. De laatste ~1.000 ft zijn voor het
+//    landingscircuit en leveren geen extra afstand op: die heb je nodig om
+//    downwind, base en final te vliegen.
+//  - de DRIFT loopt door tot de grond. Tijdens dat circuit waait het gewoon
+//    door, en dat is precies waarom je op circuithoogte bovenwinds moet zitten:
+//    anders waait je circuit van het veld af. De kant waarop het circuit
+//    gevlogen wordt doet er niet toe - in het luchtstelsel kan een canopy alle
+//    kanten op met dezelfde snelheid, dus de vorm van het circuit verandert
+//    niets aan wat bereikbaar is. Wat je niet kunt vermijden is de wind.
+//
+// Draaien kost in dit model niets; dat maakt de cirkel een kleine
+// overschatting aan de randen.
 
 import { windVectorAt } from './wind.js';
 import { add, scale, vectorLength } from './geo.js';
@@ -33,11 +44,12 @@ export function canopyRadius(openAltM, descentRateMs, airspeedMs, patternAltM = 
 
 /**
  * Bereikcirkel voor een springer die op `openingPoint` ({east, north} m
- * t.o.v. het doel) opent.
+ * t.o.v. het doel) opent. De drift loopt tot `driftToM` (standaard de grond),
+ * het bereik tot `patternAltM`.
  */
-export function reachCircle(openingPoint, profile, { openAltM, descentRateMs, airspeedMs, patternAltM = 0 }) {
+export function reachCircle(openingPoint, profile, { openAltM, descentRateMs, airspeedMs, patternAltM = 0, driftToM = 0 }) {
   return {
-    center: add(openingPoint, canopyDrift(profile, openAltM, descentRateMs, 1, patternAltM)),
+    center: add(openingPoint, canopyDrift(profile, openAltM, descentRateMs, 1, driftToM)),
     radiusM: canopyRadius(openAltM, descentRateMs, airspeedMs, patternAltM),
   };
 }

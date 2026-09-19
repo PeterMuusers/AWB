@@ -144,7 +144,11 @@ export function computeJumprun(input) {
   const descentMs = ftToM(o.canopyDescentFtMin) / 60;
   const canopyAirMs = o.canopyAirspeedMs ?? ktToMs(o.canopyAirspeedKt ?? 15.5);
   const patternAltM = ftToM(o.patternAltFt);
-  const Dc = canopyDrift(o.profile, openAltM, descentMs, 1, patternAltM);
+  /* De drift telt door tot de grond: tijdens het landingscircuit waait het gewoon door. Het bereik
+     houdt wél op circuithoogte op - die laatste duizend voet heb je nodig om downwind, base en final
+     te vliegen en leveren geen afstand op. Daarom staat het middelpunt van elk bereik verder
+     benedenwinds dan het openingspunt, en moet de spot dus verder bovenwinds liggen. */
+  const Dc = canopyDrift(o.profile, openAltM, descentMs, 1, 0);
 
   // Landingsdoelen als vectoren t.o.v. het doel: het doel zelf (oorsprong) plus eventuele extra velden
   // Alle posities zijn t.o.v. het ankerpunt `target`; het landingsdoel (de bak) ligt daar `p0` vandaan
