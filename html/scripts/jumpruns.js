@@ -6,14 +6,14 @@
  *
  * Op het bord krijgt elke jumprun om beurten de kaarttegel, tussen de radar door. Hangt er een
  * tweede scherm aan de Pi, dan hoeft dat niet: daar past Hoogeveen naast Echten en staan ze er
- * allebei de hele dag. Wie de trap op loopt ziet in één oogopslag wat er hangt.
+ * allebei de hele dag. Wie de trap op loopt ziet in één oogopslag wat er gepubliceerd is.
  *
  * Er wordt hier niets uitgerekend wat het bord niet al uitrekent: dit is dezelfde module met
  * dezelfde sommen, alleen twee keer, elk met zijn eigen kaart. Zo kunnen de twee schermen elkaar
  * niet tegenspreken.
  *
  * Staat er voor een veld niets, dan blijft de luchtfoto staan met de bak erop. Dat is het antwoord:
- * hier hangt vandaag geen run. Een leeg vak zou eruitzien als iets dat stuk is.
+ * hier is vandaag geen run gepubliceerd. Een leeg vak zou eruitzien als iets dat stuk is.
  */
 
 import { applyTheme, loadConfig } from './config.js';
@@ -28,7 +28,7 @@ function getURLParameter(variable) {
 const DROPZONES_URL = './jumprun-proxy.php?action=dropzones';
 const ID_RUNS = 'runs';
 const ID_CLOCK = 'runs-clock';
-/* Hoe lang één run in beeld blijft. Alleen van belang voor een veld waar er twee hangen - de hoge
+/* Hoe lang één run in beeld blijft. Alleen van belang voor een veld waar er twee staan - de hoge
    en de lage run - want dan wisselen die elkaar in dit vak af. Hetzelfde tempo als op het bord. */
 const TURN_MS = 20 * 1000;
 const CLOCK_MS = 10 * 1000;
@@ -45,7 +45,7 @@ function stations() {
 }
 
 /* De namen en de ligging van de velden, van jumprun.nl zelf. Zonder deze lijst weet dit scherm
-   niet waar het de luchtfoto heen moet draaien als er geen run hangt. */
+   niet waar het de luchtfoto heen moet draaien als er geen run gepubliceerd is. */
 function dropzones() {
 	return fetch(DROPZONES_URL, { headers: { Accept: 'application/json' } })
 		.then(response => response.json())
@@ -77,8 +77,8 @@ function pane(station) {
 	};
 }
 
-/* Wat er in dit vak hoort te staan. Hangt er een run, dan die - en hangen er twee, dan om beurten.
-   Hangt er niets, dan de luchtfoto van het veld. */
+/* Wat er in dit vak hoort te staan. Staat er een run, dan die - en staan er twee, dan om beurten.
+   Staat er niets, dan de luchtfoto van het veld. */
 function turn(view) {
 	if (view.module.active) {
 		view.module.show();

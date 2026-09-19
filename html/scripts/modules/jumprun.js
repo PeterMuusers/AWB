@@ -111,7 +111,7 @@ class Module {
 		this.updateData();
 	}
 
-	/* Alles wat vandaag opgehangen is, in de volgorde van de instelling: per dropzone eerst de hoge
+	/* Alles wat vandaag gepubliceerd is, in de volgorde van de instelling: per dropzone eerst de hoge
 	   run en dan de lage. Elke run krijgt zijn eigen beurt, want het zijn eigen getallen en een eigen
 	   lijn op de kaart; de exithoogte staat in de kop, dus je ziet meteen welke van de twee je hebt. */
 	get waiting() {
@@ -342,7 +342,7 @@ class Module {
 		where += ' <span class="jumprun-alt">'
 			+ Number(entry.plan.exitAltFt).toLocaleString(document.config.locale) + ' ft</span>';
 		/* De datum laten we weg: wat er staat geldt altijd vandaag. En de naam alleen als er meer
-		   mensen zijn die een jumprun kunnen ophangen; bij één iemand zegt hij niets en kost hij
+		   mensen zijn die een jumprun kunnen publiceren; bij één iemand zegt hij niets en kost hij
 		   alleen ruimte in een regel die je in twintig seconden moet lezen. */
 		var by = (this.admins > 1 && entry.set_by) ? ' ' + LANGUAGE_JUMPRUN_BY + ' ' + entry.set_by : '';
 		var who = LANGUAGE_JUMPRUN_PLACED + by + ' ' + LANGUAGE_JUMPRUN_AT + ' '
@@ -380,7 +380,7 @@ class Module {
 			+ '<span class="jumprun-who">' + who + '</span>' + area + drift + this.numbers();
 	}
 
-	/* De goedkope vraag: staat de schakelaar nog zoals hij stond, en is er iets opgehangen? Alleen
+	/* De goedkope vraag: staat de schakelaar nog zoals hij stond, en is er iets gepubliceerd? Alleen
 	   als het antwoord verandert wordt er echt iets gedaan. */
 	checkState() {
 		fetch(PROXY_URL + '?action=jumprun_state', { headers: { Accept: 'application/json' } })
@@ -426,7 +426,7 @@ class Module {
 		}).then(data => {
 			this.last_updated = new Date();
 			this.error = null;
-			/* hoeveel mensen hier iets kunnen ophangen; ontbreekt het, dan zetten we de naam er
+			/* hoeveel mensen hier iets kunnen publiceren; ontbreekt het, dan zetten we de naam er
 			   liever wel bij dan ten onrechte niet */
 			this.admins = (typeof data.admins === 'number') ? data.admins : 2;
 			/* jumpruns: één per exithoogte, hoog eerst. Een ouder jumprun.nl stuurt alleen `jumprun`. */
@@ -454,7 +454,7 @@ class Module {
 			return;
 		}
 		/* Wat er al ligt opnieuw uitrekenen heeft geen zin: een plan verandert alleen als iemand het
-		   opnieuw ophangt, en dat staat in set_at. Zonder deze vergelijking rekent dit bord elke vijf
+		   opnieuw publiceert, en dat staat in set_at. Zonder deze vergelijking rekent dit bord elke vijf
 		   seconden dezelfde runs nog eens door. */
 		var held = this.all[station] || { runs: [] };
 		var known = {};
