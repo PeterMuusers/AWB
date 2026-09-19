@@ -366,8 +366,18 @@ class Module {
 			drift = '<span class="jumprun-drift' + (reaches === false ? ' jumprun-drift-alert' : '') + '">'
 				+ LANGUAGE_JUMPRUN_SINCE + ' ' + words.join(' &middot; ') + '</span>';
 		}
+		/* Loopt de jumprun buiten het valschermgebied - exits of openingspunten verder dan 2 NM van
+		   de bak - dan hoort dat op het bord te staan, in dezelfde woorden als op jumprun.nl. Het is
+		   geen rekenfout maar wel iets waar de springleiding iets van moet vinden. */
+		var area = '';
+		if (r.area && r.area.fits === false) {
+			area = '<span class="jumprun-drift jumprun-drift-alert">'
+				+ LANGUAGE_JUMPRUN_OUTSIDE_AREA + ' &middot; '
+				+ r.area.maxDistanceNm.toFixed(1).replace('.', document.config.decimal || ',')
+				+ ' NM</span>';
+		}
 		element.innerHTML = '<span class="jumprun-where">' + where + '</span>'
-			+ '<span class="jumprun-who">' + who + '</span>' + drift + this.numbers();
+			+ '<span class="jumprun-who">' + who + '</span>' + area + drift + this.numbers();
 	}
 
 	/* De goedkope vraag: staat de schakelaar nog zoals hij stond, en is er iets opgehangen? Alleen

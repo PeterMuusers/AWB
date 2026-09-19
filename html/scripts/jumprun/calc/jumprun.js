@@ -63,6 +63,7 @@ export const DEFAULTS = Object.freeze({
   funnelMarginM: 150,      // hoeveel verder bovenwinds de lijn ligt dan de spot (extra dwarsoffset), zodat élk bereikmiddelpunt bovenwinds ligt
   preferSideDeg: null,     // ware peiling van de kant waar de jumprun zo ver mogelijk heen mag (0 = noord, 180 = zuid); null = geen voorkeur
   preferMinMarginM: 200,   // ondergrens voor de marge bij die verschuiving: zo ver naar die kant als kan, zolang de marge hierboven blijft
+  parachuteAreaNm: 2,      // straal van het valschermgebied rond de bak; daarbuiten hoort de sprong niet te komen
   minMarginM: 200,         // absolute ondergrens voor de marge bij greenLightMode 'nearest' (incl. het vertraagde scenario)
   nearestMarginFrac: 0.7,  // … én minstens dit deel van de best haalbare marge, zodat 'dichtstbij' niet op de rand gaat zitten
   magneticDeclinationDeg: 0, // oost positief; NL 2026 ≈ +2,5°
@@ -321,6 +322,19 @@ export function computeJumprun(input) {
     });
   }
 
+  /* Past de sprong binnen het valschermgebied? Dat is de cirkel rond de bak waarbinnen gesprongen
+     wordt (standaard 2 NM). Exits en openingspunten horen daar allebei in te liggen: daar hangt of
+     valt iemand. Ligt er iets buiten, dan is dat geen rekenfout maar wel iets om te zeggen. */
+  const areaRadiusM = nmToM(o.parachuteAreaNm);
+  let areaMaxM = 0;
+  let areaWorst = null;
+  for (const e of exits) {
+    for (const [wat, ll] of [['exit', e.exitPoint], ['opening', e.openingPoint]]) {
+      const d = vectorLength(add(vectorBetween(o.target, ll), scale(p0, -1)));
+      if (d > areaMaxM) { areaMaxM = d; areaWorst = { n: e.n, wat }; }
+    }
+  }
+
   return {
     trackDeg,
     headingDeg: tri.headingDeg,                                   // waar
@@ -370,6 +384,12 @@ export function computeJumprun(input) {
         preferSide,   // null = geen voorkeurszijde; anders {deg, floorM, feasible, shiftM, marginM, maxMarginM}
       },
       point: toLatLng(greenPoint),
+    },
+    area: {
+      radiusNm: o.parachuteAreaNm,
+      maxDistanceNm: mToNm(areaMaxM),
+      fits: areaMaxM <= areaRadiusM,
+      worst: areaWorst,                          // welke exit er het verst buiten ligt, en of dat de exit of de opening is
     },
     canopy: {
       driftM: Dc,

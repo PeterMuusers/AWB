@@ -17,6 +17,7 @@ const LANGUAGE_JUMPRUN_BY = 'door';
 const LANGUAGE_JUMPRUN_AT = 'om';
 const LANGUAGE_JUMPRUN_WITH = 'gerekend met';
 const LANGUAGE_JUMPRUN_SINCE = 'Sinds het plan:';
+const LANGUAGE_JUMPRUN_OUTSIDE_AREA = 'Jumprun loopt buiten valschermgebied';
 const LANGUAGE_JUMPRUN_TURNED = 'gedraaid';
 const LANGUAGE_JUMPRUN_STRONGER = 'toegenomen';
 const LANGUAGE_JUMPRUN_WEAKER = 'afgenomen';
@@ -81,6 +82,7 @@ export {
         LANGUAGE_JUMPRUN_AT,
         LANGUAGE_JUMPRUN_WITH,
         LANGUAGE_JUMPRUN_SINCE,
+        LANGUAGE_JUMPRUN_OUTSIDE_AREA,
         LANGUAGE_JUMPRUN_TURNED,
         LANGUAGE_JUMPRUN_STRONGER,
         LANGUAGE_JUMPRUN_WEAKER,

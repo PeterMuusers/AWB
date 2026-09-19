@@ -71,11 +71,18 @@ export function computeAuto(input, options = {}) {
 		   laagste magnetische koers - een keuze die niet van de wind afhangt, zodat hij niet heen en
 		   weer springt bij elke verversing. */
 		const candidates = funnelTracks(result);
+		/* Liggen beide kanten even dicht bij een baanrichting - wat gebeurt zodra de drift er netjes
+		   tussenin valt - dan mag het laatste cijfer van de berekening niet bepalen welke kant het
+		   wordt. Dan geldt dezelfde regel als zonder baanrichtingen: de laagste magnetische koers. */
+		const dichtstbij = (deg) => Math.min(...tracks.map((t) => apart(deg, t)));
+		const laagste = (a, b) => (normalise(b - declination) < normalise(a - declination) ? b : a);
 		let track = tracks.length
-			? candidates.reduce((best, candidate) => (
-				Math.min(...tracks.map((t) => apart(candidate, t)))
-					< Math.min(...tracks.map((t) => apart(best, t))) ? candidate : best))
-			: candidates.reduce((a, b) => (normalise(b - declination) < normalise(a - declination) ? b : a));
+			? candidates.reduce((best, candidate) => {
+				const verschil = dichtstbij(candidate) - dichtstbij(best);
+				if (Math.abs(verschil) <= 1e-6) return laagste(best, candidate);
+				return verschil < 0 ? candidate : best;
+			})
+			: candidates.reduce(laagste);
 		if (step > 0) {
 			track = normalise(Math.round(normalise(track - declination) / step) * step + declination);
 		}

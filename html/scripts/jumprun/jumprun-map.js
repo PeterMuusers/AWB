@@ -316,7 +316,10 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
     // gemeenschappelijk bereik onder de parachute: één lens i.p.v. een cirkel per exit
     const good = cssVar('--good');
     const crit = cssVar('--crit');
-    const ok = result.canopy.allReachTarget;
+    /* Rood zodra iemand het veld niet haalt, én zodra de sprong buiten het valschermgebied valt:
+       exits of openingspunten verder dan 2 NM van de bak horen daar niet te liggen. */
+    const binnenGebied = !result.area || result.area.fits;
+    const ok = result.canopy.allReachTarget && binnenGebied;
     if (result.exits.length) {
       const first = result.exits[0].canopy, last = result.exits[result.exits.length - 1].canopy;
       const tUnit = unitVector(trackDeg);
@@ -335,6 +338,12 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
       }
       // reservecontour: het bereik als élke exit `exitDelayS` langer duurt (laatste exit het verst verschoven).
       // Ligt binnen de lens; wat daarbinnen valt haalt iedereen óók als het langer duurt.
+      // de grens van het valschermgebied, alleen als de sprong eroverheen loopt: anders is het een
+      // ring die altijd meekijkt zonder iets te zeggen
+      if (!binnenGebied && base) {
+        L.circle(base, { radius: result.area.radiusNm * NM, color: '#000', weight: 5, opacity: 0.35, fill: false, interactive: false }).addTo(sceneLayer);
+        L.circle(base, { radius: result.area.radiusNm * NM, color: crit, weight: 2, opacity: 0.95, dashArray: '10 8', fill: false, interactive: false }).addTo(sceneLayer);
+      }
       if (poly && delayM > 0) {
         const inner = commonReachPolygon(firstC, add(lastC, scale(tUnit, delayM)), first.radiusM);
         if (inner) {
@@ -344,8 +353,11 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
         }
       }
       // legenda linksonder: altijd in beeld, ook als de lens buiten de kaart valt
-      legend.innerHTML = `<span class="ln" style="--c:${col}"></span>${ok ? 'bereik van alle exits' : 'niet iedereen haalt het'}` +
-        (delayM > 0 && poly ? `<span class="ln dash" style="--c:${okDelayed ? good : crit}"></span>${okDelayed ? '' : 'tekort '}bij ${delayS} s vertraging per exit` : '');
+      const gebiedTekst = binnenGebied ? '' :
+        `<span class="ln" style="--c:${crit}"></span>jumprun loopt buiten valschermgebied · tot ${result.area.maxDistanceNm.toFixed(1).replace('.', ',')} NM van de bak`;
+      legend.innerHTML = `<span class="ln" style="--c:${col}"></span>${result.canopy.allReachTarget ? 'bereik van alle exits' : 'niet iedereen haalt het'}` +
+        (delayM > 0 && poly ? `<span class="ln dash" style="--c:${okDelayed ? good : crit}"></span>${okDelayed ? '' : 'tekort '}bij ${delayS} s vertraging per exit` : '') +
+        gebiedTekst;
       legend.hidden = false;
     }
 
