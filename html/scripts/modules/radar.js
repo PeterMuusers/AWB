@@ -1004,6 +1004,12 @@ class Module {
 		if (document.config.jumprun) {
 			out += ' / PDOK';
 		}
+		/* Windy neemt deze tegel af en toe over met zijn windveld. Zijn eigen logo valt buiten het
+		   kader - de iframe is groter dan het venster waarin hij staat - dus zonder deze regel wordt
+		   hij nergens genoemd. */
+		if (document.config.windy) {
+			out += ' / Windy';
+		}
 		return out;
 	}
 }
