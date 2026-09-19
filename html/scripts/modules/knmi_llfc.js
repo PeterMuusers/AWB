@@ -457,6 +457,9 @@ class Module {
 	   taller than the screen. Only this card scales: the measurements and the wind profile are
 	   numbers you read at a glance and they keep their size. */
 	fit() {
+		if (this.takenOver()) {
+			return;
+		}
 		var content = document.getElementById(ID_LLFC_CONTENT);
 		var card = content ? content.closest('.llfc') : null;
 		if (!card) {
@@ -509,8 +512,33 @@ class Module {
 		return Array.isArray(configured) ? configured : [];
 	}
 
+	/* Staat er iets anders op de plek van het bulletin? Het vooruitzicht leent deze tegel - inhoud
+	   én kop - tot het met /normaal weer wordt teruggegeven. Zolang dat zo is schrijft deze module
+	   er niets in: anders veegt de eerstvolgende ronde (of een herschreven versie die nog onderweg
+	   was) het vooruitzicht binnen een paar tellen weer van het scherm. */
+	takenOver() {
+		var outlook = (document.modules || {}).outlook;
+		return !!(outlook && outlook.showing);
+	}
+
+	/* Wanneer het bulletin is uitgegeven en hoe lang het geldt, in de kop van de tegel. Staat apart,
+	   omdat het vooruitzicht die regel overneemt en hem bij /normaal weer hier vandaan wil halen in
+	   plaats van uit een kopie van een uur geleden. */
+	showValidity() {
+		if (this.valid_from === null || this.takenOver()) {
+			return false;
+		}
+		var validity = this.validityText();
+		document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL)
+			+ (validity === null ? '' : '<span class="llfc-validity">' + validity + '</span>');
+		return true;
+	}
+
 	/* The bulletin as the KNMI writes it, item by item */
 	showBulletin() {
+		if (this.takenOver()) {
+			return;
+		}
 		var content = '';
 		var subjects = this.subjects();
 		/* De geldigheid staat al in de kop van de tegel, achter het tijdstip van uitgifte. Hem hier
@@ -540,6 +568,9 @@ class Module {
 	   cijfers achter EHDB); komt dat niet overeen, dan blijft het bulletin zelf staan tot de
 	   volgende ronde. */
 	showRewrite() {
+		if (this.takenOver()) {
+			return;
+		}
 		fetch(REWRITE_URL, { cache: 'no-store' }).then(response => {
 			if (response.ok !== true) {
 				throw new Error('HTTP ' + response.status);
@@ -560,7 +591,7 @@ class Module {
 					content += '<div class=llfc-item><span class="llfc-item-text">' + line + '</span></div>';
 				}
 			});
-			if (content !== '') {
+			if (content !== '' && !this.takenOver()) {
 				document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
 				document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE + ' ' + LANGUAGE_REWRITTEN;
 				this.fit();
@@ -659,9 +690,7 @@ class Module {
 						this.showRewrite();
 					}
 					/* issued at, and how long it applies */
-					var validity = this.validityText();
-					document.getElementById(ID_VALID_FROM).innerHTML = this.valid_from.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL)
-						+ (validity === null ? '' : '<span class="llfc-validity">' + validity + '</span>');
+					this.showValidity();
 					document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 				} else {
 					document.getElementById(ID_LLFC_LAST_UPDATED_WARNING).style.display = 'block';

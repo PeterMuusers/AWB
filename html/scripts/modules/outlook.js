@@ -17,7 +17,7 @@
  */
 
 import { UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_GROUND, LANGUAGE_OUTLOOK, LANGUAGE_CLOUDS, LANGUAGE_NO_CLOUDS } from '../language.js';
+import { LANGUAGE_GROUND, LANGUAGE_OUTLOOK, LANGUAGE_OUTLOOK_CHART, LANGUAGE_CLOUDS, LANGUAGE_NO_CLOUDS } from '../language.js';
 import { sunTimes } from '../functions.js';
 
 const SOURCE = 'Open-Meteo';
@@ -43,6 +43,8 @@ const CLOUD_COLOUR = '143, 176, 204';
 const AXIS_SIZE = 14;
 const CHART_SIZE = 12;
 const WIND_SIZE = 16;
+const OKTA_SIZE = 13;
+const OKTA_GAP = 4;					// ruimte tussen het blokje en het getal erboven
 const AXIS_GAP = 8;
 const WIND_HEIGHT = 86;				// pixels onderaan voor de grondwind, met ruimte voor de getallen
 const LABEL_HEIGHT = 20;			// pixels daaronder voor de uren
@@ -65,6 +67,7 @@ function cloudCode(okta) {
 class Module {
 	constructor() {
 		this.showing = false;
+		this.busy = false;			// er wordt al een vooruitzicht opgehaald
 		this.header = null;			// de kop van de tegel zoals hij was
 		this.observer = null;
 		this.drawn = null;
@@ -83,7 +86,7 @@ class Module {
 					this.hide();
 					return;
 				}
-				if (this.showing) {
+				if (this.showing || this.busy) {
 					return;
 				}
 				this.show();
@@ -115,6 +118,9 @@ class Module {
 		after.setDate(after.getDate() + 1);
 		var iso = when => when.toISOString().slice(0, 10);
 
+		/* Het ophalen duurt langer dan de vijf seconden tussen twee rondes; zonder deze vlag vraagt de
+		   volgende ronde hetzelfde nog een keer. */
+		this.busy = true;
 		fetch(aloft.apiUrl({ start_date: iso(before), end_date: iso(after) }), { headers: { Accept: 'application/json' } })
 			.then(response => {
 				if (response.ok !== true) {
@@ -125,6 +131,9 @@ class Module {
 			.then(data => {
 				var ofDay = aloft.parse(data).filter(hour => this.sameDay(hour.time, day));
 				var hours = ofDay.filter(hour => HOURS.indexOf(hour.time.getHours()) !== -1);
+				if (hours.length === 0) {
+					throw new Error('geen uren voor ' + day);
+				}
 				var sunset = sunTimes(hours[0].time, document.config.location.lattitude,
 					document.config.location.longitude).sunset;
 				/* tot en met het uur waarin de zon ondergaat: dat uur springt er nog in */
@@ -133,13 +142,13 @@ class Module {
 					var uur = hour.time.getHours();
 					return uur >= DAY_FROM && uur <= laatste;
 				});
-				if (hours.length === 0) {
-					throw new Error('geen uren voor ' + day);
-				}
-				this.draw(hours, verloop, aloft);
+				/* eerst de vlag, dan pas tekenen: het bulletin kijkt ernaar om te weten dat deze tegel
+				   even van iemand anders is */
 				this.showing = true;
+				this.draw(hours, verloop, aloft);
 			})
-			.catch(error => console.warn('Vooruitzicht mislukt: ' + error.message));
+			.catch(error => console.warn('Vooruitzicht mislukt: ' + error.message))
+			.then(() => { this.busy = false; });
 	}
 
 	/* Valt dit moment op de lokale dag die we willen tonen? */
@@ -166,13 +175,13 @@ class Module {
 			var temperature = (hours[0].levels[feet] && hours[0].levels[feet].temp !== null
 					&& hours[0].levels[feet].temp !== undefined)
 				? '<span class="windtemperature">' + Math.round(hours[0].levels[feet].temp) + '&nbsp;&deg;C</span>' : '';
-			return '<tr><td class="windtext">' + feet.toLocaleString(document.config.locale) + temperature + '</td>'
+			return '<tr data-feet="' + feet + '"><td class="windtext">' + feet.toLocaleString(document.config.locale) + temperature + '</td>'
 				+ hours.map(hour => aloft.cell(hour.levels[feet], '', false, null,
 					aloft.overLimit(feet, hour.levels[feet]))).join('')
 				+ '</tr>';
 		}).join('');
 
-		var ground = '<tr class="ground-row"><td class="windtext">' + LANGUAGE_GROUND + '</td>'
+		var ground = '<tr class="ground-row" data-feet="0"><td class="windtext">' + LANGUAGE_GROUND + '</td>'
 			+ hours.map(hour => aloft.cell({ kt: hour.ground.kt, dir: hour.ground.dir },
 				aloft.gust(hour.ground.gust, hour.ground.kt), false, null, false)).join('')
 			+ '</tr>';
@@ -204,7 +213,8 @@ class Module {
 			+ '<table class="outlook-table"><thead>' + head + '</thead><tbody>'
 			+ clouds + divider + rows + ground + '</tbody></table>'
 			+ '</div>'
-			+ '<div class="outlook-right"><canvas class="outlook-chart"></canvas></div>'
+			+ '<div class="outlook-right"><span class="outlook-chart-title">' + LANGUAGE_OUTLOOK_CHART + '</span>'
+			+ '<canvas class="outlook-chart"></canvas></div>'
 			+ '</div>';
 
 		/* De kop van de tegel gaat mee: daar staat normaal het weerbulletin aangekondigd, en dat is
@@ -288,13 +298,33 @@ class Module {
 			return 1;
 		};
 
+		/* De hoogtes van de tabel ernaast, opgemeten in het beeld: dan ligt 15k hier op dezelfde
+		   hoogte als de rij 15.000 daar, en 1k op de rij 1.000. Zo zeggen links en rechts op dezelfde
+		   ooghoogte hetzelfde. Lukt het opmeten niet, dan verdeelt de grafiek de ruimte zelf. */
+		var levels = this.levels(canvas);
+
 		ctx.font = AXIS_SIZE + 'px ' + family;
 		var axisWidth = Math.max.apply(null, AXIS_TICKS.map(feet => ctx.measureText(this.tickLabel(feet)).width)) + AXIS_GAP;
 		var left = axisWidth;
 		var right = box.width - 2;
-		var bottom = box.height - LABEL_HEIGHT - WIND_HEIGHT;
-		var top = TOP_GAP;
-		var y = feet => bottom - fraction(feet) * (bottom - top);
+		var bottom = levels ? levels[levels.length - 1].y : box.height - LABEL_HEIGHT - WIND_HEIGHT;
+		var top = levels ? levels[0].y : TOP_GAP;
+		var ceiling = levels ? levels[0].feet : ALTITUDE_TICKS[ALTITUDE_TICKS.length - 1];
+		var y = feet => {
+			if (!levels) {
+				return bottom - fraction(feet) * (bottom - top);
+			}
+			if (feet >= levels[0].feet) {
+				return levels[0].y;
+			}
+			for (var i = 0; i < levels.length - 1; i++) {
+				if (feet >= levels[i + 1].feet) {
+					var within = (feet - levels[i + 1].feet) / (levels[i].feet - levels[i + 1].feet);
+					return levels[i + 1].y + within * (levels[i].y - levels[i + 1].y);
+				}
+			}
+			return levels[levels.length - 1].y;
+		};
 		var span = (right - left) / day.length;
 		var x = index => left + index * span;
 
@@ -321,10 +351,40 @@ class Module {
 		};
 		day.forEach((hour, index) => {
 			(hour.layers || []).forEach(layer => {
-				var hoog = y(Math.min(layer.top, ALTITUDE_TICKS[ALTITUDE_TICKS.length - 1]));
-				var laag = y(Math.min(layer.base, ALTITUDE_TICKS[ALTITUDE_TICKS.length - 1]));
+				var hoog = y(Math.min(layer.top, ceiling));
+				var laag = y(Math.min(layer.base, ceiling));
 				ctx.fillStyle = 'rgba(' + towardsWhite(layer.okta) + ', 0.85)';
 				ctx.fillRect(x(index) + 1, hoog, Math.max(2, span - 2), Math.max(2, laag - hoog));
+			});
+		});
+
+		/* Hoeveel er hangt, in achtsten, boven het blokje in plaats van erin: een dun laagje heeft
+		   binnenin geen ruimte voor een getal, en zo staan ze allemaal op dezelfde plek. Past het niet
+		   naast elkaar, dan om de drie uur - dezelfde uren die onderaan hun tijd krijgen. */
+		ctx.font = '600 ' + OKTA_SIZE + 'px ' + family;
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'alphabetic';
+		ctx.fillStyle = ink;
+		var elkUur = (ctx.measureText('8/8').width + OKTA_GAP) <= span;
+		day.forEach((hour, index) => {
+			var lagen = hour.layers || [];
+			if (lagen.length === 0) {
+				return;
+			}
+			if (!elkUur && hour.time.getHours() % 3 !== 0) {
+				return;
+			}
+			var vorige = null;
+			lagen.forEach(layer => {
+				var hoog = y(Math.min(layer.top, ceiling));
+				var laag = y(Math.min(layer.base, ceiling));
+				/* boven het blokje, tenzij het tegen de bovenrand aan ligt: dan eronder */
+				var regel = (hoog - OKTA_GAP - OKTA_SIZE < top) ? laag + OKTA_SIZE + OKTA_GAP : hoog - OKTA_GAP;
+				if (vorige !== null && Math.abs(regel - vorige) < OKTA_SIZE) {
+					return;			// twee lagen vlak boven elkaar: één getal is leesbaar, twee niet
+				}
+				vorige = regel;
+				ctx.fillText(layer.okta + '/8', x(index) + span / 2, regel);
 			});
 		});
 
@@ -337,7 +397,7 @@ class Module {
 			if (hour.freezing === null || hour.freezing === undefined) {
 				return;
 			}
-			var punt = y(Math.min(hour.freezing, ALTITUDE_TICKS[ALTITUDE_TICKS.length - 1]));
+			var punt = y(Math.min(hour.freezing, ceiling));
 			var midden = x(index) + span / 2;
 			if (index === 0) {
 				ctx.moveTo(midden, punt);
@@ -353,8 +413,8 @@ class Module {
 		   verwachting - net als de verwachte helft in die tegel. */
 		var speeds = day.map(hour => hour.ground.kt).concat(day.map(hour => hour.ground.gust || 0));
 		var hoogste = Math.max(10, Math.max.apply(null, speeds));
-		var windTop = bottom + 26;
 		var windBottom = box.height - LABEL_HEIGHT - 14;
+		var windTop = Math.min(Math.max(bottom + 26, box.height - LABEL_HEIGHT - WIND_HEIGHT + 26), windBottom - 30);
 		var yWind = kt => windBottom - (kt / hoogste) * (windBottom - windTop);
 		var midden = index => x(index) + span / 2;
 
@@ -413,6 +473,34 @@ class Module {
 		});
 	}
 
+	/* De hoogtes van de tabel, met de plek waar hun rij begint - in de maat van het canvas, dus
+	   gedeeld door de schaal waarmee het bord op het scherm gepast wordt. Geeft null als er niets te
+	   meten valt; dan verdeelt de grafiek de ruimte zelf. */
+	levels(canvas) {
+		var rows = document.querySelectorAll('.outlook-table tr[data-feet]');
+		if (rows.length < 2 || canvas.clientHeight === 0) {
+			return null;
+		}
+		var frame = canvas.getBoundingClientRect();
+		var scale = frame.height / canvas.clientHeight;
+		if (!(scale > 0)) {
+			return null;
+		}
+		var list = [];
+		Array.prototype.forEach.call(rows, row => {
+			list.push({
+				feet: Number(row.getAttribute('data-feet')),
+				y: (row.getBoundingClientRect().top - frame.top) / scale,
+			});
+		});
+		list.sort((a, b) => b.feet - a.feet);
+		/* de bovenste rij moet wel in beeld liggen, anders valt de hele grafiek buiten het vak */
+		if (list[0].y < 0 || list[list.length - 1].y > canvas.clientHeight) {
+			return null;
+		}
+		return list;
+	}
+
 	/* 9.000 ft heet "9k" op de schaal, net als in de tegel ernaast */
 	tickLabel(feet) {
 		return (feet === 0) ? '0' : (feet / 1000) + 'k';
@@ -439,10 +527,16 @@ class Module {
 		/* Terug naar het bulletin: de module heeft alles nog in huis, hij hoeft alleen opnieuw te
 		   tekenen. Is de herschreven versie aan de beurt, dan komt die er zelf achteraan. */
 		var llfc = (document.modules || {}).knmi_llfc;
-		if (llfc && llfc.llfc) {
-			llfc.showBulletin();
-			if (llfc.rewrite) {
-				llfc.showRewrite();
+		if (llfc) {
+			/* de kop liever vers dan uit de kopie: er kan intussen een nieuw bulletin zijn geweest */
+			if (llfc.showValidity) {
+				llfc.showValidity();
+			}
+			if (llfc.llfc) {
+				llfc.showBulletin();
+				if (llfc.rewrite) {
+					llfc.showRewrite();
+				}
 			}
 		}
 	}

@@ -411,7 +411,11 @@ loadConfig(location).then(response => {
 		if (e.code === "KeyR") {
 			console.log('Manual refresh triggered');
 			for (var module in document.modules) {
-				document.modules[module].updateData();
+				/* niet elke module haalt zelf data op - het vooruitzicht en de windkaart kijken alleen
+				   naar wat er al is */
+				if (typeof document.modules[module].updateData === 'function') {
+					document.modules[module].updateData();
+				}
 			}
 		}
 

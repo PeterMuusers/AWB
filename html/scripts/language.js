@@ -41,6 +41,7 @@ const LANGUAGE_WIND_PROFILE = 'Windprofiel';
 const LANGUAGE_WIND = 'Wind';
 const LANGUAGE_OUTLOOK = 'Vooruitzicht';
 const LANGUAGE_CLOUDS = 'Wolken';
+const LANGUAGE_OUTLOOK_CHART = 'Bewolking per uur';
 const LANGUAGE_AT_GROUND = 'aan de grond';
 const LANGUAGE_WIND_DIRECTION = 'Richting';
 const LANGUAGE_VISIBILITY = 'Zicht';
@@ -108,6 +109,7 @@ export {
         LANGUAGE_WIND,
         LANGUAGE_OUTLOOK,
         LANGUAGE_CLOUDS,
+        LANGUAGE_OUTLOOK_CHART,
         LANGUAGE_AT_GROUND,
         LANGUAGE_WIND_DIRECTION,
         LANGUAGE_VISIBILITY,
