@@ -9,6 +9,7 @@
 #
 #   ./rpi/card-rescue.sh show              what the card says now, and any logs it brought back
 #   ./rpi/card-rescue.sh wifi "SSID" [pri] teach it another wifi network (higher pri wins)
+#   ./rpi/card-rescue.sh wifi-open "SSID" [pri]  the same, for a network without a password
 #   ./rpi/card-rescue.sh forget "SSID"     take a network out of the Imager's own list
 #   ./rpi/card-rescue.sh debug             have the next boot leave its logs on this card
 #   ./rpi/card-rescue.sh bump              do the first-boot work again, changing nothing else
@@ -154,9 +155,15 @@ else:
 cmdline = boot / 'cmdline.txt'
 if cmdline.exists():
     text = cmdline.read_text()
-    fixed = re.sub(r'(ds=nocloud[^\s]*?;i=)[^\s;]+', lambda m: m.group(1) + stamp, text)
-    if fixed == text and 'ds=nocloud' in text:
-        fixed = re.sub(r'(ds=nocloud[^\s]*)', lambda m: m.group(1) + ';i=' + stamp, text, count=1)
+    # Alles wat op een id lijkt eruit en er precies één terug. Er kan er namelijk al meer dan één
+    # staan - de Pi schrijft er bij het opstarten zelf ook een achteraan - en cloud-init leest de
+    # laatste. Eentje erbij zetten is dan hetzelfde als niets doen, en dat is niet te zien: de kaart
+    # klopt, meta-data klopt, en de Pi doet stug niets van wat je hem meegaf.
+    def one_id(match):
+        parts = [part for part in match.group(0).split(';') if not part.startswith('i=')]
+        return ';'.join(parts) + ';i=' + stamp
+
+    fixed = re.sub(r'ds=nocloud[^\s]*', one_id, text, count=1) if 'ds=nocloud' in text else text
     if fixed != text:
         # one line, always: a second line in here and the Pi does not boot at all
         assert fixed.strip().count('\n') == 0, 'cmdline.txt must stay a single line'
@@ -213,26 +220,45 @@ add_debug() {
 	say "Leave the logs on the card at the next boot"
 	note "Everything that says what went wrong lives on the Linux partition, which a Mac cannot"
 	note "read. This has the Pi copy it onto the boot partition, which is plain FAT."
+	AWB_FIRST=1 \
 	AWB_NAME=debug \
 	AWB_BODY='#!/bin/bash
 # Written onto the card by rpi/card-rescue.sh. Copies what happened onto the boot partition.
+#
+# Twee momentopnamen, en geen van beide houdt het opstarten op. Vroeg meten geeft een bord dat nog
+# nergens verbonden is; laat meten geeft niets als iemand de stekker eruit trekt omdat het te lang
+# duurt. Vandaar allebei - en via systemd-run, want alles wat dit script zelf op de achtergrond zou
+# starten gaat mee in het graf van cloud-init zodra dat klaar is.
 OUT=/boot/firmware/awb-debug
 [ -d /boot/firmware ] || OUT=/boot/awb-debug
 mkdir -p "$OUT"
-{
-  echo "== $(date -Is) =="
-  echo "-- who am i"; hostname; head -2 /etc/os-release; uptime
-  echo "-- network"; ip -br addr; ip route
-  echo "-- wifi"; nmcli -t -f ACTIVE,SSID,SIGNAL device wifi list --rescan no 2>&1 | head -20
-  echo "-- name resolution"; getent hosts deb.debian.org
-  echo "-- reaching the internet"; curl -sS -o /dev/null -w "%{http_code}\n" --max-time 20 https://deb.debian.org/
-  echo "-- cloud-init"; cloud-init status --long 2>&1 | head -20
-} > "$OUT/summary.txt" 2>&1
-for f in /var/log/cloud-init-output.log /var/log/cloud-init.log; do
-  [ -r "$f" ] && tail -c 200000 "$f" > "$OUT/$(basename "$f")"
-done
-journalctl -b --no-pager 2>/dev/null | tail -n 800 > "$OUT/journal.txt"
-sync' \
+
+if [ "$1" = collect ]; then
+  {
+    echo "== $(date -Is) ($2) =="
+    echo "-- who am i"; hostname; head -2 /etc/os-release; uptime
+    echo "-- network"; ip -br addr; ip route
+    echo "-- wifi"; nmcli -t -f ACTIVE,SSID,SIGNAL device wifi list --rescan no 2>&1 | head -20
+    echo "-- profiles"; nmcli -t -f NAME,TYPE,AUTOCONNECT,AUTOCONNECT-PRIORITY connection show 2>&1
+    echo "-- devices"; nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device status 2>&1
+    echo "-- what NetworkManager tried"; journalctl -b -u NetworkManager --no-pager 2>&1 \
+      | grep -iE "skydive|manifest|psk|auth|assoc|secrets|fail|deactiv" | tail -30
+    echo "-- name resolution"; getent hosts deb.debian.org
+    echo "-- reaching the internet"; curl -sS -o /dev/null -w "%{http_code}\n" --max-time 20 https://deb.debian.org/
+    echo "-- cloud-init"; cloud-init status --long 2>&1 | head -20
+  } > "$OUT/summary-$2.txt" 2>&1
+  cp -f /var/log/cloud-init-output.log /var/log/cloud-init.log "$OUT/" 2>/dev/null
+  journalctl -b --no-pager 2>/dev/null | tail -2000 > "$OUT/journal.txt" 2>&1
+  cp -f /var/log/awb-captive.log "$OUT/captive.log" 2>/dev/null
+  cp -f /var/lib/awb/captive-last.html "$OUT/captive-last.html" 2>/dev/null
+  sync
+  exit 0
+fi
+
+systemctl reset-failed awb-debug-early.service awb-debug-late.service 2>/dev/null
+systemd-run --unit=awb-debug-early --on-active=25 /usr/local/sbin/awb-debug.sh collect early >/dev/null 2>&1
+systemd-run --unit=awb-debug-late --on-active=110 /usr/local/sbin/awb-debug.sh collect late >/dev/null 2>&1
+echo "debug scheduled"' \
 		edit_user_data
 	bump_instance_id
 	say "Done"
@@ -242,8 +268,48 @@ sync' \
 # ---------------------------------------------------------------- wifi
 
 add_wifi() {
-	local ssid="$1" priority="${2:-0}"
+	local ssid="$1" priority="${2:-0}" open="${3:-}"
 	say "Wifi network: ${ssid} (priority ${priority})"
+
+	# Een open netwerk heeft geen wachtwoord om te zoeken. Dat is geen randgeval: juist het netwerk
+	# met een portaal ervoor is open, en dat is precies het soort netwerk waar je een bord op kwijt
+	# raakt en met de kaart weer bij moet zien te komen.
+	if [[ -n "${open}" ]]; then
+		note "Open network: no password."
+		AWB_FIRST=1 \
+		AWB_NAME="wifi-$(echo "${ssid}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')" \
+		AWB_EXTRA="/etc/NetworkManager/system-connections/${ssid}.nmconnection
+'0600'
+|
+      [connection]
+      id=${ssid}
+      type=wifi
+      autoconnect=true
+      autoconnect-priority=${priority}
+
+      [wifi]
+      mode=infrastructure
+      ssid=${ssid}
+
+      [ipv4]
+      method=auto
+
+      [ipv6]
+      method=auto
+      addr-gen-mode=default" \
+		AWB_BODY='#!/bin/bash
+# Written onto the card by rpi/card-rescue.sh. NetworkManager refuses a keyfile that anyone else
+# can read, and cloud-init writes it before NetworkManager is up, so tell it to look again.
+chown root:root "/etc/NetworkManager/system-connections/SSID.nmconnection" 2>/dev/null
+chmod 600 "/etc/NetworkManager/system-connections/SSID.nmconnection" 2>/dev/null
+nmcli connection reload 2>/dev/null || systemctl reload NetworkManager 2>/dev/null
+echo "reloaded NetworkManager for SSID"' \
+			edit_user_data_ssid "${ssid}"
+		bump_instance_id
+		say "Done"
+		note "An open network: whatever sits in front of it still has to let the board through."
+		return 0
+	fi
 
 	local password=""
 	local source=""
@@ -309,12 +375,18 @@ edit_user_data_ssid() {
 
 # ---------------------------------------------------------------- forget
 
-# Only touches network-config, the list the Imager wrote. Networks this script added are keyfiles
-# and are removed by deleting them on the Pi itself; this is for undoing what was seeded there,
-# which matters because everything in that list beyond the first one is folded into the first.
+# Two lists to take it out of, because a Pi can know a network in two ways: the one the Imager
+# seeded (network-config) and the NetworkManager profiles that were added later, on the Pi or by
+# this script. Forgetting one and not the other leaves a board that still walks back into the
+# network you were trying to get it out of - which is exactly the trouble you took the card out
+# for. The profile is deleted at the next boot, by a script this puts on the card.
 forget_wifi() {
 	local ssid="$1"
-	[[ -f "${BOOT}/network-config" ]] || die "This card has no network-config on it."
+	forget_profile "${ssid}"
+	if [[ ! -f "${BOOT}/network-config" ]]; then
+		bump_instance_id
+		return 0
+	fi
 	say "Taking ${ssid} out of the Imager's network list"
 	SSID="${ssid}" python3 - "${BOOT}" <<'PYTHON'
 import os, pathlib, re, sys
@@ -333,12 +405,31 @@ PYTHON
 	bump_instance_id
 }
 
+# Een NetworkManager-profiel weghalen bij de volgende start. Dat bestand staat op de ext4-partitie
+# en die kan een Mac niet eens lezen, dus het gebeurt op de Pi zelf - door een scriptje dat hier
+# op de bootpartitie wordt neergezet en bij het opstarten één keer langskomt.
+forget_profile() {
+	local ssid="$1"
+	say "Removing the NetworkManager profile for ${ssid} at the next boot"
+	AWB_FIRST=1 \
+	AWB_NAME="drop-$(echo "${ssid}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]')" \
+	AWB_BODY='#!/bin/bash
+# Written onto the card by rpi/card-rescue.sh: take this network off the board.
+rm -f "/etc/NetworkManager/system-connections/SSID.nmconnection"
+nmcli connection delete "SSID" 2>/dev/null
+nmcli connection reload 2>/dev/null || systemctl reload NetworkManager 2>/dev/null
+echo "removed SSID"' \
+		edit_user_data_ssid "${ssid}"
+	note "It will not join \"${ssid}\" again until you teach it that network anew."
+}
+
 # ---------------------------------------------------------------- main
 
 case "${1:-}" in
 	show) show_card ;;
 	debug) add_debug ;;
 	wifi) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh wifi \"SSID\" [priority]"; add_wifi "$2" "${3:-0}" ;;
+	wifi-open) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh wifi-open \"SSID\" [priority]"; add_wifi "$2" "${3:-0}" open ;;
 	forget) [[ -n "${2:-}" ]] || die "Which network? ./rpi/card-rescue.sh forget \"SSID\""; forget_wifi "$2" ;;
 	bump) say "Making cloud-init do its first-boot work again"; bump_instance_id ;;
 	*) awk 'NR > 2 { if (/^#/) { sub(/^# ?/, ""); print; next } exit }' "$0"; exit 1 ;;
