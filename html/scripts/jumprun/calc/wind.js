@@ -135,13 +135,27 @@ export function profileFromOpenMeteo(hourly, index, opts) {
   );
 }
 
+/** Hoogte waarop de grondwind gemeten wordt: tien meter, zoals elk weerstation. */
+export const GROUND_FT = 33;
+
 /**
  * Profiel uit het cloudbase-endpoint /api/aloft: een object of lijst met
  * per niveau {ft, kt, dir}. Deze hoogtes zijn al AGL/QFE-achtig per 1.000 ft.
+ *
+ * Het model begint op 500 ft. Daaronder remt de grond de wind af - vanavond op
+ * Hoogeveen 13 kt aan de grond tegen 23 kt op 500 ft - en zonder onderste
+ * niveau houdt `windAt` die 500-voetswind vast tot aan de grond. Daarom mag de
+ * gemeten grondwind (`ground`, op tien meter) er als onderste niveau bij: dan
+ * loopt de laatste vijfhonderd voet naar een gemeten getal toe in plaats van
+ * naar een doorgetrokken lijn. Dat telt mee in de drift onder de parachute, en
+ * dus in de spot.
  */
-export function profileFromAloft(levels) {
+export function profileFromAloft(levels, ground = null) {
+  const alle = isNum(ground && ground.kt) && isNum(ground && ground.dir)
+    ? [{ ft: GROUND_FT, kt: ground.kt, dir: ground.dir }, ...levels]
+    : levels;
   return normalizeProfile(
-    levels.map((l) => ({
+    alle.map((l) => ({
       heightM: ftToM(l.ft),
       speedMs: ktToMs(l.kt),
       fromDeg: l.dir,

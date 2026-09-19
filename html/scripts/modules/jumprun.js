@@ -470,10 +470,15 @@ class Module {
 		};
 	}
 
-	/* The wind as the calculation wants it. The plan carries levels; so does this board. */
+	/* The wind as the calculation wants it. The plan carries levels; so does this board.
+
+	   De gemeten grondwind gaat als onderste niveau mee: het model begint op 500 ft, en zonder dat
+	   niveau houdt de berekening die 500-voetswind vast tot aan de grond - terwijl de grond de wind
+	   juist afremt. Dat telt mee in de drift onder de parachute, en dus in de lijn die hier staat. */
 	profileOf(wind) {
 		var levels = (wind && Array.isArray(wind.levels)) ? wind.levels : [];
-		return levels.length > 1 ? profileFromAloft(levels) : null;
+		var ground = (wind && wind.ground) ? wind.ground : null;
+		return levels.length > 1 ? profileFromAloft(levels, ground) : null;
 	}
 
 	/* The wind this board measures and models right now, in the same shape as the plan's. */
@@ -490,7 +495,18 @@ class Module {
 			kt: hour.levels[feet].kt,
 			dir: hour.levels[feet].dir,
 		})).filter(level => level.kt !== null && level.dir !== null).sort((a, b) => a.ft - b.ft);
-		return levels.length > 1 ? { at: hour.time.toISOString(), levels } : null;
+		return levels.length > 1 ? { at: hour.time.toISOString(), levels, ground: this.groundWind() } : null;
+	}
+
+	/* De grondwind die dit bord meet, in de vorm die de rekenkern wil. Ontbreekt hij, dan rekent de
+	   kern zoals vroeger: met de laagste modelwind tot aan de grond. */
+	groundWind() {
+		var meting = (document.modules || {}).luchtvaartmeteo;
+		var laatste = meting && meting.observation ? meting.observation : null;
+		if (!laatste || !(laatste.wind_kt >= 0) || !(laatste.wind_dir >= 0)) {
+			return null;
+		}
+		return { kt: laatste.wind_kt, dir: laatste.wind_dir };
 	}
 
 	compute(plan, profile) {

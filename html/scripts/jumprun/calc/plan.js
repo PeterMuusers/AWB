@@ -133,9 +133,10 @@ export function fieldsFor(dz, bak, targetsOff = []) {
  */
 export function computeRun(o) {
 	const { dz, settings, fields, levels, target, over = {}, lowRunRule = true } = o;
+	// de gemeten grondwind hoort onderin het profiel; zie profileFromAloft
 	const input = {
 		...planInput(dz, {
-			profile: profileFromAloft(levels),
+			profile: profileFromAloft(levels, o.ground),
 			elevationM: o.elevationM,
 			exitAltFt: o.exitAltFt,
 			openAltFt: o.openAltFt,
@@ -178,7 +179,7 @@ export function adviceOffset(result, settings, bak, compute) {
 export function adviseRun(o) {
 	const { dz, settings, fields, levels, bak, alt, higher = null } = o;
 	const openAltFt = Math.min(o.openAltFt, alt - 500);
-	const base = { dz, settings, fields, levels, elevationM: o.elevationM, exits: o.exits, groupSizes: o.groupSizes };
+	const base = { dz, settings, fields, levels, ground: o.ground, elevationM: o.elevationM, exits: o.exits, groupSizes: o.groupSizes };
 
 	if (higher && alt < higher.alt) {
 		const same = {
@@ -225,7 +226,7 @@ export function computePlan(o) {
 	const settings = settingsFor(o.dz, o.prefs || {});
 	const fields = fieldsFor(o.dz, o.bak, o.targetsOff || []);
 	const base = {
-		dz: o.dz, settings, fields, levels: o.levels, elevationM: o.elevationM,
+		dz: o.dz, settings, fields, levels: o.levels, ground: o.ground, elevationM: o.elevationM,
 		exits: o.exits, groupSizes: o.groupSizes, openAltFt: o.openAltFt, bak: o.bak,
 	};
 
