@@ -384,7 +384,7 @@ class Module {
 					+ '<span class="metrics-layer-bar"' + share + '></span>'
 					+ '<span class="metrics-layer-base"' + share + '>' + layer.base.toLocaleString(document.config.locale)
 						+ '&nbsp;<span class="metrics-unit">' + UNIT_FEET + '</span></span>'
-					+ '<span class="metrics-layer-code"' + share + '>' + cloudAmountCode(layer.okta) + ' ' + layer.okta + '/8</span>'
+					+ '<span class="metrics-layer-code"' + share + '>' + cloudAmountCode(layer.okta) + '</span>'
 					+ '</span>';
 			}).join(''));
 		}

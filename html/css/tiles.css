@@ -1089,13 +1089,16 @@ header,
    vakjes zie je; "6/8" moet je lezen. De vulling loopt tot var(--okta) en het masker knipt de
    tussenruimtes eruit, dus de grens valt altijd op een vakjesrand - okta's zijn hele getallen. */
 .metrics-layer-bar {
-	--vak: 3px;
-	--gat: 1.5px;
+	--vak: 4px;
+	--gat: 2px;
 	width: calc(8 * var(--vak) + 7 * var(--gat));
-	height: 10px;
+	height: 12px;
+	/* Een vol vakje wordt iets opgetrokken naar wit en een leeg vakje is een gat in de tegel: op het
+	   bord in de hangar wordt van een paar meter afstand gekeken, en dan moet het verschil tussen
+	   vier en vijf achtsten in één oogopslag te tellen zijn. */
 	background: linear-gradient(to right,
-		var(--cloud-color, #8fb0cc) 0 calc(var(--okta, 0) * 100%),
-		color-mix(in srgb, var(--cloud-color, #8fb0cc) 22%, transparent) calc(var(--okta, 0) * 100%));
+		color-mix(in srgb, var(--cloud-color, #8fb0cc) 78%, #ffffff) 0 calc(var(--okta, 0) * 100%),
+		rgba(0, 0, 0, 0.30) calc(var(--okta, 0) * 100%));
 	-webkit-mask: repeating-linear-gradient(to right, #000 0 var(--vak), transparent var(--vak) calc(var(--vak) + var(--gat)));
 	mask: repeating-linear-gradient(to right, #000 0 var(--vak), transparent var(--vak) calc(var(--vak) + var(--gat)));
 }
