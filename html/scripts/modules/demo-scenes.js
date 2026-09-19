@@ -318,6 +318,7 @@ class Module {
 		this.scene = null;			// wat er nu loopt
 		this.undo = null;
 		this.timer = null;
+		this.loop = null;			// de beurten die de radarlus even is kwijtgeraakt
 		this.task = setInterval(this.check.bind(this), POLL_MS);
 		this.check();
 		this.loadDropzones();
@@ -381,6 +382,14 @@ class Module {
 	}
 
 	stop() {
+		/* Niets aan de hand, niets op te ruimen. Deze module kijkt elke vijf seconden of er een
+		   tafereel klaarstaat, en vrijwel altijd staat dat er niet - dan hoort hij van het bord af
+		   te blijven. Deed hij dat niet, dan sloot hij onderaan ook de windkaart en de jumprun,
+		   terwijl de radarlus die net zijn beurt had gegeven: de kaart stond vijf tellen in beeld
+		   en de lus wachtte daarna nog een halve minuut op iets dat er niet meer was. */
+		if (!this.scene && !this.timer && !this.undo && !this.loop) {
+			return;
+		}
 		clearTimeout(this.timer);
 		this.timer = null;
 		if (this.undo !== null) {

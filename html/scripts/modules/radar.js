@@ -786,9 +786,9 @@ class Module {
 			return 0;
 		}
 		this.windRuns = 0;
-		var count = windy.waiting.length;
-		setTimeout(() => windy.sequence(this.windSeconds), after);
-		return count;
+		var waiting = windy.waiting;
+		setTimeout(() => windy.sequence(this.windSeconds, waiting), after);
+		return waiting.length;
 	}
 
 	/* Replace the forecast overlays when the run (or the source) changes */

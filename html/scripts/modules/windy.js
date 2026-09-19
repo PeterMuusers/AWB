@@ -151,8 +151,11 @@ class Module {
 
 	/* Alle hoogtes die het aangaat achter elkaar, elk een eigen beurt. Geeft terug hoeveel beelden
 	   dat zijn, zodat de radar weet hoe lang hij moet wachten - dezelfde afspraak als de jumprun. */
-	sequence(seconds) {
-		var waiting = this.waiting;
+	sequence(seconds, list) {
+		/* De lijst mag van buiten komen: de radarlus telt hoeveel beelden het worden en reserveert
+		   daar zijn wachttijd op, en die telling gebeurt eerder dan dit. Rekent hij met drie en
+		   tonen we er twee, dan staat de radar de rest van de tijd stil. Dezelfde lijst dus. */
+		var waiting = list || this.waiting;
 		if (waiting.length === 0 || !document.getElementById(ID_LAYER)) {
 			return 0;
 		}
