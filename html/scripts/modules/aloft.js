@@ -27,17 +27,6 @@ const ID_VALID_FROM = 'winds-valid-from';
 const ID_TABLE_HEAD = 'upper-winds-content-head';
 const ID_TABLE_BODY = 'uppper-winds-content-data';
 const ID_FREEZING_ALTITUDE = 'freezing-altitude-data';
-/* Hoeveel het model van het bulletin mag afwijken voordat het de moeite van het melden waard is.
-   Het bulletin geldt voor het hele land en noemt vaak al een marge van tien knopen; deze getallen
-   staan bovenop die marge. Ze staan met opzet ruim: een melding die elke dag komt leest niemand. */
-const BULLETIN_SPEED_SLACK = 10;		// knopen buiten de marge van het bulletin
-const BULLETIN_DIR_SLACK = 45;			// graden naast de richting van het bulletin
-const BULLETIN_CALM_KT = 10;			// daaronder zegt een windrichting niet zoveel meer
-/* Hoe ver de twee in de tijd uit elkaar mogen liggen. Het bulletin geeft twee momenten, zes uur
-   uit elkaar; ligt het dichtstbijzijnde te ver weg, of hebben wij geen uur dat erbij past, dan
-   valt er niets eerlijks te vergelijken en zeggen we niets. */
-const BULLETIN_MAX_HOURS = 3;
-const BULLETIN_MAX_OWN_HOURS = 1.5;
 
 /* Pressure levels with wind, and the levels used for the cloud layers */
 const WIND_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500];
@@ -77,7 +66,6 @@ class Module {
 
 		this.last_updated = null;
 		this.hours = [];		// [{time, levels: {ft: {kt, dir}}, freezing, layers}]
-		this.differed = '';		// welke afwijking van het bulletin er het laatst gemeld is
 
 		/* Set language specific stuff */
 		document.getElementById(ID_WINDS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
@@ -147,73 +135,6 @@ class Module {
 			}
 		}
 		return null;
-	}
-
-	/* Het model naast het weerbulletin van het KNMI leggen.
-	 *
-	 * Onderaan dat bulletin staat een blokje hoogtewinden: per hoogte een richting en een snelheid
-	 * of een marge, voor het begin en het eind van de geldigheidsperiode. Dat zijn landelijke
-	 * waarden, met opzet ruim genomen, en dit bord rekent voor één punt bij de dropzone. Een
-	 * verschil van een paar knopen hoort er dus bij en zegt niets.
-	 *
-	 * Waar het wel iets zegt: als het model er ver naast zit. Dan is er iets aan de hand met de
-	 * gegevens - een run die is blijven hangen, een model dat het front mist - en dan hoort iemand
-	 * die naar deze tabel kijkt te weten dat de meteoroloog iets anders schrijft.
-	 *
-	 * Geeft het grootste verschil terug, of null als alles binnen de marge valt.
-	 */
-	bulletinDiff() {
-		var llfc = (document.modules || {}).knmi_llfc;
-		var bulletin = (llfc && typeof llfc.upperWinds === 'function') ? llfc.upperWinds() : [];
-		if (bulletin.length === 0 || this.hours.length === 0) {
-			return null;
-		}
-		/* De kolom die het dichtst bij nu ligt: het bulletin geeft het begin en het eind van zijn
-		   periode, en daartussenin hoort het weer ergens te zitten. */
-		var now = new Date();
-		var uur = now.getUTCHours() + now.getUTCMinutes() / 60;
-		var kolommen = bulletin.map(regel => regel.at).filter((at, index, alle) => alle.indexOf(at) === index);
-		var kolom = kolommen.reduce((best, at) =>
-			(Math.abs(at - uur) < Math.abs(best - uur)) ? at : best, kolommen[0]);
-		if (Math.abs(kolom - uur) > BULLETIN_MAX_HOURS) {
-			return null;
-		}
-
-		/* en ons eigen uur dat daarbij hoort */
-		var hour = this.hours.reduce((best, one) =>
-			(Math.abs(one.time.getUTCHours() - kolom) < Math.abs(best.time.getUTCHours() - kolom)) ? one : best,
-			this.hours[0]);
-		if (!hour || !hour.profile
-			|| Math.abs(hour.time.getUTCHours() + hour.time.getUTCMinutes() / 60 - kolom) > BULLETIN_MAX_OWN_HOURS) {
-			return null;
-		}
-
-		var ergste = null;
-		bulletin.filter(regel => regel.at === kolom).forEach(regel => {
-			var ours = this.interpolate(hour.profile, regel.feet);
-			if (ours === null) {
-				return;
-			}
-			/* hoeveel knopen buiten de marge van het bulletin, en hoeveel graden ernaast */
-			var traag = Math.max(0, regel.min - BULLETIN_SPEED_SLACK - ours.kt);
-			var hard = Math.max(0, ours.kt - regel.max - BULLETIN_SPEED_SLACK);
-			var knopen = Math.max(traag, hard);
-			var graden = Math.abs(((ours.dir - regel.dir + 540) % 360) - 180);
-			graden = Math.max(0, graden - BULLETIN_DIR_SLACK);
-			/* Windstil is een geval apart: dan zegt een richting niets meer, en een verschil van
-			   honderdtachtig graden bij vijf knopen is geen afwijking maar ruis. */
-			if (ours.kt < BULLETIN_CALM_KT && regel.max < BULLETIN_CALM_KT) {
-				graden = 0;
-			}
-			var hoeveel = knopen + graden / 10;
-			if (hoeveel > 0 && (ergste === null || hoeveel > ergste.hoeveel)) {
-				ergste = {
-					hoeveel: hoeveel, feet: regel.feet, at: kolom,
-					bulletin: regel, model: ours,
-				};
-			}
-		});
-		return ergste;
 	}
 
 	/* The height where the temperature crosses zero, interpolated from the profile. Not every model
@@ -341,10 +262,6 @@ class Module {
 				: Math.round((reported - elevation) * FEET_PER_METER / 100) * 100;
 			return {
 				time: new Date(time + 'Z'),
-				/* het ruwe profiel blijft bewaard: het bulletin van het KNMI noemt andere hoogtes
-				   dan dit bord toont (500 vt, FL 050, FL 100), en die wil je kunnen navragen
-				   zonder een al geïnterpoleerde waarde nog eens te interpoleren */
-				profile: profile,
 				levels: levels,
 				ground: {
 					kt: Math.round(hourly.wind_speed_10m[index]),
@@ -504,22 +421,6 @@ class Module {
 		/* the unit stays on the title line, the explanation goes on its own line below it */
 		document.getElementById(ID_VALID_FROM).innerHTML = UNIT_KNOTS
 			+ '<span class="upper-winds-note">' + LANGUAGE_MEASURED + '</span>';
-		/* Wijkt het model af van het bulletin, dan komt dat in de bulletintegel te staan - met de
-		   getallen van het KNMI erbij, zodat er iets te vergelijken valt. Hier onder de kop was het
-		   een voetnoot; daar is het een blok waar je naar kunt kijken. Melden dat het veranderd is,
-		   want die tegel tekent zichzelf alleen als het bulletin verandert. */
-		var differs = this.bulletinDiff();
-		var nu = differs ? differs.feet + '/' + differs.at : '';
-		if (nu !== this.differed) {
-			this.differed = nu;
-			var llfc = (document.modules || {}).knmi_llfc;
-			if (llfc && llfc.llfc) {
-				llfc.showBulletin();
-				if (llfc.rewrite) {
-					llfc.showRewrite();
-				}
-			}
-		}
 		document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 	}
 }

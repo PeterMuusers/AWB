@@ -255,61 +255,6 @@ header,
 	display: block;
 	font-weight: 500;
 }
-/* Het blok dat in de bulletintegel verschijnt als het model iets heel anders beweert dan het
-   weerbulletin. Een vol geel vlak met donkere letters: het staat er alleen als er iets aan de hand
-   is, en dan hoort het van vier meter afstand op te vallen. Het geel en het donkerblauw erop komen
-   allebei uit het thema - dat paar is er voor waarschuwingsvlakken. */
-.llfc-item-alert {
-	background-color: var(--alert1-background-color, #ffe959);
-	color: var(--alert-color, #00325f);
-	border-radius: 8px;
-	padding: 8px 12px 10px;
-	box-sizing: border-box;
-	break-inside: avoid;
-}
-/* Alles binnen dat vlak leest van dezelfde donkere kleur; de bijzaken wat lichter, maar nooit in
-   het grijs van de rest van het bord - dat verdwijnt in het geel. */
-.llfc-item-alert .llfc-item-header,
-.llfc-item-alert .llfc-item-text,
-.llfc-item-alert .llfc-winds-alt,
-.llfc-item-alert .llfc-winds-value,
-.llfc-item-alert .llfc-winds-temp,
-.llfc-item-alert .llfc-winds-note {
-	color: inherit;
-}
-.llfc-item-alert .llfc-winds-alt,
-.llfc-item-alert .llfc-winds-temp,
-.llfc-item-alert .llfc-winds-note {
-	opacity: 0.72;
-}
-/* De hoogtewinden zoals het bulletin ze opschrijft: hoogte, richting/snelheid, temperatuur. Vaste
-   kolommen en cijfers van gelijke breedte, want dit is een tabelletje en geen zin. */
-.llfc-winds {
-	display: grid;
-	grid-template-columns: auto auto 1fr;
-	column-gap: 10px;
-	font-variant-numeric: tabular-nums;
-	line-height: 1.5;
-}
-.llfc-winds-row {
-	display: contents;
-}
-.llfc-winds-value {
-	font-weight: 600;
-}
-/* De hoogte waar het verschil het grootst is, zodat je weet waar je moet kijken. Op een geel vlak
-   kan dat niet met kleur - daar is het vlak zelf al voor - dus met gewicht en volle dekking. */
-.llfc-item-alert .llfc-winds-row-differs .llfc-winds-alt,
-.llfc-item-alert .llfc-winds-row-differs .llfc-winds-value,
-.llfc-item-alert .llfc-winds-row-differs .llfc-winds-temp {
-	opacity: 1;
-	font-weight: 700;
-}
-.llfc-winds-note {
-	display: block;
-	margin-top: 6px;
-	color: var(--metadata-textcolor);
-}
 .upper-winds-content {
 	text-align: right;
 	font-variant-numeric: tabular-nums;

@@ -428,7 +428,6 @@ async def vooruitzicht(interaction: discord.Interaction) -> None:
     app_commands.Choice(name="drie wolkenlagen", value="wolkenlagen"),
     app_commands.Choice(name="een gesloten wolkendek (8/8 op 1.200 ft)", value="dek"),
     app_commands.Choice(name="onweer in het bulletin", value="onweer"),
-    app_commands.Choice(name="het model wijkt af van het KNMI-bulletin", value="hoogtewinden"),
     app_commands.Choice(name="een jumprun op de kaart", value="jumprun"),
     app_commands.Choice(name="een hoge en een lage jumprun", value="jumprun-hoog-laag"),
     app_commands.Choice(name="stoppen", value="stop"),
