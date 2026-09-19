@@ -38,6 +38,8 @@ const LANGUAGE_EXPECTED_LABEL = 'verwacht';
 const LANGUAGE_GROUND = 'Grond';
 const LANGUAGE_FREEZING_LEVEL_AT = '0 \u00b0C op';
 const LANGUAGE_BULLETIN = 'KNMI';
+const LANGUAGE_UPPER_WINDS = 'Hoogtewinden';
+const LANGUAGE_UPPER_WINDS_DIFFERS = 'Het model wijkt hiervan af; de tabel hiernaast komt uit het model.';
 const LANGUAGE_BULLETIN_MODEL = 'model';
 const LANGUAGE_MEASURED = 'grond gemeten, hoogtes uit het model';
 const LANGUAGE_WIND_PROFILE = 'Windprofiel';
@@ -109,6 +111,8 @@ export {
         LANGUAGE_GROUND,
         LANGUAGE_FREEZING_LEVEL_AT,
         LANGUAGE_BULLETIN,
+        LANGUAGE_UPPER_WINDS,
+        LANGUAGE_UPPER_WINDS_DIFFERS,
         LANGUAGE_BULLETIN_MODEL,
         LANGUAGE_MEASURED,
         LANGUAGE_WIND_PROFILE,

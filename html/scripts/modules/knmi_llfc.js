@@ -3,7 +3,7 @@
 
 import { DATE_OPTIONS_UTC, DATE_OPTIONS_LOCAL, UNIT_CELCIUS, UNIT_FEET } from '../const.js';
 import { localiseTimes } from '../functions.js';
-import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_UPDATED_INLINE, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL, LANGUAGE_VALID_FOR } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_LAST_UPDATED, LANGUAGE_UPDATED_INLINE, LANGUAGE_REWRITTEN, LANGUAGE_VALID_UNTIL, LANGUAGE_VALID_FOR, LANGUAGE_UPPER_WINDS, LANGUAGE_UPPER_WINDS_DIFFERS } from '../language.js';
 
 const SOURCE = 'KNMI';
 /* How far the forecast text may be scaled down to keep the board inside the screen, and in what
@@ -554,7 +554,7 @@ class Module {
 				content += '<div class=llfc-item><span class="llfc-item-header">' + subjects[i] + '</span><span class="llfc-item-text">' + item + '</span></div>';
 			}
 		}
-		document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
+		document.getElementById(ID_LLFC_CONTENT).innerHTML = this.alertBlock() + content;
 		document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE;
 		this.fit();
 	}
@@ -592,7 +592,7 @@ class Module {
 				}
 			});
 			if (content !== '' && !this.takenOver()) {
-				document.getElementById(ID_LLFC_CONTENT).innerHTML = content;
+				document.getElementById(ID_LLFC_CONTENT).innerHTML = this.alertBlock() + content;
 				document.getElementById(ID_LLFC_SOURCE_DATA).innerHTML = SOURCE + ' ' + LANGUAGE_REWRITTEN;
 				this.fit();
 			}
@@ -708,6 +708,47 @@ class Module {
 
 			console.error(error);
 		});
+	}
+
+	/* Het blok dat erbij komt als het model iets heel anders beweert dan dit bulletin.
+	 *
+	 * Wat erin staat komt uit het bulletin en verder niets: de hoogtewinden zoals de meteoroloog ze
+	 * opschrijft. De tabel van het bord staat ernaast, dus de vergelijking maakt wie ernaar kijkt
+	 * zelf - en wat eraan te doen valt beslist diegene ook zelf. Het bord zegt alleen: hier lopen
+	 * twee bronnen uiteen, kijk er even naar.
+	 *
+	 * De kleur is een omlijning en geen tekstkleur: de kleuren in de getallen op dit bord zijn
+	 * vergeven aan dingen die over de sprong gaan, en dit gaat over de gegevens.
+	 */
+	alertBlock() {
+		var aloft = (document.modules || {}).aloft;
+		var differs = (aloft && typeof aloft.bulletinDiff === 'function') ? aloft.bulletinDiff() : null;
+		if (!differs) {
+			return '';
+		}
+		var kolom = differs.at;
+		var regels = this.upperWinds().filter(regel => regel.at === kolom);
+		if (regels.length === 0) {
+			return '';
+		}
+		var hoogte = regel => (regel.feet >= 5000)
+			? 'FL ' + String(Math.round(regel.feet / 100)).padStart(3, '0')
+			: String(regel.feet).padStart(4, '0') + ' vt';
+		var lijst = regels.map(regel => {
+			var marge = (regel.min === regel.max) ? String(regel.min) : regel.min + '-' + regel.max;
+			var opvallend = (regel.feet === differs.feet) ? ' llfc-winds-row-differs' : '';
+			return '<span class="llfc-winds-row' + opvallend + '">'
+				+ '<span class="llfc-winds-alt">' + hoogte(regel) + '</span>'
+				+ '<span class="llfc-winds-value">' + String(regel.dir).padStart(3, '0') + '/' + marge + '</span>'
+				+ (regel.temp === null ? '' : '<span class="llfc-winds-temp">'
+					+ (regel.temp > 0 ? '+' : '') + regel.temp + '&nbsp;&deg;C</span>')
+				+ '</span>';
+		}).join('');
+		return '<div class="llfc-item llfc-item-alert">'
+			+ '<span class="llfc-item-header">' + LANGUAGE_UPPER_WINDS + ' '
+			+ String(kolom).padStart(2, '0') + ' UTC</span>'
+			+ '<span class="llfc-item-text"><span class="llfc-winds">' + lijst + '</span>'
+			+ '<span class="llfc-winds-note">' + LANGUAGE_UPPER_WINDS_DIFFERS + '</span></span></div>';
 	}
 
 	/* De hoogtewinden uit het bulletin, als getallen.

@@ -255,13 +255,50 @@ header,
 	display: block;
 	font-weight: 500;
 }
-/* Wanneer het model iets heel anders beweert dan het weerbulletin van het KNMI. Geen signaalkleur:
-   de kleuren op dit bord zijn vergeven aan dingen die over de sprong gaan - stoten, harde wind,
-   de nulgradengrens - en dit gaat over de gegevens zelf. Wel zwaarder gezet dan de regel erboven,
-   want het staat er alleen als er iets aan de hand is. */
-.upper-winds-differs {
-	font-weight: 700;
-	color: var(--textcolor-2, var(--textcolor));
+/* Het blok dat in de bulletintegel verschijnt als het model iets heel anders beweert dan het
+   weerbulletin. Een omlijning en geen tekstkleur: de kleuren in de getallen op dit bord zijn
+   vergeven aan dingen die over de sprong gaan - stoten, harde wind, de nulgradengrens - en dit
+   gaat over de gegevens zelf. Het blok staat er alleen als er iets aan de hand is, dus het mag
+   opvallen. */
+.llfc-item-alert {
+	border: 2px solid var(--textcolor-alert, #ffcc33);
+	border-radius: 8px;
+	padding: 6px 10px 8px;
+	box-sizing: border-box;
+}
+.llfc-item-alert .llfc-item-header {
+	color: var(--textcolor-alert, #ffcc33);
+}
+/* De hoogtewinden zoals het bulletin ze opschrijft: hoogte, richting/snelheid, temperatuur. Vaste
+   kolommen en cijfers van gelijke breedte, want dit is een tabelletje en geen zin. */
+.llfc-winds {
+	display: grid;
+	grid-template-columns: auto auto 1fr;
+	column-gap: 10px;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.5;
+}
+.llfc-winds-row {
+	display: contents;
+}
+.llfc-winds-alt {
+	color: var(--metadata-textcolor);
+}
+.llfc-winds-value {
+	font-weight: 600;
+}
+.llfc-winds-temp {
+	color: var(--metadata-textcolor);
+}
+/* de hoogte waar het verschil het grootst is, zodat je weet waar je moet kijken */
+.llfc-winds-row-differs .llfc-winds-alt,
+.llfc-winds-row-differs .llfc-winds-value {
+	color: var(--textcolor-alert, #ffcc33);
+}
+.llfc-winds-note {
+	display: block;
+	margin-top: 6px;
+	color: var(--metadata-textcolor);
 }
 .upper-winds-content {
 	text-align: right;

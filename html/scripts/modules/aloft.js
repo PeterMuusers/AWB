@@ -1,7 +1,7 @@
 /* eslint no-tabs: ["error", { allowIndentationTabs: true }] */
 
 import { DATE_OPTIONS_LOCAL, UNIT_FEET, UNIT_KNOTS } from '../const.js';
-import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED, LANGUAGE_GLOVES, LANGUAGE_BULLETIN, LANGUAGE_BULLETIN_MODEL } from '../language.js';
+import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_NOW, LANGUAGE_GROUND, LANGUAGE_FREEZING_LEVEL_AT, LANGUAGE_MEASURED, LANGUAGE_GLOVES } from '../language.js';
 
 /*
  * Wind profile for the dropzone: wind per altitude for now and the coming hours, plus the height
@@ -77,6 +77,7 @@ class Module {
 
 		this.last_updated = null;
 		this.hours = [];		// [{time, levels: {ft: {kt, dir}}, freezing, layers}]
+		this.differed = '';		// welke afwijking van het bulletin er het laatst gemeld is
 
 		/* Set language specific stuff */
 		document.getElementById(ID_WINDS_SOURCE_LABEL).innerHTML = LANGUAGE_SOURCE;
@@ -213,20 +214,6 @@ class Module {
 			}
 		});
 		return ergste;
-	}
-
-	/* Wat er dan op het bord komt te staan: allebei de getallen, naast elkaar, zonder er een
-	   oordeel bij te geven. Wat het betekent dat de twee uiteenlopen is aan wie het leest. */
-	bulletinNote(differs) {
-		/* zoals het bulletin het zelf schrijft: 240/35, zonder gradenteken */
-		var pad = graden => String(Math.round(graden)).padStart(3, '0');
-		var marge = (differs.bulletin.min === differs.bulletin.max)
-			? String(differs.bulletin.min)
-			: differs.bulletin.min + '-' + differs.bulletin.max;
-		return LANGUAGE_BULLETIN + ' ' + String(differs.at).padStart(2, '0') + ' UTC &middot; '
-			+ differs.feet.toLocaleString(document.config.locale) + '&nbsp;' + UNIT_FEET + ' '
-			+ pad(differs.bulletin.dir) + '/' + marge + ' &middot; '
-			+ LANGUAGE_BULLETIN_MODEL + ' ' + pad(differs.model.dir) + '/' + differs.model.kt;
 	}
 
 	/* The height where the temperature crosses zero, interpolated from the profile. Not every model
@@ -515,11 +502,24 @@ class Module {
 		}
 
 		/* the unit stays on the title line, the explanation goes on its own line below it */
-		var differs = this.bulletinDiff();
 		document.getElementById(ID_VALID_FROM).innerHTML = UNIT_KNOTS
-			+ '<span class="upper-winds-note">' + LANGUAGE_MEASURED + '</span>'
-			+ (differs === null ? ''
-				: '<span class="upper-winds-note upper-winds-differs">' + this.bulletinNote(differs) + '</span>');
+			+ '<span class="upper-winds-note">' + LANGUAGE_MEASURED + '</span>';
+		/* Wijkt het model af van het bulletin, dan komt dat in de bulletintegel te staan - met de
+		   getallen van het KNMI erbij, zodat er iets te vergelijken valt. Hier onder de kop was het
+		   een voetnoot; daar is het een blok waar je naar kunt kijken. Melden dat het veranderd is,
+		   want die tegel tekent zichzelf alleen als het bulletin verandert. */
+		var differs = this.bulletinDiff();
+		var nu = differs ? differs.feet + '/' + differs.at : '';
+		if (nu !== this.differed) {
+			this.differed = nu;
+			var llfc = (document.modules || {}).knmi_llfc;
+			if (llfc && llfc.llfc) {
+				llfc.showBulletin();
+				if (llfc.rewrite) {
+					llfc.showRewrite();
+				}
+			}
+		}
 		document.getElementById(ID_LAST_UPDATED).innerHTML = this.last_updated.toLocaleString(document.config.locale, DATE_OPTIONS_LOCAL);
 	}
 }
