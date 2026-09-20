@@ -366,117 +366,9 @@ class Module {
 		var windBottom = height - LABEL_HEIGHT;
 		var winds = this.measured('wind_kt');
 		var gusts = this.measured('gust_kt');
-		var visibleOnly = points => points.filter(point => point.time.getTime() >= start && point.time.getTime() <= end);
-		/* Wat er van de gemeten uren verwacht werd toen ze nog moesten komen: een gestippelde lijn
-		   onder de gemeten lijn, met het verschil als vlak ertussen - blauw voor de wind, oranje voor
-		   de stoten. Zo is in één blik te zien of het model het vandaag bij het rechte eind had.
-		   Van de bewaarde momentopnames telt die welke er het verst naast zat: dat is de afwijking
-		   waar je rekening mee had moeten houden. Het bord onthoudt ze zelf (zie aloft.js), dus na
-		   een verse installatie blijft dit leeg tot er een paar uur voorbij zijn. */
-		var snapshots = (aloft && aloft.groundSnapshots) ? aloft.groundSnapshots() : [];
-		/* De waarde van één momentopname op een tijdstip, tussen zijn uren door - dezelfde rechte
-		   die de verwachting rechts van "nu" ook trekt. Buiten wat die opname bestrijkt: niets. */
-		var between = (series, at, field) => {
-			var previous = null;
-			for (var index = 0; index < series.length; index++) {
-				var point = series[index];
-				var value = point[field];
-				if (value === null || value === undefined) {
-					continue;
-				}
-				if (Math.abs(point.time - at) < 1000) {
-					return value;
-				}
-				if (point.time > at) {
-					if (previous === null) {
-						return null;
-					}
-					return previous.value + (value - previous.value) * (at - previous.time) / (point.time - previous.time);
-				}
-				previous = { time: point.time, value: value };
-			}
-			return null;
-		};
-		/* De gemeten reeks met de verwachting erbij, in aaneengesloten stukken: waar niets bewaard is
-		   hoort geen vlak te staan, en een lijn die over dat gat springt toont een afwijking die
-		   niemand gemeten heeft. */
-		var expectedRuns = (points, field) => {
-			var runs = [];
-			var run = [];
-			visibleOnly(points).forEach(point => {
-				var at = point.time.getTime();
-				var furthest = null;
-				snapshots.forEach(series => {
-					var value = between(series, at, field);
-					if (value !== null && (furthest === null || Math.abs(value - point.value) > Math.abs(furthest - point.value))) {
-						furthest = value;
-					}
-				});
-				if (furthest === null) {
-					if (run.length > 1) {
-						runs.push(run);
-					}
-					run = [];
-					return;
-				}
-				run.push({ time: point.time, was: furthest, is: point.value });
-			});
-			if (run.length > 1) {
-				runs.push(run);
-			}
-			return runs;
-		};
-		/* Een extraatje op de grafiek mag de grafiek niet meeslepen: gaat er iets mis met wat er
-		   bewaard staat, dan tekent het bord gewoon de gemeten en de verwachte lijn. */
-		var expectedWind = [];
-		var expectedGust = [];
-		try {
-			expectedWind = expectedRuns(winds, 'kt');
-			expectedGust = expectedRuns(gusts, 'gust');
-		} catch (error) {
-			console.error(error);
-		}
-		var drawExpected = (runs, colour) => {
-			runs.forEach(run => {
-				context.fillStyle = colour;
-				context.globalAlpha = 0.18;
-				context.beginPath();
-				run.forEach((point, index) => {
-					var position = [x(point.time.getTime()), windY(point.was)];
-					if (index === 0) {
-						context.moveTo(position[0], position[1]);
-					} else {
-						context.lineTo(position[0], position[1]);
-					}
-				});
-				run.slice().reverse().forEach(point => {
-					context.lineTo(x(point.time.getTime()), windY(point.is));
-				});
-				context.closePath();
-				context.fill();
-				context.globalAlpha = 0.55;
-				context.strokeStyle = colour;
-				context.lineWidth = 1;
-				context.setLineDash([2, 2]);
-				context.beginPath();
-				run.forEach((point, index) => {
-					var position = [x(point.time.getTime()), windY(point.was)];
-					if (index === 0) {
-						context.moveTo(position[0], position[1]);
-					} else {
-						context.lineTo(position[0], position[1]);
-					}
-				});
-				context.stroke();
-				context.setLineDash([]);
-				context.globalAlpha = 1;
-			});
-		};
-		var peak = Math.max(10, ...winds.map(point => point.value), ...gusts.map(point => point.value),
-			...ahead.map(hour => hour.ground.gust || 0),
-			/* de verwachting van toen telt mee, anders valt een lijn die er ver naast zat buiten de strook */
-			...expectedWind.flat().map(point => point.was), ...expectedGust.flat().map(point => point.was));
+		var peak = Math.max(10, ...winds.map(point => point.value), ...gusts.map(point => point.value), ...ahead.map(hour => hour.ground.gust || 0));
 		var windY = knots => windBottom - (knots / peak) * (windBottom - windTop);
+		var visibleOnly = points => points.filter(point => point.time.getTime() >= start && point.time.getTime() <= end);
 		var drawLine = (points, colour, dashed) => {
 			var visible = visibleOnly(points);
 			if (visible.length < 2) {
@@ -544,16 +436,6 @@ class Module {
 		}
 		if (nowGust) {
 			aheadGust.unshift(nowGust);
-		}
-
-		try {
-			drawExpected(expectedWind, windColour);
-			drawExpected(expectedGust, gustColour);
-		} catch (error) {
-			console.error(error);
-		} finally {
-			context.globalAlpha = 1;
-			context.setLineDash([]);
 		}
 
 		drawLine(winds, windColour, false);
