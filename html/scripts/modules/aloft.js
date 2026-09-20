@@ -17,6 +17,18 @@ import { LANGUAGE_SOURCE, LANGUAGE_UPDATED_INLINE, LANGUAGE_NOW, LANGUAGE_GROUND
 const SOURCE = 'Open-Meteo';
 const API_URL = 'https://api.open-meteo.com/v1/forecast';
 
+/* Wat er van een uur verwacht werd toen het nog moest komen.
+ *
+ * Het model geeft alleen de verwachting van nu: wat er twee uur geleden voor dit uur stond is dan
+ * weg. De grafiek laat dat juist graag zien - hoe ver zat het model ernaast - dus bewaart het bord
+ * bij elke ophaal de grondwind van de uren die nog moeten komen. Elk uur waarin opgehaald wordt
+ * krijgt zijn eigen momentopname; het model vernieuwt ongeveer even vaak, dus dat is ruwweg één
+ * opname per modelrun. Het staat in de browseropslag en overleeft zo de nachtelijke herstart van
+ * het bord; wat ouder is dan het venster van de grafiek gaat eruit. */
+const MEMORY_KEY = 'awb.groundwind.expected';
+const MEMORY_HOURS_BACK = 3;			// zo ver terug blijven momentopnames staan
+const MEMORY_HOURS_AHEAD = 6;			// en zo ver vooruit; daarbuiten hoort geen model te kijken
+
 const ID_WINDS_SOURCE_LABEL = 'winds-source-label';
 const ID_WINDS_SOURCE_DATA = 'winds-source-data';
 const ID_WINDS_LAST_UPDATED_LABEL = 'winds-last-updated-label';
@@ -219,6 +231,7 @@ class Module {
 				return;
 			}
 			this.hours = this.parse(data);
+			this.remember();
 			this.last_updated = new Date();
 			this.showData();
 		}).catch(error => {
@@ -275,6 +288,66 @@ class Module {
 				layers: this.cloudLayers(hourly, index, elevation),
 			};
 		});
+	}
+
+	/* De grondwind van deze ophaal bewaren, onder het uur waarin hij is opgehaald. Zo staat er van
+	   elk uur dat voorbijkomt een reeks momentopnames, en is straks - als het uur gemeten is - na te
+	   gaan wat ervan verwacht werd. Mislukt de opslag (privémodus, volle schijf), dan gaat de rest
+	   gewoon door: dit is een extraatje op de grafiek en geen voorwaarde. */
+	remember() {
+		var now = Date.now();
+		var store = this.recall();
+		var stamp = new Date(Math.floor(now / 3600000) * 3600000).toISOString();
+		var snapshot = store[stamp] || {};
+		this.hours.forEach(hour => {
+			var at = hour.time.getTime();
+			if (at < now - MEMORY_HOURS_BACK * 3600000 || at > now + MEMORY_HOURS_AHEAD * 3600000) {
+				return;
+			}
+			if (hour.ground && hour.ground.kt !== null && hour.ground.kt !== undefined) {
+				snapshot[hour.time.toISOString()] = { kt: hour.ground.kt, gust: hour.ground.gust };
+			}
+		});
+		store[stamp] = snapshot;
+		var kept = {};
+		Object.keys(store).forEach(when => {
+			var hours = {};
+			Object.keys(store[when]).forEach(target => {
+				if (new Date(target).getTime() >= now - MEMORY_HOURS_BACK * 3600000) {
+					hours[target] = store[when][target];
+				}
+			});
+			if (Object.keys(hours).length > 0) {
+				kept[when] = hours;
+			}
+		});
+		try {
+			window.localStorage.setItem(MEMORY_KEY, JSON.stringify(kept));
+		} catch (error) {
+			/* geen opslag beschikbaar: dan tekent de grafiek gewoon geen verwachting van toen */
+		}
+	}
+
+	recall() {
+		try {
+			var raw = window.localStorage.getItem(MEMORY_KEY);
+			var store = raw ? JSON.parse(raw) : {};
+			return (store && typeof store === 'object') ? store : {};
+		} catch (error) {
+			return {};
+		}
+	}
+
+	/* De bewaarde momentopnames, elk als een op tijd gesorteerde reeks: [[{time, kt, gust}]] */
+	groundSnapshots() {
+		var store = this.recall();
+		return Object.keys(store).map(when => {
+			return Object.keys(store[when]).map(target => ({
+				time: new Date(target).getTime(),
+				kt: store[when][target].kt,
+				gust: store[when][target].gust,
+			})).sort((first, second) => first.time - second.time);
+		}).filter(series => series.length > 0);
 	}
 
 	/* The hours shown in the table: the one closest to now, then the hours after it */
