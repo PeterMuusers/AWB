@@ -59,7 +59,7 @@
 		"afterRuns": 2,
 		"seconds": 20
 	},
-	"windy": { "seconds": 30, "afterRuns": 1, "product": "ecmwf", "zoom": 7, "lowBand": [1000, 3000], "lowLimit": 30, "groundLimit": 20 },
+	"windy": { "seconds": 30, "afterRuns": 1, "everySeconds": 180, "product": "ecmwf", "zoom": 7, "lowBand": [1000, 3000], "lowLimit": 30, "groundLimit": 20 },
 	"llfc": {
 		"mode": "ai",
 		"model": "claude-haiku-4-5"

@@ -245,11 +245,16 @@ class Module {
 		this.jumprunAfterRuns = jumprun.afterRuns || 0;
 		this.jumprunSeconds = jumprun.seconds || 20;
 		this.jumprunTimer = null;
-		/* en hoe vaak de windkaart dat doet, als er harde wind op hoogte staat */
+		/* en hoe vaak de windkaart dat doet, als er harde wind op hoogte staat. `afterRuns` zet hem
+		   aan of uit (0 is nooit) en `everySeconds` bepaalt het tempo: hoe lang een radarlus duurt
+		   hangt af van het aantal beelden, dus tellen in lussen geeft de ene dag een ander ritme dan
+		   de andere. Met een ondergrens in seconden komt de windkaart altijd even vaak langs. */
 		var windy = document.config.windy || {};
 		this.windAfterRuns = (windy.afterRuns !== undefined) ? windy.afterRuns : 1;
 		this.windSeconds = windy.seconds || this.jumprunSeconds;
+		this.windEverySeconds = (windy.everySeconds !== undefined) ? windy.everySeconds : 180;
 		this.windRuns = 0;
+		this.windLast = 0;			// wanneer de windkaart voor het laatst aan de beurt was
 		this.runs = 0;
 
 		this.last_updated = null;
@@ -791,7 +796,17 @@ class Module {
 		if (this.windRuns < this.windAfterRuns) {
 			return 0;
 		}
+		/* Niet vaker dan het tempo dat is ingesteld. De teller hierboven blijft staan zolang het nog
+		   te vroeg is, zodat hij bij de eerstvolgende lus daarna meteen aan de beurt is. */
+		var now = Date.now();
+		if (this.windLast && now - this.windLast < this.windEverySeconds * 1000) {
+			return 0;
+		}
 		this.windRuns = 0;
+		/* Geteld vanaf het einde van de lus waarin hij aan de beurt kwam. Hij komt even later pas in
+		   beeld - hij staat achter de jumpruns in de rij - maar dat wachten hoort bij elke beurt, dus
+		   het valt tegen elkaar weg en de drie minuten blijven drie minuten. */
+		this.windLast = now;
 		var waiting = windy.waiting;
 		setTimeout(() => windy.sequence(this.windSeconds, waiting), after);
 		return waiting.length;
