@@ -12,3 +12,7 @@ bord niets en zegt het dat.
 Kopiëren gaat met:
 
     cp ~/Development/cloudbase/web/js/calc/*.js html/scripts/jumprun/calc/
+    cp ~/Development/cloudbase/web/js/{jumprun-map,map-touch,wind-particles}.js html/scripts/jumprun/
+
+De kaart zelf (`jumprun-map.js`, met `map-touch.js` en `wind-particles.js`) komt daar vandaan en
+gaat op dezelfde manier: het bord hoort dezelfde tekening te laten zien als het scherm.

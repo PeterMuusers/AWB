@@ -1,6 +1,9 @@
 // Kaartlaag: Leaflet (globaal `L`) met de PDOK-luchtfoto, noord altijd boven.
+// De afstandsringen en hun getallen horen bij de bak en niet bij de jumprun: ze staan altijd om de
+// bak heen en de getallen staan er recht boven, ook als de lijn ergens anders ligt.
 // Tekent de jumprun-scène en beheert twee sleepbare handvatten:
-//  - de koerspijl (1 NM vóór het doel op de track): slepen = track draaien;
+//  - de koerspijl (1 NM vóór het doel op de track): slepen = track draaien, om het ankerpunt van de
+//    lijn of - bij de polaire notatie - om het groene licht (zie setPivot);
 //  - het groene licht: slepen langs de track, in stappen van 0,1 NM;
 //  - de witte ring (het doel): slepen langs de N-Z- of O-W-as vanaf de dropzone,
 //    in stappen van 0,1 NM, en zet zo de offset;
@@ -16,7 +19,6 @@ import { createWindParticles } from './wind-particles.js';
 const PDOK_URL = 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.jpeg';
 const RINGS_NM = Array.from({ length: 20 }, (_, i) => (i + 1) / 10);   // 0,1 … 2,0 NM, elke 0,1 NM
 const LABEL_EVERY_NM = 0.2;                                                                 // label per 0,2 NM
-const LABEL_OFFSET_M = 90;                                                                  // labels 90 m naast de jumprun-lijn
 const HANDLE_MIN_M = 0.6 * NM;   // koerspijl minstens zo ver vóór het doel …
 const HANDLE_AFTER_M = 350;      // … en altijd dit stuk voorbij de laatste exit, zodat de exits vrij blijven
 
@@ -135,12 +137,22 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
     target = t;
     base = b;
     staticLayer.clearLayers();
+    // De ringen meten de afstand tot de bak, dus liggen ze om de bak en niet om het ankerpunt van
+    // de lijn: schuift de offset, dan schuift de maatverdeling niet mee.
+    const centre = base || t;
     for (const nm of RINGS_NM) {
       // donkere schaduwlijn onder de witte ring: leesbaar op lichte én donkere ondergrond;
       // de halve mijlen iets zwaarder dan de tienden
       const major = Math.abs((nm * 10) % 5) < 1e-6;
-      L.circle(t, { radius: nm * NM, color: '#000', weight: major ? 3 : 2, opacity: major ? 0.35 : 0.22, fill: false, interactive: false }).addTo(staticLayer);
-      L.circle(t, { radius: nm * NM, color: '#fff', weight: major ? 1.2 : 0.8, opacity: major ? 0.6 : 0.4, fill: false, interactive: false }).addTo(staticLayer);
+      L.circle(centre, { radius: nm * NM, color: '#000', weight: major ? 3 : 2, opacity: major ? 0.35 : 0.22, fill: false, interactive: false }).addTo(staticLayer);
+      L.circle(centre, { radius: nm * NM, color: '#fff', weight: major ? 1.2 : 0.8, opacity: major ? 0.6 : 0.4, fill: false, interactive: false }).addTo(staticLayer);
+      // het getal op de ring zelf, recht boven de bak: zo hoort het bij zijn eigen ring en staat het
+      // altijd op dezelfde plek, wat de jumprun ook doet
+      if (Math.abs((nm / LABEL_EVERY_NM) - Math.round(nm / LABEL_EVERY_NM)) > 1e-6) continue;
+      L.marker(destination(centre, 0, nm * NM), {
+        interactive: false,
+        icon: L.divIcon({ className: 'ring-label', iconSize: [0, 0], html: `<span>${nm.toFixed(1)} NM</span>` }),
+      }).addTo(staticLayer);
     }
     // extra landingsdoelen (bijv. B-veld en leerlingveld op Texel): kleine ring met naam
     for (const x of extra) {
@@ -165,6 +177,24 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
 
   const DIRS = { N: 0, E: 90, S: 180, W: 270 };
   let offsetMode = 'cardinal';   // 'cardinal': N/O/Z/W per 0,1 NM; 'free': elke richting (hele graden) per 0,1 NM
+  /* Waar de lijn omheen draait als je aan de koerspijl trekt.
+     'target': om het ankerpunt van de lijn, de witte ring. Dat is wat de offsetnotatie uitspreekt -
+     koers, offset, groen licht - dus dat punt hoort te blijven liggen.
+     'green': om het groene licht. De polaire notatie (Texel) spreekt juist dát punt uit, als peiling
+     en afstand vanuit het midden; draai je daar de koers, dan blijft de spot waar hij is en draait
+     alleen de invliegrichting eromheen. */
+  let pivotMode = 'target';
+  function setPivot(mode) { pivotMode = mode === 'green' ? 'green' : 'target'; }
+  /** Het draaipunt van de koerspijl, met de afstand waarop de pijl daar langs de track vandaan staat. */
+  function trackPivot() {
+    if (pivotMode === 'green' && lastResult) {
+      const d = handleDistM - lastResult.greenLight.nm * NM;
+      // alleen als de pijl ver genoeg voorbij het groene licht staat; anders zegt een peiling vanaf
+      // dat punt niets meer en draait de lijn om het ankerpunt, zoals altijd
+      if (d > 100) return { point: lastResult.greenLight.point, distM: d };
+    }
+    return { point: target, distM: handleDistM };
+  }
   function setOffsetMode(mode) {
     offsetMode = mode;
     if (targetHandle) targetHandle.options.title = mode === 'free' ? 'Sleep het doel in elke richting voor de offset' : 'Sleep het doel noord/oost/zuid/west voor de offset';
@@ -225,8 +255,9 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
     let liveRaf = 0;
     const live = (fn, v) => { if (!fn) return; cancelAnimationFrame(liveRaf); liveRaf = requestAnimationFrame(() => fn(v)); };
     trackHandle.on('drag', () => {
-      const brg = bearing(target, trackHandle.getLatLng());
-      trackHandle.setLatLng(destination(target, brg, handleDistM));
+      const p = trackPivot();
+      const brg = bearing(p.point, trackHandle.getLatLng());
+      trackHandle.setLatLng(destination(p.point, brg, p.distM));
       const svg = trackHandle.getElement()?.querySelector('svg');
       if (svg) svg.style.transform = `rotate(${brg}deg)`;
       placeTrackLabel(trackHandle.getElement(), brg);
@@ -235,7 +266,7 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
     trackHandle.on('dragend', () => {
       cancelAnimationFrame(liveRaf);
       dragging = false;
-      onTrack(Math.round(bearing(target, trackHandle.getLatLng())) % 360);
+      onTrack(Math.round(bearing(trackPivot().point, trackHandle.getLatLng())) % 360);
     });
 
     greenHandle = L.marker(target, { ...dragOpts, icon: greenIcon(), zIndexOffset: 900, title: 'Sleep het groene licht langs de track' }).addTo(map);
@@ -298,19 +329,6 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
       const flown = [result.greenLight.point, result.exits[result.exits.length - 1].exitPoint];
       L.polyline(flown, { color: '#000', weight: 7, opacity: 0.35, interactive: false }).addTo(sceneLayer);           // schaduw
       L.polyline(flown, { color: '#fff', weight: 4, opacity: 0.9, interactive: false }).addTo(sceneLayer);
-    }
-
-    // afstandslabels bij de ringen: op een lijn evenwijdig aan de jumprun, vóór het doel in de
-    // vliegrichting, met een vaste offset (LABEL_OFFSET_M) aan de kant waar de drift níet heen gaat
-    const driftCross = alongCross(result.freefall.displacementM, trackDeg).cross;   // > 0: drift naar rechts
-    const tUnit = unitVector(trackDeg);
-    const perp = scale(unitVector(trackDeg + 90), driftCross > 0 ? -LABEL_OFFSET_M : LABEL_OFFSET_M);
-    for (const nm of RINGS_NM) {
-      if (Math.abs((nm / LABEL_EVERY_NM) - Math.round(nm / LABEL_EVERY_NM)) > 1e-6) continue;
-      L.marker(offsetPoint(target, add(scale(tUnit, nm * NM), perp)), {
-        interactive: false,
-        icon: L.divIcon({ className: 'ring-label', iconSize: [0, 0], html: `<span>${nm.toFixed(1)} NM</span>` }),
-      }).addTo(sceneLayer);
     }
 
     // gemeenschappelijk bereik onder de parachute: één lens i.p.v. een cirkel per exit
@@ -412,5 +430,5 @@ export function createJumprunMap(el, { onTrack, onGreen, onOffset = null, onSepa
 
   function setGlide(on) { showGlide = !!on; if (lastResult) render(lastResult); }
 
-  return { map, setTarget, setOffsetMode, render, fit, ensureVisible, setGlide, wind };
+  return { map, setTarget, setOffsetMode, setPivot, render, fit, ensureVisible, setGlide, wind };
 }
